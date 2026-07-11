@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Volkrion Lead Hunter</title>
+<style>
+  :root {
+    --navy: #0b3d3a; --navy2: #0f4c47; --gold: #bf9000;
+    --cream: #fdfcf9; --paper: #f7f5ee; --ink: #1f2a2a;
+    --grey: #6b7280; --border: #e3e0d5;
+    --green: #1d9e75; --green2: #178862; --red: #b3492f;
+    --pink: #b3306b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: var(--paper); color: var(--ink); }
+
+  header { background: var(--navy); color: #fff; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .brand { font-size: 17px; font-weight: 800; letter-spacing: .02em; }
+  .brand span { color: var(--gold); }
+  .api-status { font-size: 11px; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+
+  nav { display: flex; gap: 2px; padding: 0 20px; background: var(--paper); border-bottom: 1px solid var(--border); }
+  nav button { background: none; border: none; padding: 13px 16px; font-size: 13px; font-weight: 700; color: var(--grey); cursor: pointer; border-bottom: 3px solid transparent; }
+  nav button.active { color: var(--navy); border-bottom-color: var(--gold); }
+
+  main { max-width: 960px; margin: 0 auto; padding: 20px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .card-sub { font-size: 12px; color: var(--grey); margin-bottom: 14px; }
+  .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--grey); margin-bottom: 12px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; }
+  .field label { display: block; font-size: 11px; color: var(--grey); margin-bottom: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+  .field input, .field select {
+    width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; font-family: inherit; background: var(--cream); color: var(--ink);
+  }
+
+  .chip-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 6px; }
+  .chip { padding: 7px 13px; border: 1px solid var(--border); border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer; background: var(--cream); color: var(--ink); user-select: none; }
+  .chip.selected { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .chip-note { font-size: 11px; color: var(--grey); margin-top: 8px; }
+
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .btn { border: none; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn-navy { background: var(--navy); color: #fff; }
+  .btn-navy:hover:not(:disabled) { background: var(--navy2); }
+  .btn-outline { background: var(--cream); color: var(--navy); border: 1px solid var(--border); }
+  .btn-outline:hover { border-color: var(--navy); }
+  .btn-green { background: var(--green); color: #fff; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+  .btn-green:hover { background: var(--green2); }
+  .btn-pink { background: var(--pink); color: #fff; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+  .btn-pink:hover { background: #97295a; }
+  .btn-save { background: var(--navy); color: #fff; font-size: 11px; padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; white-space: nowrap; }
+  .btn-save:hover { background: var(--navy2); }
+  .btn-saved { background: #e6f2ea; color: #2d7d46; font-size: 11px; padding: 6px 12px; border-radius: 6px; border: none; cursor: default; white-space: nowrap; }
+  .btn-del { background: none; border: none; color: var(--red); font-size: 12px; cursor: pointer; padding: 4px 6px; }
+  .btn-saveall { background: var(--gold); color: #fff; font-size: 11px; padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; white-space: nowrap; }
+  .btn-saveall:hover { background: #a67c00; }
+
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #d8d4c6; border-top-color: var(--green); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-msg { color: var(--grey); font-size: 13px; padding: 16px 0; }
+  .err-box { background: #fdf1ef; border: 1px solid #e8c4bc; color: #a3402f; padding: 12px 14px; border-radius: 8px; font-size: 12px; margin-top: 8px; }
+
+  .result-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; background: #fff; }
+  .result-main { flex: 1; min-width: 180px; }
+  .result-name { font-weight: 700; font-size: 14px; color: var(--navy); }
+  .result-meta { font-size: 12px; color: var(--grey); margin-top: 2px; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+  .badge-no { background: #e6f2ea; color: #2d7d46; }
+  .badge-yes { background: #f3ecd9; color: #8a6d1d; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .stat { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+  .stat-n { font-size: 22px; font-weight: 800; color: var(--navy); }
+  .stat-l { font-size: 10px; text-transform: uppercase; letter-spacing: .03em; color: var(--grey); margin-top: 2px; }
+
+  .lead-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; background: #fff; }
+  .lead-main { flex: 1; min-width: 180px; }
+  .lead-name { font-weight: 700; font-size: 14px; color: var(--navy); }
+  .lead-meta { font-size: 12px; color: var(--grey); margin-top: 2px; }
+  .status-sel { font-size: 12px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--cream); }
+  .empty { text-align: center; padding: 28px 12px; color: #9a988e; font-size: 13px; }
+
+  .link-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 4px; }
+  .link-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--cream); border: 1px solid var(--border); border-radius: 8px; padding: 11px 13px; text-decoration: none; color: var(--ink); font-size: 13px; font-weight: 600; }
+  .link-item:hover { border-color: var(--navy); }
+  .link-icon { width: 24px; height: 24px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #fff; flex-shrink: 0; }
+
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Volkrion <span>Lead Hunter</span></div>
+  <div class="api-status">
+    <div class="dot"></div>
+    <span>Connected to Claude ✓</span>
+  </div>
+</header>
+
+<nav>
+  <button class="active" data-view="hunt" onclick="switchTab('hunt')">🔍 Hunt</button>
+  <button data-view="leads" onclick="switchTab('leads')">📋 My Leads</button>
+  <button data-view="settings" onclick="switchTab('settings')">⚙ Settings</button>
+</nav>
+
+<main>
+
+  <section id="view-hunt" class="view active">
+    <div class="card">
+      <div class="card-title">Search an area</div>
+      <div class="card-sub">Enter city + area, then pick one or more business types — Claude searches the web for real businesses with a working phone number or an active Instagram, so you always have a way to message them.</div>
+      <div class="grid">
+        <div class="field"><label>City</label><input id="h-city" placeholder="e.g. Kanpur"></div>
+        <div class="field"><label>Area / locality</label><input id="h-area" placeholder="e.g. Kalyanpur"></div>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label>Business types — select one or more</label>
+        <div class="chip-grid" id="niche-chips"></div>
+        <p class="chip-note">Selecting several types runs one combined search and returns a wide mix of leads in a single click.</p>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-navy" id="ai-btn" onclick="aiFindLeads()">✦ Find businesses with Claude</button>
+        <button class="btn btn-outline" onclick="generateLinks()">🔗 Free search links</button>
+      </div>
+      <p style="font-size:11px;color:var(--grey);margin-top:10px;">✦ Only returns businesses with a real phone number (WhatsApp) or a real Instagram account — nothing you can't actually message. 🔗 Free links open manual search tabs instead.</p>
+    </div>
+
+    <div id="ai-results-card" class="card" style="display:none;">
+      <div class="section-label">
+        <span id="ai-results-heading">Results</span>
+        <button class="btn-saveall" id="save-all-btn" onclick="saveAllResults()" style="display:none;">💾 Save all leads</button>
+      </div>
+      <div id="ai-results"></div>
+    </div>
+
+    <div id="links-card" class="card" style="display:none;">
+      <div class="section-label" id="links-heading">Search links</div>
+      <div class="link-grid" id="links-grid"></div>
+      <p style="font-size:11px;color:var(--grey);margin-top:10px;">Open each tab → copy name + phone → add to My Leads tab → message from there.</p>
+    </div>
+  </section>
+
+  <section id="view-leads" class="view">
+    <div class="stats" id="stats"></div>
+
+    <div class="card">
+      <div class="card-title">Add a lead manually</div>
+      <div class="card-sub">Or save directly from search results above. Provide a phone number, an Instagram handle, or both.</div>
+      <div class="grid">
+        <div class="field"><label>Business name</label><input id="l-name" placeholder="e.g. Royal Properties"></div>
+        <div class="field"><label>Phone (with country code)</label><input id="l-phone" placeholder="919876543210"></div>
+        <div class="field"><label>Instagram handle</label><input id="l-instagram" placeholder="e.g. royalproperties"></div>
+        <div class="field"><label>Area</label><input id="l-area" placeholder="e.g. Kakadeo"></div>
+        <div class="field">
+          <label>Business type</label>
+          <select id="l-niche"></select>
+        </div>
+        <div class="field">
+          <label>Has website?</label>
+          <select id="l-haswebsite">
+            <option value="no">No website</option>
+            <option value="yes">Has a website</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Source</label>
+          <select id="l-source">
+            <option>Google Maps</option><option>99acres</option><option>MagicBricks</option>
+            <option>Instagram</option><option>Facebook</option><option>JustDial</option>
+            <option>LinkedIn</option><option>Referral</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-navy" onclick="addLeadManual()">Add lead</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label"><span>Your leads</span></div>
+      <div id="leads-list"></div>
+    </div>
+  </section>
+
+  <section id="view-settings" class="view">
+    <div class="card">
+      <div class="card-title">Claude connection</div>
+      <div class="card-sub">This tool calls Claude directly — there's no API key to manage and nothing is sent anywhere except Anthropic's own servers when you run a search.</div>
+      <div class="api-status" style="color:var(--navy);"><div class="dot"></div><span>Connected to Claude ✓ — using web search</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Data</div>
+      <div class="card-sub">Your leads are saved privately for this tool — visible only to you.</div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="exportLeads()">Export leads as CSV</button>
+        <button class="btn" style="background:#fdf1ef; color:var(--red); border:1px solid #e8c4bc;" onclick="clearAllLeads()">Clear all leads</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Niche vocabulary (drives both search phrasing and message wording) ──
+const NICHE_LIST = [
+  { key:'real_estate', label:'Real estate agent', phrase:'real estate agents and property dealers', customer:'buyers', item:'listings' },
+  { key:'cafes', label:'Cafe', phrase:'cafes and coffee shops', customer:'customers', item:'menu' },
+  { key:'salons', label:'Salon', phrase:'hair and beauty salons', customer:'clients', item:'services' },
+  { key:'dentists', label:'Dentist', phrase:'dental clinics', customer:'patients', item:'services' },
+  { key:'gyms', label:'Gym', phrase:'gyms and fitness centers', customer:'members', item:'programs' },
+  { key:'restaurants', label:'Restaurant', phrase:'restaurants', customer:'customers', item:'menu' },
+  { key:'interior_designers', label:'Interior designer', phrase:'interior designers', customer:'clients', item:'portfolio' },
+  { key:'architects', label:'Architect', phrase:'architects', customer:'clients', item:'portfolio' },
+  { key:'boutiques', label:'Boutique', phrase:'boutiques and clothing stores', customer:'customers', item:'collection' },
+  { key:'yoga_studios', label:'Yoga studio', phrase:'yoga and fitness studios', customer:'clients', item:'classes' },
+  { key:'photographers', label:'Photographer', phrase:'photographers', customer:'clients', item:'portfolio' },
+  { key:'coaching_centers', label:'Coaching center', phrase:'coaching centers and tutors', customer:'students', item:'courses' },
+  { key:'event_planners', label:'Event planner', phrase:'event planners', customer:'clients', item:'portfolio' },
+  { key:'clinics', label:'Doctor / clinic', phrase:'doctors and clinics', customer:'patients', item:'services' },
+  { key:'wedding', label:'Wedding studio', phrase:'wedding photographers and studios', customer:'clients', item:'portfolio' },
+  { key:'pet_services', label:'Pet grooming', phrase:'pet grooming and pet stores', customer:'customers', item:'services' },
+];
+function nicheInfo(key) { return NICHE_LIST.find(n => n.key === key) || { customer:'customers', item:'work', label: key || 'Business' }; }
+function nicheKeyToLabel(k) { return nicheInfo(k).label; }
+
+// ── Message builder: tailored by business type, website status, and channel ──
+function buildMessage({ nicheKey, hasWebsite, hasPhone, hasInstagram, name }) {
+  const { customer, item } = nicheInfo(nicheKey);
+  if (hasWebsite) {
+    return `Hi! Came across ${name} and had a look at your website — nice work. I help businesses like yours turn more site visitors into ${customer} with a few focused design and speed improvements. Out of curiosity, are most new ${customer} coming through the website itself these days, or still mostly WhatsApp/calls? Happy to share a couple of quick ideas either way — no pressure at all.`;
+  }
+  if (hasInstagram && !hasPhone) {
+    return `Hi! Came across ${name}'s Instagram and really like your ${item} — great work. I help businesses like yours get a simple, professional website so ${customer} can find you and reach out even outside Instagram. Would you be open to a quick chat about what that could look like for ${name}?`;
+  }
+  return `Hi! Came across ${name} online — do you have a website where ${customer} can see your ${item}, or is it mostly calls/walk-ins for now? I help local businesses set up a clean, professional site that brings in more ${customer} without extra effort on your end. Happy to share a quick idea if it's useful — no pressure either way.`;
+}
+
+// ── Storage (persists across sessions, private to this user) ───────
+async function load(key, fallback) {
+  try {
+    const r = await window.storage.get(key, false);
+    return r ? JSON.parse(r.value) : fallback;
+  } catch (e) { return fallback; }
+}
+async function save(key, value) {
+  try { await window.storage.set(key, JSON.stringify(value), false); }
+  catch (e) { console.error('Storage error', e); }
+}
+
+let leads = [];
+let savedIds = new Set();
+let selectedNiches = new Set(['real_estate']);
+let currentResults = []; // last search results, kept for "save all"
+
+async function initStorage() {
+  leads = await load('vlh_leads', []);
+  savedIds = new Set(await load('vlh_saved_ids', []));
+  renderLeads();
+}
+
+function initNicheUI() {
+  const chipEl = document.getElementById('niche-chips');
+  chipEl.innerHTML = NICHE_LIST.map(n =>
+    `<div class="chip ${selectedNiches.has(n.key) ? 'selected' : ''}" data-key="${n.key}" onclick="toggleNiche('${n.key}')">${n.label}</div>`
+  ).join('');
+
+  const lSel = document.getElementById('l-niche');
+  lSel.innerHTML = NICHE_LIST.map(n => `<option value="${n.key}">${n.label}</option>`).join('');
+}
+function toggleNiche(key) {
+  if (selectedNiches.has(key)) selectedNiches.delete(key); else selectedNiches.add(key);
+  document.querySelector(`.chip[data-key="${key}"]`).classList.toggle('selected');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function switchTab(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelector('nav button[data-view="' + view + '"]').classList.add('active');
+  if (view === 'leads') renderLeads();
+}
+
+// ── AI search (Claude, built in — no key needed) ────────────────────
+async function searchOneNiche(niche, location) {
+  const systemPrompt = `You find real, currently operating local businesses using web search. After searching, reply with ONLY a raw JSON array, no markdown, no explanation, no code fences.
+Each item: {"name": string, "phone": string or null (digits only, include country code 91 for India, e.g. 919876543210), "instagram": string or null (just the handle without @ or URL), "area": string, "hasWebsite": boolean, "notes": string (one short fact: rating, specialty, or years operating)}.
+Only include a business if you found a real phone number OR a real active Instagram handle for it in search results — skip anything with neither. Never invent a business, number, or handle. Max 6 results. If none found, return [].`;
+  const userMsg = `Search the web and find ${niche.phrase} in ${location}, India. I need real businesses that have either a working phone number or an active Instagram account, for B2B web design outreach. Prioritize ones without a website, but include a few with websites too.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMsg }],
+      tools: [{ type: 'web_search_20250305', name: 'web_search' }]
+    })
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(`${niche.label}: ${err.error?.message || 'API error ' + resp.status}`);
+  }
+
+  const data = await resp.json();
+
+  // If Claude ran out of room mid-search or mid-answer, say so instead of quietly returning nothing.
+  if (data.stop_reason === 'max_tokens') {
+    console.warn(`${niche.label}: response was cut off (max_tokens). Raw content:`, data.content);
+  }
+
+  const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+  if (!text.trim()) {
+    console.warn(`${niche.label}: no text content in response.`, data);
+    throw new Error(`${niche.label}: Claude returned no text (stop_reason: ${data.stop_reason || 'unknown'}).`);
+  }
+
+  const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  const match = clean.match(/\[[\s\S]*\]/);
+  let raw = match ? match[0] : clean;
+  let businesses;
+  try {
+    businesses = JSON.parse(raw);
+  } catch (parseErr) {
+    // Truncated JSON (ran out of tokens mid-array) — salvage whatever complete objects exist.
+    const lastGoodComma = raw.lastIndexOf('},');
+    if (lastGoodComma > -1) {
+      try { businesses = JSON.parse(raw.slice(0, lastGoodComma + 1) + ']'); }
+      catch { businesses = null; }
+    } else {
+      businesses = null;
+    }
+    if (!businesses) {
+      console.error(`${niche.label}: JSON parse failed. Raw text:`, text);
+      throw new Error(`${niche.label}: couldn't parse Claude's response — it may have been cut off. Try again or narrow to one type.`);
+    }
+  }
+  if (!Array.isArray(businesses)) businesses = [];
+
+  return businesses
+    .filter(b => (b.phone && String(b.phone).replace(/[^0-9]/g, '')) || (b.instagram && String(b.instagram).trim()))
+    .map(b => ({ ...b, nicheKey: niche.key }));
+}
+
+async function aiFindLeads() {
+  const city = document.getElementById('h-city').value.trim();
+  const area = document.getElementById('h-area').value.trim();
+  const btn = document.getElementById('ai-btn');
+  const niches = NICHE_LIST.filter(n => selectedNiches.has(n.key));
+
+  if (!city) { alert('Enter at least a city.'); return; }
+  if (!niches.length) { alert('Select at least one business type.'); return; }
+
+  const location = area ? `${area}, ${city}` : city;
+  const card = document.getElementById('ai-results-card');
+  const heading = document.getElementById('ai-results-heading');
+  const resultsEl = document.getElementById('ai-results');
+  const saveAllBtn = document.getElementById('save-all-btn');
+
+  card.style.display = 'block';
+  saveAllBtn.style.display = 'none';
+  const typeLabel = niches.map(n => n.label.toLowerCase()).join(', ');
+  heading.textContent = `Searching ${typeLabel} in ${location}...`;
+  resultsEl.innerHTML = `<div class="loading-msg"><span class="spinner"></span>Searching ${niches.length} business type${niches.length > 1 ? 's' : ''}, give it a few seconds...</div>`;
+  btn.disabled = true; btn.textContent = 'Searching...';
+
+  try {
+    const settled = await Promise.allSettled(niches.map(n => searchOneNiche(n, location)));
+    const businesses = [];
+    const errors = [];
+    settled.forEach((r, i) => {
+      if (r.status === 'fulfilled') businesses.push(...r.value);
+      else errors.push(r.reason?.message || `${niches[i].label}: unknown error`);
+    });
+    currentResults = businesses;
+
+    if (!businesses.length && errors.length) {
+      // Every niche failed outright — show the real reason, not a fake "no results".
+      heading.textContent = 'Search failed';
+      resultsEl.innerHTML = `<div class="err-box"><strong>Error${errors.length > 1 ? 's' : ''}:</strong><br>${errors.map(e => esc(e)).join('<br>')}<br><br>Try again, narrow to one business type, or try a broader area name.</div>`;
+    } else if (!businesses.length) {
+      heading.textContent = `No results — ${typeLabel} in ${location}`;
+      resultsEl.innerHTML = `<div class="empty">No businesses with a phone number or Instagram found here. Try a broader area name or different types.</div>`;
+    } else {
+      heading.textContent = `${businesses.length} found — ${typeLabel} in ${location}`;
+      let html = businesses.map(b => renderResult(b, location)).join('');
+      if (errors.length) {
+        html += `<div class="err-box">Some searches didn't complete: ${errors.map(e => esc(e)).join('; ')}. The results above are from the ones that did.</div>`;
+      }
+      resultsEl.innerHTML = html;
+      saveAllBtn.style.display = 'inline-block';
+    }
+  } catch (e) {
+    heading.textContent = 'Search failed';
+    resultsEl.innerHTML = `<div class="err-box"><strong>Error:</strong> ${esc(e.message)}<br><br>Try a different or broader area name, or try again in a moment.</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = '✦ Find businesses with Claude';
+  }
+}
+
+function renderResult(b, location) {
+  const name = b.name || 'Unknown';
+  const phone = (b.phone || '').replace(/[^0-9]/g, '');
+  const instagram = (b.instagram || '').replace(/[@\/].*$/, '').replace('@', '').trim();
+  const area = b.area || location;
+  const hasWebsite = !!b.hasWebsite;
+  const notes = b.notes || '';
+  const nicheKey = b.nicheKey;
+  const nicheLabel = nicheKeyToLabel(nicheKey);
+  const hasPhone = !!phone;
+  const hasInstagram = !!instagram;
+  const msg = buildMessage({ nicheKey, hasWebsite, hasPhone, hasInstagram, name });
+  const waLink = hasPhone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : null;
+  const igLink = hasInstagram ? `https://www.instagram.com/${instagram}/` : null;
+  const idKey = phone || instagram || name;
+  const isSaved = savedIds.has(idKey);
+
+  return `
+    <div class="result-row" id="res-${esc(idKey)}">
+      <div class="result-main">
+        <span class="result-name">${esc(name)}</span>
+        <span class="badge" style="background:#f0f0f0;color:#555;">${esc(nicheLabel)}</span>
+        <span class="badge ${hasWebsite ? 'badge-yes' : 'badge-no'}">${hasWebsite ? 'Has website' : 'No website'}</span>
+        <div class="result-meta">${esc(area)}${hasPhone ? ' · ' + phone : ''}${hasInstagram ? ' · @' + esc(instagram) : ''}${notes ? ' · ' + esc(notes) : ''}</div>
+      </div>
+      ${waLink ? `<a class="btn btn-green btn" href="${waLink}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
+      ${igLink ? `<a class="btn btn-pink btn" href="${igLink}" target="_blank" rel="noopener" onclick="copyMsg(${JSON.stringify(msg)})">📸 Instagram</a>` : ''}
+      <button class="btn-save" onclick='saveFromResult(${JSON.stringify({ name, phone, instagram, area, hasWebsite, nicheKey, notes })})' id="save-${esc(idKey)}" ${isSaved ? 'style="display:none;"' : ''}>+ Save</button>
+      <button class="btn-saved" id="saved-${esc(idKey)}" ${isSaved ? '' : 'style="display:none;"'}>✓ Saved</button>
+    </div>`;
+}
+
+function copyMsg(msg) {
+  navigator.clipboard.writeText(msg).then(() => showToast('DM message copied — paste it in Instagram')).catch(() => {});
+}
+
+async function saveFromResult(data) {
+  const { name, phone, instagram, area, hasWebsite, nicheKey, notes } = data;
+  const idKey = phone || instagram || name;
+  if (savedIds.has(idKey)) return;
+  leads.unshift({
+    id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name, phone: phone || '', instagram: instagram || '', area,
+    niche: nicheKey, nicheLabel: nicheKeyToLabel(nicheKey),
+    hasWebsite, source: 'AI Search', status: 'New', notes: notes || '',
+    added: new Date().toLocaleDateString()
+  });
+  savedIds.add(idKey);
+  await save('vlh_leads', leads);
+  await save('vlh_saved_ids', [...savedIds]);
+  const saveBtn = document.getElementById('save-' + idKey);
+  const savedBtn = document.getElementById('saved-' + idKey);
+  if (saveBtn) saveBtn.style.display = 'none';
+  if (savedBtn) savedBtn.style.display = 'inline-block';
+}
+
+async function saveAllResults() {
+  if (!currentResults.length) return;
+  let added = 0;
+  for (const b of currentResults) {
+    const phone = (b.phone || '').replace(/[^0-9]/g, '');
+    const instagram = (b.instagram || '').replace(/[@\/].*$/, '').replace('@', '').trim();
+    const idKey = phone || instagram || b.name;
+    if (savedIds.has(idKey)) continue;
+    leads.unshift({
+      id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name: b.name, phone, instagram, area: b.area || '',
+      niche: b.nicheKey, nicheLabel: nicheKeyToLabel(b.nicheKey),
+      hasWebsite: !!b.hasWebsite, source: 'AI Search', status: 'New', notes: b.notes || '',
+      added: new Date().toLocaleDateString()
+    });
+    savedIds.add(idKey);
+    added++;
+  }
+  await save('vlh_leads', leads);
+  await save('vlh_saved_ids', [...savedIds]);
+  document.querySelectorAll('#ai-results .btn-save').forEach(b => b.style.display = 'none');
+  document.querySelectorAll('#ai-results .btn-saved').forEach(b => b.style.display = 'inline-block');
+  showToast(`Saved ${added} new lead${added === 1 ? '' : 's'}`);
+}
+
+// ── Free search links ──────────────────────────────────────────────
+function generateLinks() {
+  const city = document.getElementById('h-city').value.trim();
+  const area = document.getElementById('h-area').value.trim();
+  const niches = NICHE_LIST.filter(n => selectedNiches.has(n.key));
+  if (!city) { alert('Enter at least a city.'); return; }
+  if (!niches.length) { alert('Select at least one business type.'); return; }
+  const niche = niches[0];
+  const phrase = niche.phrase;
+  const label = niches.map(n => n.label.toLowerCase()).join(', ');
+  const location = area ? `${area}, ${city}` : city;
+  const q = encodeURIComponent(phrase + ' in ' + location);
+  const hCity = city.replace(/[^a-zA-Z]/g, '').toLowerCase();
+  const hNiche = phrase.split(' ')[0].replace(/[^a-zA-Z]/g, '').toLowerCase();
+  const sources = [
+    { name: '99acres', color: '#c0392b', abbr: '99', url: `https://www.99acres.com/search/property/buy/${encodeURIComponent((area || city).toLowerCase().replace(/\s+/g, '-'))}?city=${encodeURIComponent(city)}` },
+    { name: 'Google Maps', color: '#2d7d46', abbr: 'GM', url: `https://www.google.com/maps/search/${q}` },
+    { name: 'Google', color: '#2a5db0', abbr: 'G', url: `https://www.google.com/search?q=${q}` },
+    { name: 'Instagram', color: '#b3306b', abbr: 'IG', url: `https://www.instagram.com/explore/tags/${hNiche}${hCity}/` },
+    { name: 'JustDial', color: '#3b3b3b', abbr: 'JD', url: `https://www.justdial.com/${encodeURIComponent(city)}/${encodeURIComponent(phrase.replace(/\s+/g, '-'))}` },
+    { name: 'Facebook', color: '#1f5fae', abbr: 'FB', url: `https://www.facebook.com/search/pages/?q=${q}` },
+  ];
+  document.getElementById('links-heading').textContent = `Search links — ${label} in ${location}`;
+  document.getElementById('links-grid').innerHTML = sources.map(s => `<a class="link-item" href="${s.url}" target="_blank" rel="noopener"><span>${s.name}</span><span class="link-icon" style="background:${s.color};">${s.abbr}</span></a>`).join('');
+  document.getElementById('links-card').style.display = 'block';
+}
+
+// ── Lead tracker ───────────────────────────────────────────────────
+async function addLeadManual() {
+  const name = document.getElementById('l-name').value.trim();
+  const phone = document.getElementById('l-phone').value.trim().replace(/[^0-9]/g, '');
+  const instagram = document.getElementById('l-instagram').value.trim().replace('@', '');
+  const area = document.getElementById('l-area').value.trim();
+  const nicheSel = document.getElementById('l-niche');
+  const niche = nicheSel.value;
+  const nicheLabel = nicheSel.selectedOptions[0].textContent;
+  const hasWebsite = document.getElementById('l-haswebsite').value === 'yes';
+  const source = document.getElementById('l-source').value;
+  if (!name || (!phone && !instagram)) { alert('Enter a business name, and at least a phone number or Instagram handle.'); return; }
+  leads.unshift({ id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name, phone, instagram, area, niche, nicheLabel, hasWebsite, source, status: 'New', added: new Date().toLocaleDateString() });
+  await save('vlh_leads', leads);
+  document.getElementById('l-name').value = '';
+  document.getElementById('l-phone').value = '';
+  document.getElementById('l-instagram').value = '';
+  document.getElementById('l-area').value = '';
+  renderLeads();
+}
+
+async function deleteLead(id) {
+  leads = leads.filter(l => l.id !== id);
+  await save('vlh_leads', leads);
+  renderLeads();
+}
+async function updateStatus(id, status) {
+  const l = leads.find(l => l.id === id);
+  if (l) l.status = status;
+  await save('vlh_leads', leads);
+}
+
+function renderLeads() {
+  const statuses = ['New', 'Messaged', 'Follow-up 1', 'Follow-up 2', 'Replied', 'Interested', 'Quoted', 'Closed - Won', 'Closed - Lost', 'No response'];
+  const c = {}; statuses.forEach(s => c[s] = 0);
+  leads.forEach(l => { if (c[l.status] !== undefined) c[l.status]++; });
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-n">${leads.length}</div><div class="stat-l">Total</div></div>
+    <div class="stat"><div class="stat-n">${c['New']}</div><div class="stat-l">Not messaged</div></div>
+    <div class="stat"><div class="stat-n">${c['Replied'] + c['Interested'] + c['Quoted']}</div><div class="stat-l">Replied</div></div>
+    <div class="stat"><div class="stat-n">${c['Closed - Won']}</div><div class="stat-l">Won</div></div>
+  `;
+  const el = document.getElementById('leads-list');
+  if (!leads.length) { el.innerHTML = '<div class="empty">No leads yet. Find some in the Hunt tab or add manually above.</div>'; return; }
+  el.innerHTML = leads.map(l => {
+    const hasPhone = !!l.phone;
+    const hasInstagram = !!l.instagram;
+    const msg = buildMessage({ nicheKey: l.niche, hasWebsite: l.hasWebsite, hasPhone, hasInstagram, name: l.name });
+    const wa = hasPhone ? `https://wa.me/${l.phone}?text=${encodeURIComponent(msg)}` : null;
+    const ig = hasInstagram ? `https://www.instagram.com/${l.instagram}/` : null;
+    return `<div class="lead-row">
+      <div class="lead-main">
+        <span class="lead-name">${esc(l.name)}</span>
+        <span class="badge" style="background:#f0f0f0;color:#555;">${esc(l.nicheLabel || '')}</span>
+        <div class="lead-meta">${hasPhone ? esc(l.phone) : ''}${hasInstagram ? (hasPhone ? ' · @' : '@') + esc(l.instagram) : ''}${l.area ? ' · ' + esc(l.area) : ''} · ${l.hasWebsite ? 'has website' : 'no website'} · ${esc(l.source || '')} · added ${l.added}</div>
+      </div>
+      <select class="status-sel" onchange="updateStatus('${l.id}',this.value)">
+        ${statuses.map(s => `<option value="${s}" ${l.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+      </select>
+      ${wa ? `<a class="btn btn-green btn" href="${wa}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
+      ${ig ? `<a class="btn btn-pink btn" href="${ig}" target="_blank" rel="noopener" onclick='copyMsg(${JSON.stringify(msg)})'>📸 Instagram</a>` : ''}
+      <button class="btn-del" onclick="deleteLead('${l.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function exportLeads() {
+  if (!leads.length) { alert('No leads to export.'); return; }
+  const cols = ['Name', 'Phone', 'Instagram', 'Area', 'Niche', 'Has Website', 'Source', 'Status', 'Added'];
+  const rows = leads.map(l => [l.name, l.phone, l.instagram, l.area, l.nicheLabel, l.hasWebsite ? 'Yes' : 'No', l.source, l.status, l.added].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(','));
+  const csv = [cols.join(','), ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'volkrion_leads.csv';
+  a.click();
+}
+
+async function clearAllLeads() {
+  if (!confirm('Delete all leads? This cannot be undone.')) return;
+  leads = []; savedIds = new Set();
+  await save('vlh_leads', []); await save('vlh_saved_ids', []);
+  renderLeads();
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+initNicheUI();
+initStorage();
+</script>
+</body>
+</html>
