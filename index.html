@@ -104,7 +104,7 @@
   <div class="brand">Volkrion <span>Lead Hunter</span></div>
   <div class="api-status">
     <div class="dot"></div>
-    <span>Connected to Claude ✓</span>
+    <span>Leads sync to Supabase ✓</span>
   </div>
 </header>
 
@@ -249,16 +249,72 @@ function buildMessage({ nicheKey, hasWebsite, hasPhone, hasInstagram, name }) {
   return `Hi! Came across ${name} online — do you have a website where ${customer} can see your ${item}, or is it mostly calls/walk-ins for now? I help local businesses set up a clean, professional site that brings in more ${customer} without extra effort on your end. Happy to share a quick idea if it's useful — no pressure either way.`;
 }
 
-// ── Storage (persists across sessions, private to this user) ───────
-async function load(key, fallback) {
-  try {
-    const r = await window.storage.get(key, false);
-    return r ? JSON.parse(r.value) : fallback;
-  } catch (e) { return fallback; }
+// ── Storage (Supabase — real database, synced across all your devices) ──
+const SUPABASE_URL = 'https://bjnoxnnbnynygmgpkhql.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqbm94bm5ibnlueWdtZ3BraHFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MjA0NTksImV4cCI6MjA5OTI5NjQ1OX0.fwbQkRFu-xU_GoB3zSRRdzH48EsXKRCRBoWmpWgf77Q';
+const sbHeaders = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+  'Content-Type': 'application/json'
+};
+
+function toRow(l) {
+  return { id: l.id, name: l.name, phone: l.phone || '', instagram: l.instagram || '', area: l.area || '',
+    niche: l.niche || '', niche_label: l.nicheLabel || '', has_website: !!l.hasWebsite, source: l.source || '',
+    status: l.status || 'New', added: l.added || new Date().toLocaleDateString(), notes: l.notes || '' };
 }
-async function save(key, value) {
-  try { await window.storage.set(key, JSON.stringify(value), false); }
-  catch (e) { console.error('Storage error', e); }
+function fromRow(r) {
+  return { id: r.id, name: r.name, phone: r.phone, instagram: r.instagram, area: r.area,
+    niche: r.niche, nicheLabel: r.niche_label, hasWebsite: r.has_website, source: r.source,
+    status: r.status, added: r.added, notes: r.notes };
+}
+
+async function fetchLeads() {
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`, { headers: sbHeaders });
+    if (!resp.ok) throw new Error('Failed to load leads');
+    const rows = await resp.json();
+    return rows.map(fromRow);
+  } catch (e) { console.error('Load error', e); showToast('Could not load leads — check connection'); return []; }
+}
+async function insertLeadRemote(lead) {
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+      method: 'POST', headers: { ...sbHeaders, Prefer: 'return=minimal' },
+      body: JSON.stringify(toRow(lead))
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+  } catch (e) { console.error('Insert error', e); showToast('Save failed — check connection'); }
+}
+async function insertLeadsRemoteBulk(leadsArr) {
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+      method: 'POST', headers: { ...sbHeaders, Prefer: 'return=minimal' },
+      body: JSON.stringify(leadsArr.map(toRow))
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+  } catch (e) { console.error('Bulk insert error', e); showToast('Save failed — check connection'); }
+}
+async function updateLeadRemote(id, status) {
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
+      method: 'PATCH', headers: { ...sbHeaders, Prefer: 'return=minimal' },
+      body: JSON.stringify({ status })
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+  } catch (e) { console.error('Update error', e); showToast('Update failed — check connection'); }
+}
+async function deleteLeadRemote(id) {
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, { method: 'DELETE', headers: sbHeaders });
+    if (!resp.ok) throw new Error(await resp.text());
+  } catch (e) { console.error('Delete error', e); showToast('Delete failed — check connection'); }
+}
+async function clearAllLeadsRemote() {
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=neq.__none__`, { method: 'DELETE', headers: sbHeaders });
+    if (!resp.ok) throw new Error(await resp.text());
+  } catch (e) { console.error('Clear error', e); showToast('Clear failed — check connection'); }
 }
 
 let leads = [];
@@ -267,8 +323,8 @@ let selectedNiches = new Set(['real_estate']);
 let currentResults = []; // last search results, kept for "save all"
 
 async function initStorage() {
-  leads = await load('vlh_leads', []);
-  savedIds = new Set(await load('vlh_saved_ids', []));
+  leads = await fetchLeads();
+  savedIds = new Set(JSON.parse(localStorage.getItem('vlh_saved_ids') || '[]'));
   renderLeads();
 }
 
@@ -468,8 +524,8 @@ async function saveFromResult(data) {
     added: new Date().toLocaleDateString()
   });
   savedIds.add(idKey);
-  await save('vlh_leads', leads);
-  await save('vlh_saved_ids', [...savedIds]);
+  await insertLeadRemote(leads[0]);
+  localStorage.setItem('vlh_saved_ids', JSON.stringify([...savedIds]));
   const saveBtn = document.getElementById('save-' + idKey);
   const savedBtn = document.getElementById('saved-' + idKey);
   if (saveBtn) saveBtn.style.display = 'none';
@@ -479,22 +535,25 @@ async function saveFromResult(data) {
 async function saveAllResults() {
   if (!currentResults.length) return;
   let added = 0;
+  const newlyAdded = [];
   for (const b of currentResults) {
     const phone = (b.phone || '').replace(/[^0-9]/g, '');
     const instagram = (b.instagram || '').replace(/[@\/].*$/, '').replace('@', '').trim();
     const idKey = phone || instagram || b.name;
     if (savedIds.has(idKey)) continue;
-    leads.unshift({
+    const newLead = {
       id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name: b.name, phone, instagram, area: b.area || '',
       niche: b.nicheKey, nicheLabel: nicheKeyToLabel(b.nicheKey),
       hasWebsite: !!b.hasWebsite, source: 'AI Search', status: 'New', notes: b.notes || '',
       added: new Date().toLocaleDateString()
-    });
+    };
+    leads.unshift(newLead);
+    newlyAdded.push(newLead);
     savedIds.add(idKey);
     added++;
   }
-  await save('vlh_leads', leads);
-  await save('vlh_saved_ids', [...savedIds]);
+  if (newlyAdded.length) await insertLeadsRemoteBulk(newlyAdded);
+  localStorage.setItem('vlh_saved_ids', JSON.stringify([...savedIds]));
   document.querySelectorAll('#ai-results .btn-save').forEach(b => b.style.display = 'none');
   document.querySelectorAll('#ai-results .btn-saved').forEach(b => b.style.display = 'inline-block');
   showToast(`Saved ${added} new lead${added === 1 ? '' : 's'}`);
@@ -539,8 +598,9 @@ async function addLeadManual() {
   const hasWebsite = document.getElementById('l-haswebsite').value === 'yes';
   const source = document.getElementById('l-source').value;
   if (!name || (!phone && !instagram)) { alert('Enter a business name, and at least a phone number or Instagram handle.'); return; }
-  leads.unshift({ id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name, phone, instagram, area, niche, nicheLabel, hasWebsite, source, status: 'New', added: new Date().toLocaleDateString() });
-  await save('vlh_leads', leads);
+  const newLead = { id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name, phone, instagram, area, niche, nicheLabel, hasWebsite, source, status: 'New', added: new Date().toLocaleDateString() };
+  leads.unshift(newLead);
+  await insertLeadRemote(newLead);
   document.getElementById('l-name').value = '';
   document.getElementById('l-phone').value = '';
   document.getElementById('l-instagram').value = '';
@@ -550,13 +610,13 @@ async function addLeadManual() {
 
 async function deleteLead(id) {
   leads = leads.filter(l => l.id !== id);
-  await save('vlh_leads', leads);
+  await deleteLeadRemote(id);
   renderLeads();
 }
 async function updateStatus(id, status) {
   const l = leads.find(l => l.id === id);
   if (l) l.status = status;
-  await save('vlh_leads', leads);
+  await updateLeadRemote(id, status);
 }
 
 function renderLeads() {
@@ -607,7 +667,8 @@ function exportLeads() {
 async function clearAllLeads() {
   if (!confirm('Delete all leads? This cannot be undone.')) return;
   leads = []; savedIds = new Set();
-  await save('vlh_leads', []); await save('vlh_saved_ids', []);
+  await clearAllLeadsRemote();
+  localStorage.removeItem('vlh_saved_ids');
   renderLeads();
 }
 
