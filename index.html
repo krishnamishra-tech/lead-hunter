@@ -121,8 +121,57 @@
       <div class="card-title">Search an area</div>
       <div class="card-sub">Enter city + area, then pick one or more business types — Claude searches the web for real businesses with a working phone number or an active Instagram, so you always have a way to message them.</div>
       <div class="grid">
-        <div class="field"><label>City</label><input id="h-city" placeholder="e.g. Kanpur"></div>
-        <div class="field"><label>Area / locality</label><input id="h-area" placeholder="e.g. Kalyanpur"></div>
+        <div class="field"><label>City</label><input id="h-city" list="vlh-city-list" placeholder="Start typing... e.g. Kanpur" oninput="updateAreaSuggestions(this.value)"></div>
+        <datalist id="vlh-city-list">
+          <option value="Agra"><option value="Agartala"><option value="Ahmedabad"><option value="Aizawl">
+          <option value="Ajmer"><option value="Akbarpur"><option value="Akola"><option value="Aligarh">
+          <option value="Allahabad (Prayagraj)"><option value="Alwar"><option value="Ambala"><option value="Ambattur">
+          <option value="Amravati"><option value="Amritsar"><option value="Amroha"><option value="Anantapur">
+          <option value="Asansol"><option value="Aurangabad"><option value="Ayodhya"><option value="Azamgarh">
+          <option value="Bahraich"><option value="Ballia"><option value="Banda"><option value="Bangalore">
+          <option value="Barabanki"><option value="Bareilly"><option value="Basti"><option value="Belgaum">
+          <option value="Bhagalpur"><option value="Bharatpur"><option value="Bhavnagar"><option value="Bhilai">
+          <option value="Bhilwara"><option value="Bhiwandi"><option value="Bhopal"><option value="Bhubaneswar">
+          <option value="Bijnor"><option value="Bikaner"><option value="Bilaspur"><option value="Bokaro">
+          <option value="Bulandshahr"><option value="Chandausi"><option value="Chandigarh"><option value="Chennai">
+          <option value="Coimbatore"><option value="Cuttack"><option value="Darbhanga"><option value="Dehradun">
+          <option value="Delhi NCR"><option value="Deoria"><option value="Dhanbad"><option value="Dharwad">
+          <option value="Dispur"><option value="Durgapur"><option value="Erode"><option value="Etah">
+          <option value="Etawah"><option value="Faizabad"><option value="Faridabad"><option value="Farrukhabad">
+          <option value="Fatehpur"><option value="Firozabad"><option value="Gangtok"><option value="Gaya">
+          <option value="Ghaziabad"><option value="Ghazipur"><option value="Gonda"><option value="Gorakhpur">
+          <option value="Greater Noida"><option value="Gulbarga"><option value="Guntur"><option value="Gurugram">
+          <option value="Guwahati"><option value="Gwalior"><option value="Hapur"><option value="Hardoi">
+          <option value="Hathras"><option value="Howrah"><option value="Hubballi"><option value="Hyderabad">
+          <option value="Imphal"><option value="Indore"><option value="Itanagar"><option value="Jabalpur">
+          <option value="Jaipur"><option value="Jalandhar"><option value="Jalgaon"><option value="Jammu">
+          <option value="Jamnagar"><option value="Jamshedpur"><option value="Jaunpur"><option value="Jhansi">
+          <option value="Jodhpur"><option value="Kakinada"><option value="Kanpur"><option value="Karnal">
+          <option value="Kochi"><option value="Kohima"><option value="Kolhapur"><option value="Kolkata">
+          <option value="Kota"><option value="Kozhikode"><option value="Kurnool"><option value="Lakhimpur">
+          <option value="Lalitpur"><option value="Loni"><option value="Lucknow"><option value="Ludhiana">
+          <option value="Madurai"><option value="Maheshtala"><option value="Mainpuri"><option value="Malegaon">
+          <option value="Mangalore"><option value="Mathura"><option value="Mau"><option value="Meerut">
+          <option value="Mirzapur"><option value="Modinagar"><option value="Moradabad"><option value="Muzaffarnagar">
+          <option value="Muzaffarpur"><option value="Mysore"><option value="Nagpur"><option value="Nanded">
+          <option value="Nashik"><option value="Navi Mumbai"><option value="Nellore"><option value="New Delhi">
+          <option value="Noida"><option value="Orai"><option value="Panaji"><option value="Panchkula">
+          <option value="Panipat"><option value="Patiala"><option value="Patna"><option value="Pilibhit">
+          <option value="Pondicherry"><option value="Pune"><option value="Raebareli"><option value="Raipur">
+          <option value="Rajahmundry"><option value="Rajkot"><option value="Rampur"><option value="Ranchi">
+          <option value="Ratlam"><option value="Rewa"><option value="Rohtak"><option value="Rourkela">
+          <option value="Saharanpur"><option value="Salem"><option value="Sambalpur"><option value="Sambhal">
+          <option value="Sangli"><option value="Satna"><option value="Shahjahanpur"><option value="Shillong">
+          <option value="Shimla"><option value="Silchar"><option value="Siliguri"><option value="Sitapur">
+          <option value="Solapur"><option value="Sonipat"><option value="Srinagar"><option value="Sultanpur">
+          <option value="Surat"><option value="Thane"><option value="Thiruvananthapuram"><option value="Tiruchirappalli">
+          <option value="Tirunelveli"><option value="Tirupati"><option value="Udaipur"><option value="Ujhani">
+          <option value="Ujjain"><option value="Ulhasnagar"><option value="Unnao"><option value="Vadodara">
+          <option value="Varanasi"><option value="Vasai-Virar"><option value="Vellore"><option value="Vijayawada">
+          <option value="Visakhapatnam"><option value="Warangal">
+        </datalist>
+        <div class="field"><label>Area / locality</label><input id="h-area" list="vlh-area-list" placeholder="e.g. Kalyanpur, or pick a city above for suggestions"></div>
+        <datalist id="vlh-area-list"></datalist>
       </div>
       <div class="field" style="margin-top:12px;">
         <label>Business types — select one or more</label>
@@ -147,7 +196,26 @@
     <div id="links-card" class="card" style="display:none;">
       <div class="section-label" id="links-heading">Search links</div>
       <div class="link-grid" id="links-grid"></div>
-      <p style="font-size:11px;color:var(--grey);margin-top:10px;">Open each tab → copy name + phone → add to My Leads tab → message from there.</p>
+      <p style="font-size:11px;color:var(--grey);margin-top:10px;">Open each tab → copy the business results → paste below to import leads instantly.</p>
+    </div>
+
+    <div id="paste-card" class="card" style="display:none;">
+      <div class="card-title">📋 Paste & Import Leads</div>
+      <div class="card-sub">Copy any text from Google Maps, JustDial, 99acres, or anywhere — paste it below. The tool will extract business names and phone numbers automatically.</div>
+      <textarea id="paste-box" placeholder="Paste copied text here...
+Example:
+Sharma Properties
++91 98765 43210
+Kalyanpur, Kanpur
+
+Royal Realty
+9876012345
+Gomti Nagar" style="width:100%;height:160px;margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:vertical;background:var(--cream);color:var(--ink);box-sizing:border-box;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn-primary" onclick="parsePastedLeads()" style="flex:1;min-width:140px;">⚡ Extract Leads</button>
+        <button onclick="document.getElementById('paste-box').value=''" style="padding:10px 16px;border:1px solid var(--border);border-radius:8px;background:var(--cream);color:var(--ink);cursor:pointer;font-size:13px;">Clear</button>
+      </div>
+      <div id="paste-results" style="margin-top:14px;"></div>
     </div>
   </section>
 
@@ -216,6 +284,43 @@
 
 <script>
 // ── Niche vocabulary (drives both search phrasing and message wording) ──
+// ── Known localities per city (shows as suggestions in Area field) ──
+const CITY_LOCALITIES = {
+  'lucknow': ['Gomti Nagar', 'Hazratganj', 'Indira Nagar', 'Aliganj', 'Alambagh', 'Aminabad', 'Chowk', 'Mahanagar', 'Jankipuram', 'Vikas Nagar', 'Vibhuti Khand', 'Vinay Khand', 'Aashiyana', 'Telibagh', 'Sushant Golf City', 'Faizabad Road', 'Kursi Road', 'Chinhat', 'Nishatganj', 'Charbagh', 'Cantt'],
+  'kanpur': ['Swaroop Nagar', 'Kakadeo', 'Kidwai Nagar', 'Civil Lines', 'Govind Nagar', 'Arya Nagar', 'Kalyanpur', 'Panki', 'Vikas Nagar', 'Barra', 'Naveen Market', 'Yashoda Nagar', 'Ashok Nagar', 'Rawatpur', 'Juhi', 'Shastri Nagar', 'Chunniganj'],
+  'delhi ncr': ['Connaught Place', 'Dwarka', 'Rohini', 'Karol Bagh', 'Saket', 'Vasant Kunj', 'Lajpat Nagar', 'Janakpuri', 'Pitampura', 'Rajouri Garden', 'Greater Kailash', 'Hauz Khas', 'Preet Vihar', 'Mayur Vihar', 'Laxmi Nagar', 'Gurugram Sector 29', 'Cyber City Gurugram', 'Noida Sector 18', 'Noida Sector 62', 'Faridabad NIT'],
+  'new delhi': ['Connaught Place', 'Dwarka', 'Rohini', 'Karol Bagh', 'Saket', 'Vasant Kunj', 'Lajpat Nagar', 'Janakpuri', 'Pitampura', 'Rajouri Garden', 'Greater Kailash', 'Hauz Khas'],
+  'noida': ['Sector 18', 'Sector 62', 'Sector 137', 'Sector 50', 'Sector 76', 'Sector 15', 'Sector 34'],
+  'gurugram': ['Cyber City', 'MG Road', 'Sector 29', 'Sohna Road', 'Golf Course Road', 'DLF Phase 1', 'DLF Phase 4'],
+  'mumbai': ['Andheri', 'Bandra', 'Borivali', 'Malad', 'Powai', 'Juhu', 'Dadar', 'Goregaon', 'Chembur', 'Worli', 'Colaba', 'Vikhroli', 'Kandivali', 'Mulund', 'Ghatkopar'],
+  'navi mumbai': ['Vashi', 'Nerul', 'Belapur', 'Kharghar', 'Airoli', 'Panvel'],
+  'thane': ['Ghodbunder Road', 'Vartak Nagar', 'Naupada', 'Wagle Estate', 'Kolshet Road'],
+  'bangalore': ['Koramangala', 'Indiranagar', 'Whitefield', 'HSR Layout', 'Jayanagar', 'Electronic City', 'Marathahalli', 'JP Nagar', 'Malleshwaram', 'MG Road', 'Bannerghatta Road', 'Yelahanka', 'Hebbal', 'BTM Layout'],
+  'hyderabad': ['Banjara Hills', 'Jubilee Hills', 'Gachibowli', 'Hitech City', 'Madhapur', 'Kondapur', 'Secunderabad', 'Kukatpally', 'Ameerpet', 'Begumpet', 'Dilsukhnagar'],
+  'chennai': ['T Nagar', 'Adyar', 'Anna Nagar', 'Velachery', 'Nungambakkam', 'Mylapore', 'Porur', 'OMR', 'Tambaram', 'Chromepet'],
+  'kolkata': ['Salt Lake', 'Park Street', 'Ballygunge', 'New Town', 'Behala', 'Garia', 'Jadavpur', 'Dum Dum', 'Rajarhat'],
+  'pune': ['Koregaon Park', 'Baner', 'Hinjewadi', 'Kothrud', 'Viman Nagar', 'Aundh', 'Wakad', 'Hadapsar', 'Kalyani Nagar', 'Camp'],
+  'ahmedabad': ['Satellite', 'Vastrapur', 'Bodakdev', 'Navrangpura', 'Maninagar', 'Bopal', 'SG Highway', 'CG Road', 'Prahlad Nagar', 'Thaltej'],
+  'jaipur': ['Malviya Nagar', 'Vaishali Nagar', 'C-Scheme', 'Mansarovar', 'Raja Park', 'Tonk Road', 'Jagatpura', 'Sanganer'],
+  'varanasi': ['Lanka', 'Sigra', 'Bhelupur', 'Cantonment', 'Sarnath', 'Assi', 'Godowlia'],
+  'agra': ['Sanjay Place', 'Kamla Nagar', 'Dayalbagh', 'Sikandra', 'Tajganj', 'Shahganj'],
+  'meerut': ['Sadar Bazar', 'Shastri Nagar', 'Kankarkhera', 'Begum Bridge', 'Delhi Road', 'Garh Road'],
+  'allahabad (prayagraj)': ['Civil Lines', 'Katra', 'George Town', 'Naini', 'Jhunsi', 'Allahpur'],
+  'gorakhpur': ['Golghar', 'Civil Lines', 'Taramandal', 'Betiahata', 'Rustampur'],
+  'indore': ['Vijay Nagar', 'Rajwada', 'Palasia', 'Bhawarkuan', 'Rau', 'AB Road'],
+  'bhopal': ['MP Nagar', 'Arera Colony', 'Kolar Road', 'New Market', 'Habibganj'],
+  'chandigarh': ['Sector 17', 'Sector 22', 'Sector 35', 'Sector 43', 'Sector 8', 'Panchkula'],
+  'nagpur': ['Dharampeth', 'Sadar', 'Civil Lines', 'Wardha Road', 'Sitabuldi'],
+  'surat': ['Adajan', 'Vesu', 'Citylight', 'Piplod', 'Ghod Dod Road', 'Katargam'],
+  'patna': ['Boring Road', 'Kankarbagh', 'Patliputra Colony', 'Rajendra Nagar', 'Danapur'],
+};
+function updateAreaSuggestions(cityValue) {
+  const key = (cityValue || '').trim().toLowerCase();
+  const list = document.getElementById('vlh-area-list');
+  const localities = CITY_LOCALITIES[key];
+  list.innerHTML = localities ? localities.map(a => `<option value="${a}">`).join('') : '';
+}
+
 const NICHE_LIST = [
   { key:'real_estate', label:'Real estate agent', phrase:'real estate agents and property dealers', customer:'buyers', item:'listings' },
   { key:'cafes', label:'Cafe', phrase:'cafes and coffee shops', customer:'customers', item:'menu' },
@@ -574,7 +679,7 @@ function generateLinks() {
   const hCity = city.replace(/[^a-zA-Z]/g, '').toLowerCase();
   const hNiche = phrase.split(' ')[0].replace(/[^a-zA-Z]/g, '').toLowerCase();
   const sources = [
-    { name: '99acres', color: '#c0392b', abbr: '99', url: `https://www.99acres.com/search/property/buy/${encodeURIComponent((area || city).toLowerCase().replace(/\s+/g, '-'))}?city=${encodeURIComponent(city)}` },
+    ...(selectedNiches.has('real_estate') ? [{ name: '99acres', color: '#c0392b', abbr: '99', url: `https://www.99acres.com/search/property/buy/${encodeURIComponent((area || city).toLowerCase().replace(/\s+/g, '-'))}?city=${encodeURIComponent(city)}` }] : []),
     { name: 'Google Maps', color: '#2d7d46', abbr: 'GM', url: `https://www.google.com/maps/search/${q}` },
     { name: 'Google', color: '#2a5db0', abbr: 'G', url: `https://www.google.com/search?q=${q}` },
     { name: 'Instagram', color: '#b3306b', abbr: 'IG', url: `https://www.instagram.com/explore/tags/${hNiche}${hCity}/` },
@@ -584,9 +689,137 @@ function generateLinks() {
   document.getElementById('links-heading').textContent = `Search links — ${label} in ${location}`;
   document.getElementById('links-grid').innerHTML = sources.map(s => `<a class="link-item" href="${s.url}" target="_blank" rel="noopener"><span>${s.name}</span><span class="link-icon" style="background:${s.color};">${s.abbr}</span></a>`).join('');
   document.getElementById('links-card').style.display = 'block';
+  document.getElementById('paste-card').style.display = 'block';
+  document.getElementById('paste-results').innerHTML = '';
+  document.getElementById('paste-box').value = '';
 }
 
-// ── Lead tracker ───────────────────────────────────────────────────
+// ── Paste & Parse leads ────────────────────────────────────────────
+async function parsePastedLeads() {
+  const raw = document.getElementById('paste-box').value.trim();
+  if (!raw) { alert('Paste some text first.'); return; }
+
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const phoneRegex = /(\+?91[\s\-]?)?[6-9]\d{9}/g;
+  const igRegex = /@([a-zA-Z0-9._]{1,30})/g;
+
+  // Group lines into blocks separated by blank lines or phone numbers
+  const blocks = [];
+  let current = [];
+  for (const line of lines) {
+    if (line === '' && current.length) { blocks.push(current); current = []; }
+    else current.push(line);
+  }
+  if (current.length) blocks.push(current);
+
+  const parsed = [];
+  const seen = new Set();
+
+  for (const block of blocks) {
+    const fullText = block.join(' ');
+    // Extract phones
+    const phones = [...fullText.matchAll(phoneRegex)].map(m => m[0].replace(/[\s\-\+]/g, ''));
+    const phone = phones.length ? (phones[0].startsWith('91') && phones[0].length === 12 ? phones[0] : '91' + phones[0].slice(-10)) : '';
+    // Extract instagram
+    const igMatches = [...fullText.matchAll(igRegex)];
+    const instagram = igMatches.length ? igMatches[0][1] : '';
+    // Name = first line that doesn't look like a phone/address junk
+    const nameLine = block.find(l => !/^[\d\s\+\-\(\)\/,\.]+$/.test(l) && l.length > 2 && !l.startsWith('@'));
+    const name = nameLine ? nameLine.replace(/\s+/g, ' ').substring(0, 60) : '';
+
+    if (!name && !phone && !instagram) continue;
+    const key = phone || instagram || name;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    parsed.push({ name: name || 'Unknown', phone, instagram, key });
+  }
+
+  // Also try line-by-line phone extraction for flat lists (no blank lines)
+  if (parsed.length === 0) {
+    let i = 0;
+    while (i < lines.length) {
+      const phoneMatch = lines[i].match(/(\+?91[\s\-]?)?[6-9]\d{9}/);
+      if (phoneMatch) {
+        const phone = '91' + phoneMatch[0].replace(/[\s\-\+]/g, '').slice(-10);
+        const name = i > 0 ? lines[i - 1].substring(0, 60) : 'Unknown';
+        const key = phone || name;
+        if (!seen.has(key)) { seen.add(key); parsed.push({ name, phone, instagram: '', key }); }
+      }
+      i++;
+    }
+  }
+
+  const resultsEl = document.getElementById('paste-results');
+  if (!parsed.length) {
+    resultsEl.innerHTML = `<div class="err-box">Could not find any business names or phone numbers in the pasted text. Make sure you copy the full listing text from Google Maps or JustDial.</div>`;
+    return;
+  }
+
+  const city = document.getElementById('h-city').value.trim();
+  const area = document.getElementById('h-area').value.trim();
+  const niche = NICHE_LIST.find(n => selectedNiches.has(n.key)) || NICHE_LIST[0];
+
+  resultsEl.innerHTML = `
+    <div style="font-size:13px;color:var(--grey);margin-bottom:10px;">Found <strong>${parsed.length}</strong> lead${parsed.length !== 1 ? 's' : ''} — review and save:</div>
+    ${parsed.map((p, i) => `
+      <div class="result-row" id="pres-${i}" style="flex-wrap:wrap;gap:8px;">
+        <div class="result-main" style="flex:1;min-width:200px;">
+          <input value="${esc(p.name)}" id="pname-${i}" style="font-weight:600;border:1px solid var(--border);border-radius:6px;padding:4px 8px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--ink);">
+          <div class="result-meta" style="margin-top:4px;">
+            ${p.phone ? `📞 ${p.phone}` : '<span style="color:#c0392b">No phone found</span>'}
+            ${p.instagram ? ` · @${esc(p.instagram)}` : ''}
+          </div>
+        </div>
+        <button class="btn btn-green" onclick="saveParsedLead(${i},'${esc(p.phone)}','${esc(p.instagram)}','${esc(area)}','${esc(city)}','${niche.key}')" id="pbtn-${i}">+ Save</button>
+        <button style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--cream);color:var(--grey);cursor:pointer;font-size:12px;" onclick="document.getElementById('pres-${i}').remove()">✕</button>
+      </div>`).join('')}
+    <button class="btn-primary" style="margin-top:12px;width:100%;" onclick="saveAllParsed(${JSON.stringify(parsed.map((p,i)=>i))})">💾 Save all ${parsed.length} leads</button>
+  `;
+}
+
+async function saveParsedLead(i, phone, instagram, area, city, nicheKey) {
+  const nameEl = document.getElementById(`pname-${i}`);
+  const name = nameEl ? nameEl.value.trim() : 'Unknown';
+  const nicheLabel = nicheKeyToLabel(nicheKey);
+  const newLead = {
+    id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+    name, phone, instagram, area: area || city, niche: nicheKey, nicheLabel,
+    hasWebsite: false, source: 'Paste Import', status: 'New', notes: '',
+    added: new Date().toLocaleDateString()
+  };
+  leads.unshift(newLead);
+  await insertLeadRemote(newLead);
+  const btn = document.getElementById(`pbtn-${i}`);
+  if (btn) { btn.textContent = '✓ Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
+  showToast(`Saved: ${name}`);
+}
+
+async function saveAllParsed(indices) {
+  const city = document.getElementById('h-city').value.trim();
+  const area = document.getElementById('h-area').value.trim();
+  const niche = NICHE_LIST.find(n => selectedNiches.has(n.key)) || NICHE_LIST[0];
+  const newLeads = [];
+  for (const i of indices) {
+    const nameEl = document.getElementById(`pname-${i}`);
+    if (!nameEl) continue;
+    const btn = document.getElementById(`pbtn-${i}`);
+    if (btn && btn.disabled) continue; // already saved
+    const name = nameEl.value.trim() || 'Unknown';
+    const phone = btn ? btn.getAttribute('onclick').match(/'([0-9]*)'/)?.[1] || '' : '';
+    newLeads.push({
+      id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+      name, phone, instagram: '', area: area || city, niche: niche.key, nicheLabel: niche.label,
+      hasWebsite: false, source: 'Paste Import', status: 'New', notes: '',
+      added: new Date().toLocaleDateString()
+    });
+    if (btn) { btn.textContent = '✓ Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
+  }
+  if (newLeads.length) {
+    leads.unshift(...newLeads);
+    await insertLeadsRemoteBulk(newLeads);
+    showToast(`Saved ${newLeads.length} leads`);
+  }
+}
 async function addLeadManual() {
   const name = document.getElementById('l-name').value.trim();
   const phone = document.getElementById('l-phone').value.trim().replace(/[^0-9]/g, '');
