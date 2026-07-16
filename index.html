@@ -6,7 +6,7 @@
 <title>Volkrion Lead Hunter</title>
 <style>
   :root {
-    --navy: #0b3d3a; --navy2: #0f4c47; --gold: #bf9000;
+    --navy: #0e7c6b; --navy2: #149e89; --gold: #c9971f; --gold-light: #e0b84a;
     --cream: #fdfcf9; --paper: #f7f5ee; --ink: #1f2a2a;
     --grey: #6b7280; --border: #e3e0d5;
     --green: #1d9e75; --green2: #178862; --red: #b3492f;
@@ -17,7 +17,7 @@
 
   header { background: var(--navy); color: #fff; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
   .brand { font-size: 17px; font-weight: 800; letter-spacing: .02em; }
-  .brand span { color: var(--gold); }
+  .brand span { color: var(--gold-light); }
   .api-status { font-size: 11px; display: flex; align-items: center; gap: 6px; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
 
@@ -85,7 +85,9 @@
   .lead-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; background: #fff; }
   .lead-main { flex: 1; min-width: 180px; }
   .lead-name { font-weight: 700; font-size: 14px; color: var(--navy); }
-  .lead-meta { font-size: 12px; color: var(--grey); margin-top: 2px; }
+  .lead-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 12px; font-size: 12px; color: var(--grey); margin-top: 3px; }
+  .meta-item { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); font-weight: 500; }
+  .meta-trail { color: var(--grey); font-size: 11px; }
   .status-sel { font-size: 12px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--cream); }
   .empty { text-align: center; padding: 28px 12px; color: #9a988e; font-size: 13px; }
 
@@ -874,7 +876,12 @@ function renderLeads() {
       <div class="lead-main">
         <span class="lead-name">${esc(l.name)}</span>
         <span class="badge" style="background:#f0f0f0;color:#555;">${esc(l.nicheLabel || '')}</span>
-        <div class="lead-meta">${hasPhone ? esc(l.phone) : ''}${hasInstagram ? (hasPhone ? ' · @' : '@') + esc(l.instagram) : ''}${l.area ? ' · ' + esc(l.area) : ''} · ${l.hasWebsite ? 'has website' : 'no website'} · ${esc(l.source || '')} · added ${l.added}</div>
+        <div class="lead-meta">
+          ${hasPhone ? `<span class="meta-item">📞 ${esc(l.phone)}</span>` : ''}
+          ${hasInstagram ? `<span class="meta-item">📸 @${esc(l.instagram)}</span>` : ''}
+          ${l.area ? `<span class="meta-item">📍 ${esc(l.area)}</span>` : ''}
+          <span class="meta-trail">${l.hasWebsite ? 'Has website' : 'No website'} · ${esc(l.source || '')} · Added ${l.added}</span>
+        </div>
       </div>
       <select class="status-sel" onchange="updateStatus('${l.id}',this.value)">
         ${statuses.map(s => `<option value="${s}" ${l.status === s ? 'selected' : ''}>${s}</option>`).join('')}
