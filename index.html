@@ -78,7 +78,9 @@
   .badge-yes { background: #f3ecd9; color: #8a6d1d; }
 
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 18px; }
-  .stat { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+  .stat { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+  .stat:hover { border-color: var(--navy2); }
+  .stat.active { border-color: var(--navy); background: #eef7f5; }
   .stat-n { font-size: 22px; font-weight: 800; color: var(--navy); }
   .stat-l { font-size: 10px; text-transform: uppercase; letter-spacing: .03em; color: var(--grey); margin-top: 2px; }
 
@@ -344,17 +346,7 @@ const NICHE_LIST = [
 function nicheInfo(key) { return NICHE_LIST.find(n => n.key === key) || { customer:'customers', item:'work', label: key || 'Business' }; }
 function nicheKeyToLabel(k) { return nicheInfo(k).label; }
 
-// ── Message builder: tailored by business type, website status, and channel ──
-function buildMessage({ nicheKey, hasWebsite, hasPhone, hasInstagram, name }) {
-  const { customer, item } = nicheInfo(nicheKey);
-  if (hasWebsite) {
-    return `Hi! Came across ${name} and had a look at your website — nice work. I help businesses like yours turn more site visitors into ${customer} with a few focused design and speed improvements. Out of curiosity, are most new ${customer} coming through the website itself these days, or still mostly WhatsApp/calls? Happy to share a couple of quick ideas either way — no pressure at all.`;
-  }
-  if (hasInstagram && !hasPhone) {
-    return `Hi! Came across ${name}'s Instagram and really like your ${item} — great work. I help businesses like yours get a simple, professional website so ${customer} can find you and reach out even outside Instagram. Would you be open to a quick chat about what that could look like for ${name}?`;
-  }
-  return `Hi! Came across ${name} online — do you have a website where ${customer} can see your ${item}, or is it mostly calls/walk-ins for now? I help local businesses set up a clean, professional site that brings in more ${customer} without extra effort on your end. Happy to share a quick idea if it's useful — no pressure either way.`;
-}
+// ── (message builder removed — WhatsApp/Instagram now open with no pre-filled text) ──
 
 // ── Storage (Supabase — real database, synced across all your devices) ──
 const SUPABASE_URL = 'https://bjnoxnnbnynygmgpkhql.supabase.co';
@@ -426,6 +418,8 @@ async function clearAllLeadsRemote() {
 
 let leads = [];
 let savedIds = new Set();
+let leadsFilter = 'total';
+function setLeadsFilter(key) { leadsFilter = key; renderLeads(); }
 let selectedNiches = new Set(['real_estate']);
 let currentResults = []; // last search results, kept for "save all"
 
@@ -595,8 +589,7 @@ function renderResult(b, location) {
   const nicheLabel = nicheKeyToLabel(nicheKey);
   const hasPhone = !!phone;
   const hasInstagram = !!instagram;
-  const msg = buildMessage({ nicheKey, hasWebsite, hasPhone, hasInstagram, name });
-  const waLink = hasPhone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : null;
+  const waLink = hasPhone ? `https://wa.me/${phone}` : null;
   const igLink = hasInstagram ? `https://www.instagram.com/${instagram}/` : null;
   const idKey = phone || instagram || name;
   const isSaved = savedIds.has(idKey);
@@ -610,14 +603,10 @@ function renderResult(b, location) {
         <div class="result-meta">${esc(area)}${hasPhone ? ' · ' + phone : ''}${hasInstagram ? ' · @' + esc(instagram) : ''}${notes ? ' · ' + esc(notes) : ''}</div>
       </div>
       ${waLink ? `<a class="btn btn-green btn" href="${waLink}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
-      ${igLink ? `<a class="btn btn-pink btn" href="${igLink}" target="_blank" rel="noopener" onclick="copyMsg(${JSON.stringify(msg)})">📸 Instagram</a>` : ''}
+      ${igLink ? `<a class="btn btn-pink btn" href="${igLink}" target="_blank" rel="noopener">📸 Instagram</a>` : ''}
       <button class="btn-save" onclick='saveFromResult(${JSON.stringify({ name, phone, instagram, area, hasWebsite, nicheKey, notes })})' id="save-${esc(idKey)}" ${isSaved ? 'style="display:none;"' : ''}>+ Save</button>
       <button class="btn-saved" id="saved-${esc(idKey)}" ${isSaved ? '' : 'style="display:none;"'}>✓ Saved</button>
     </div>`;
-}
-
-function copyMsg(msg) {
-  navigator.clipboard.writeText(msg).then(() => showToast('DM message copied — paste it in Instagram')).catch(() => {});
 }
 
 async function saveFromResult(data) {
@@ -858,19 +847,24 @@ function renderLeads() {
   const statuses = ['New', 'Messaged', 'Follow-up 1', 'Follow-up 2', 'Replied', 'Interested', 'Quoted', 'Closed - Won', 'Closed - Lost', 'No response'];
   const c = {}; statuses.forEach(s => c[s] = 0);
   leads.forEach(l => { if (c[l.status] !== undefined) c[l.status]++; });
-  document.getElementById('stats').innerHTML = `
-    <div class="stat"><div class="stat-n">${leads.length}</div><div class="stat-l">Total</div></div>
-    <div class="stat"><div class="stat-n">${c['New']}</div><div class="stat-l">Not messaged</div></div>
-    <div class="stat"><div class="stat-n">${c['Replied'] + c['Interested'] + c['Quoted']}</div><div class="stat-l">Replied</div></div>
-    <div class="stat"><div class="stat-n">${c['Closed - Won']}</div><div class="stat-l">Won</div></div>
-  `;
+  const filters = {
+    total: { label: 'Total', n: leads.length, test: () => true },
+    not_messaged: { label: 'Not messaged', n: c['New'], test: l => l.status === 'New' },
+    replied: { label: 'Replied', n: c['Replied'] + c['Interested'] + c['Quoted'], test: l => ['Replied', 'Interested', 'Quoted'].includes(l.status) },
+    won: { label: 'Won', n: c['Closed - Won'], test: l => l.status === 'Closed - Won' },
+  };
+  document.getElementById('stats').innerHTML = Object.keys(filters).map(key => `
+    <div class="stat ${leadsFilter === key ? 'active' : ''}" onclick="setLeadsFilter('${key}')">
+      <div class="stat-n">${filters[key].n}</div><div class="stat-l">${filters[key].label}</div>
+    </div>`).join('');
+  const visibleLeads = leadsFilter === 'total' ? leads : leads.filter(filters[leadsFilter].test);
   const el = document.getElementById('leads-list');
   if (!leads.length) { el.innerHTML = '<div class="empty">No leads yet. Find some in the Hunt tab or add manually above.</div>'; return; }
-  el.innerHTML = leads.map(l => {
+  if (!visibleLeads.length) { el.innerHTML = `<div class="empty">No leads match "${filters[leadsFilter].label}". <a href="#" onclick="setLeadsFilter('total');return false;">Clear filter</a></div>`; return; }
+  el.innerHTML = visibleLeads.map(l => {
     const hasPhone = !!l.phone;
     const hasInstagram = !!l.instagram;
-    const msg = buildMessage({ nicheKey: l.niche, hasWebsite: l.hasWebsite, hasPhone, hasInstagram, name: l.name });
-    const wa = hasPhone ? `https://wa.me/${l.phone}?text=${encodeURIComponent(msg)}` : null;
+    const wa = hasPhone ? `https://wa.me/${l.phone}` : null;
     const ig = hasInstagram ? `https://www.instagram.com/${l.instagram}/` : null;
     return `<div class="lead-row">
       <div class="lead-main">
@@ -887,7 +881,7 @@ function renderLeads() {
         ${statuses.map(s => `<option value="${s}" ${l.status === s ? 'selected' : ''}>${s}</option>`).join('')}
       </select>
       ${wa ? `<a class="btn btn-green btn" href="${wa}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
-      ${ig ? `<a class="btn btn-pink btn" href="${ig}" target="_blank" rel="noopener" onclick='copyMsg(${JSON.stringify(msg)})'>📸 Instagram</a>` : ''}
+      ${ig ? `<a class="btn btn-pink btn" href="${ig}" target="_blank" rel="noopener">📸 Instagram</a>` : ''}
       <button class="btn-del" onclick="deleteLead('${l.id}')">✕</button>
     </div>`;
   }).join('');
