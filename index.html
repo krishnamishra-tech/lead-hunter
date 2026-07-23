@@ -125,55 +125,19 @@
       <div class="card-title">Search an area</div>
       <div class="card-sub">Enter city + area, then pick one or more business types — Claude searches the web for real businesses with a working phone number or an active Instagram, so you always have a way to message them.</div>
       <div class="grid">
+        <div class="field"><label>Country</label>
+          <select id="h-country" onchange="updateCityOptions(this.value); document.getElementById('h-city').value=''; document.getElementById('h-area').value=''; updateAreaSuggestions('');">
+            <option value="India">India</option>
+            <option value="United States">United States</option>
+            <option value="United Kingdom">United Kingdom</option>
+            <option value="United Arab Emirates">United Arab Emirates</option>
+            <option value="Canada">Canada</option>
+            <option value="Australia">Australia</option>
+            <option value="Singapore">Singapore</option>
+          </select>
+        </div>
         <div class="field"><label>City</label><input id="h-city" list="vlh-city-list" placeholder="Start typing... e.g. Kanpur" oninput="updateAreaSuggestions(this.value)"></div>
-        <datalist id="vlh-city-list">
-          <option value="Agra"><option value="Agartala"><option value="Ahmedabad"><option value="Aizawl">
-          <option value="Ajmer"><option value="Akbarpur"><option value="Akola"><option value="Aligarh">
-          <option value="Allahabad (Prayagraj)"><option value="Alwar"><option value="Ambala"><option value="Ambattur">
-          <option value="Amravati"><option value="Amritsar"><option value="Amroha"><option value="Anantapur">
-          <option value="Asansol"><option value="Aurangabad"><option value="Ayodhya"><option value="Azamgarh">
-          <option value="Bahraich"><option value="Ballia"><option value="Banda"><option value="Bangalore">
-          <option value="Barabanki"><option value="Bareilly"><option value="Basti"><option value="Belgaum">
-          <option value="Bhagalpur"><option value="Bharatpur"><option value="Bhavnagar"><option value="Bhilai">
-          <option value="Bhilwara"><option value="Bhiwandi"><option value="Bhopal"><option value="Bhubaneswar">
-          <option value="Bijnor"><option value="Bikaner"><option value="Bilaspur"><option value="Bokaro">
-          <option value="Bulandshahr"><option value="Chandausi"><option value="Chandigarh"><option value="Chennai">
-          <option value="Coimbatore"><option value="Cuttack"><option value="Darbhanga"><option value="Dehradun">
-          <option value="Delhi NCR"><option value="Deoria"><option value="Dhanbad"><option value="Dharwad">
-          <option value="Dispur"><option value="Durgapur"><option value="Erode"><option value="Etah">
-          <option value="Etawah"><option value="Faizabad"><option value="Faridabad"><option value="Farrukhabad">
-          <option value="Fatehpur"><option value="Firozabad"><option value="Gangtok"><option value="Gaya">
-          <option value="Ghaziabad"><option value="Ghazipur"><option value="Gonda"><option value="Gorakhpur">
-          <option value="Greater Noida"><option value="Gulbarga"><option value="Guntur"><option value="Gurugram">
-          <option value="Guwahati"><option value="Gwalior"><option value="Hapur"><option value="Hardoi">
-          <option value="Hathras"><option value="Howrah"><option value="Hubballi"><option value="Hyderabad">
-          <option value="Imphal"><option value="Indore"><option value="Itanagar"><option value="Jabalpur">
-          <option value="Jaipur"><option value="Jalandhar"><option value="Jalgaon"><option value="Jammu">
-          <option value="Jamnagar"><option value="Jamshedpur"><option value="Jaunpur"><option value="Jhansi">
-          <option value="Jodhpur"><option value="Kakinada"><option value="Kanpur"><option value="Karnal">
-          <option value="Kochi"><option value="Kohima"><option value="Kolhapur"><option value="Kolkata">
-          <option value="Kota"><option value="Kozhikode"><option value="Kurnool"><option value="Lakhimpur">
-          <option value="Lalitpur"><option value="Loni"><option value="Lucknow"><option value="Ludhiana">
-          <option value="Madurai"><option value="Maheshtala"><option value="Mainpuri"><option value="Malegaon">
-          <option value="Mangalore"><option value="Mathura"><option value="Mau"><option value="Meerut">
-          <option value="Mirzapur"><option value="Modinagar"><option value="Moradabad"><option value="Muzaffarnagar">
-          <option value="Muzaffarpur"><option value="Mysore"><option value="Nagpur"><option value="Nanded">
-          <option value="Nashik"><option value="Navi Mumbai"><option value="Nellore"><option value="New Delhi">
-          <option value="Noida"><option value="Orai"><option value="Panaji"><option value="Panchkula">
-          <option value="Panipat"><option value="Patiala"><option value="Patna"><option value="Pilibhit">
-          <option value="Pondicherry"><option value="Pune"><option value="Raebareli"><option value="Raipur">
-          <option value="Rajahmundry"><option value="Rajkot"><option value="Rampur"><option value="Ranchi">
-          <option value="Ratlam"><option value="Rewa"><option value="Rohtak"><option value="Rourkela">
-          <option value="Saharanpur"><option value="Salem"><option value="Sambalpur"><option value="Sambhal">
-          <option value="Sangli"><option value="Satna"><option value="Shahjahanpur"><option value="Shillong">
-          <option value="Shimla"><option value="Silchar"><option value="Siliguri"><option value="Sitapur">
-          <option value="Solapur"><option value="Sonipat"><option value="Srinagar"><option value="Sultanpur">
-          <option value="Surat"><option value="Thane"><option value="Thiruvananthapuram"><option value="Tiruchirappalli">
-          <option value="Tirunelveli"><option value="Tirupati"><option value="Udaipur"><option value="Ujhani">
-          <option value="Ujjain"><option value="Ulhasnagar"><option value="Unnao"><option value="Vadodara">
-          <option value="Varanasi"><option value="Vasai-Virar"><option value="Vellore"><option value="Vijayawada">
-          <option value="Visakhapatnam"><option value="Warangal">
-        </datalist>
+        <datalist id="vlh-city-list"></datalist>
         <div class="field"><label>Area / locality</label><input id="h-area" list="vlh-area-list" placeholder="e.g. Kalyanpur, or pick a city above for suggestions"></div>
         <datalist id="vlh-area-list"></datalist>
       </div>
@@ -289,6 +253,22 @@ Gomti Nagar" style="width:100%;height:160px;margin-top:10px;padding:10px;border:
 
 <script>
 // ── Niche vocabulary (drives both search phrasing and message wording) ──
+// ── Cities grouped by country ──
+const CITY_BY_COUNTRY = {
+  'India': ['Agra', 'Agartala', 'Ahmedabad', 'Aizawl', 'Ajmer', 'Akbarpur', 'Akola', 'Aligarh', 'Allahabad (Prayagraj)', 'Alwar', 'Ambala', 'Ambattur', 'Amravati', 'Amritsar', 'Amroha', 'Anantapur', 'Asansol', 'Aurangabad', 'Ayodhya', 'Azamgarh', 'Bahraich', 'Ballia', 'Banda', 'Bangalore', 'Barabanki', 'Bareilly', 'Basti', 'Belgaum', 'Bhagalpur', 'Bharatpur', 'Bhavnagar', 'Bhilai', 'Bhilwara', 'Bhiwandi', 'Bhopal', 'Bhubaneswar', 'Bijnor', 'Bikaner', 'Bilaspur', 'Bokaro', 'Bulandshahr', 'Chandausi', 'Chandigarh', 'Chennai', 'Coimbatore', 'Cuttack', 'Darbhanga', 'Dehradun', 'Delhi NCR', 'Deoria', 'Dhanbad', 'Dharwad', 'Dispur', 'Durgapur', 'Erode', 'Etah', 'Etawah', 'Faizabad', 'Faridabad', 'Farrukhabad', 'Fatehpur', 'Firozabad', 'Gangtok', 'Gaya', 'Ghaziabad', 'Ghazipur', 'Gonda', 'Gorakhpur', 'Greater Noida', 'Gulbarga', 'Guntur', 'Gurugram', 'Guwahati', 'Gwalior', 'Hapur', 'Hardoi', 'Hathras', 'Howrah', 'Hubballi', 'Hyderabad', 'Imphal', 'Indore', 'Itanagar', 'Jabalpur', 'Jaipur', 'Jalandhar', 'Jalgaon', 'Jammu', 'Jamnagar', 'Jamshedpur', 'Jaunpur', 'Jhansi', 'Jodhpur', 'Kakinada', 'Kanpur', 'Karnal', 'Kochi', 'Kohima', 'Kolhapur', 'Kolkata', 'Kota', 'Kozhikode', 'Kurnool', 'Lakhimpur', 'Lalitpur', 'Loni', 'Lucknow', 'Ludhiana', 'Madurai', 'Maheshtala', 'Mainpuri', 'Malegaon', 'Mangalore', 'Mathura', 'Mau', 'Meerut', 'Mirzapur', 'Modinagar', 'Moradabad', 'Muzaffarnagar', 'Muzaffarpur', 'Mysore', 'Nagpur', 'Nanded', 'Nashik', 'Navi Mumbai', 'Nellore', 'New Delhi', 'Noida', 'Orai', 'Panaji', 'Panchkula', 'Panipat', 'Patiala', 'Patna', 'Pilibhit', 'Pondicherry', 'Pune', 'Raebareli', 'Raipur', 'Rajahmundry', 'Rajkot', 'Rampur', 'Ranchi', 'Ratlam', 'Rewa', 'Rohtak', 'Rourkela', 'Saharanpur', 'Salem', 'Sambalpur', 'Sambhal', 'Sangli', 'Satna', 'Shahjahanpur', 'Shillong', 'Shimla', 'Silchar', 'Siliguri', 'Sitapur', 'Solapur', 'Sonipat', 'Srinagar', 'Sultanpur', 'Surat', 'Thane', 'Thiruvananthapuram', 'Tiruchirappalli', 'Tirunelveli', 'Tirupati', 'Udaipur', 'Ujhani', 'Ujjain', 'Ulhasnagar', 'Unnao', 'Vadodara', 'Varanasi', 'Vasai-Virar', 'Vellore', 'Vijayawada', 'Visakhapatnam', 'Warangal'],
+  'United States': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Jacksonville', 'San Francisco', 'Columbus', 'Charlotte', 'Indianapolis', 'Seattle', 'Denver', 'Boston', 'Atlanta', 'Miami', 'Las Vegas', 'Portland', 'Washington DC', 'Nashville', 'Detroit', 'Memphis', 'Baltimore', 'Milwaukee', 'Sacramento'],
+  'United Kingdom': ['London', 'Birmingham', 'Manchester', 'Glasgow', 'Liverpool', 'Leeds', 'Sheffield', 'Edinburgh', 'Bristol', 'Cardiff', 'Leicester', 'Belfast', 'Nottingham', 'Newcastle', 'Southampton', 'Oxford', 'Cambridge', 'Coventry', 'Reading', 'Brighton'],
+  'United Arab Emirates': ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah', 'Umm Al Quwain', 'Al Ain'],
+  'Canada': ['Toronto', 'Vancouver', 'Montreal', 'Calgary', 'Edmonton', 'Ottawa', 'Winnipeg', 'Quebec City', 'Hamilton', 'Mississauga', 'Surrey', 'Brampton', 'Halifax', 'Victoria'],
+  'Australia': ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Canberra', 'Newcastle', 'Wollongong', 'Hobart', 'Geelong', 'Darwin'],
+  'Singapore': ['Singapore'],
+};
+function updateCityOptions(country) {
+  const list = document.getElementById('vlh-city-list');
+  const cities = CITY_BY_COUNTRY[country] || CITY_BY_COUNTRY['India'];
+  list.innerHTML = cities.map(c => `<option value="${c}">`).join('');
+}
+
 // ── Known localities per city (shows as suggestions in Area field) ──
 const CITY_LOCALITIES = {
   'lucknow': ['Gomti Nagar', 'Hazratganj', 'Indira Nagar', 'Aliganj', 'Alambagh', 'Aminabad', 'Chowk', 'Mahanagar', 'Jankipuram', 'Vikas Nagar', 'Vibhuti Khand', 'Vinay Khand', 'Aashiyana', 'Telibagh', 'Sushant Golf City', 'Faizabad Road', 'Kursi Road', 'Chinhat', 'Nishatganj', 'Charbagh', 'Cantt'],
@@ -318,6 +298,19 @@ const CITY_LOCALITIES = {
   'nagpur': ['Dharampeth', 'Sadar', 'Civil Lines', 'Wardha Road', 'Sitabuldi'],
   'surat': ['Adajan', 'Vesu', 'Citylight', 'Piplod', 'Ghod Dod Road', 'Katargam'],
   'patna': ['Boring Road', 'Kankarbagh', 'Patliputra Colony', 'Rajendra Nagar', 'Danapur'],
+  'new york': ['Manhattan', 'Brooklyn', 'Queens', 'The Bronx', 'Staten Island', 'SoHo', 'Upper East Side', 'Williamsburg', 'Astoria', 'Harlem'],
+  'los angeles': ['Downtown LA', 'Hollywood', 'Santa Monica', 'Venice', 'Beverly Hills', 'Silver Lake', 'Culver City', 'Pasadena'],
+  'san francisco': ['Mission District', 'SoMa', 'Nob Hill', 'Marina District', 'Castro', 'Financial District'],
+  'chicago': ['The Loop', 'Wicker Park', 'Lincoln Park', 'River North', 'Logan Square', 'Hyde Park'],
+  'london': ['Camden', 'Shoreditch', 'Kensington', 'Chelsea', 'Islington', 'Hackney', 'Greenwich', 'Wimbledon', 'Notting Hill', 'Canary Wharf'],
+  'manchester': ['City Centre', 'Northern Quarter', 'Didsbury', 'Salford', 'Chorlton'],
+  'dubai': ['Downtown Dubai', 'Dubai Marina', 'Jumeirah', 'Business Bay', 'Deira', 'Al Barsha', 'Jumeirah Lake Towers', 'Palm Jumeirah', 'Al Quoz'],
+  'abu dhabi': ['Corniche', 'Khalidiya', 'Al Reem Island', 'Yas Island', 'Al Bateen'],
+  'toronto': ['Downtown Toronto', 'North York', 'Scarborough', 'Etobicoke', 'The Annex', 'Yorkville', 'Liberty Village'],
+  'vancouver': ['Downtown Vancouver', 'Kitsilano', 'Yaletown', 'Gastown', 'West End'],
+  'sydney': ['CBD', 'Bondi', 'Surry Hills', 'Parramatta', 'Manly', 'Newtown', 'Chatswood'],
+  'melbourne': ['CBD', 'St Kilda', 'Fitzroy', 'South Yarra', 'Richmond', 'Carlton'],
+  'singapore': ['Orchard', 'Marina Bay', 'Bugis', 'Tanjong Pagar', 'Jurong East', 'Ang Mo Kio', 'Bishan'],
 };
 function updateAreaSuggestions(cityValue) {
   const key = (cityValue || '').trim().toLowerCase();
@@ -536,6 +529,7 @@ Only include a business if you found a real phone number OR a real active Instag
 }
 
 async function aiFindLeads() {
+  const country = document.getElementById('h-country').value;
   const city = document.getElementById('h-city').value.trim();
   const area = document.getElementById('h-area').value.trim();
   const btn = document.getElementById('ai-btn');
@@ -544,7 +538,7 @@ async function aiFindLeads() {
   if (!city) { alert('Enter at least a city.'); return; }
   if (!niches.length) { alert('Select at least one business type.'); return; }
 
-  const location = area ? `${area}, ${city}` : city;
+  const location = (area ? `${area}, ${city}` : city) + (country !== 'India' ? `, ${country}` : '');
   const card = document.getElementById('ai-results-card');
   const heading = document.getElementById('ai-results-heading');
   const resultsEl = document.getElementById('ai-results');
@@ -670,6 +664,7 @@ async function saveAllResults() {
 
 // ── Free search links ──────────────────────────────────────────────
 function generateLinks() {
+  const country = document.getElementById('h-country').value;
   const city = document.getElementById('h-city').value.trim();
   const area = document.getElementById('h-area').value.trim();
   const niches = NICHE_LIST.filter(n => selectedNiches.has(n.key));
@@ -682,15 +677,35 @@ function generateLinks() {
   const q = encodeURIComponent(phrase + ' in ' + location);
   const hCity = city.replace(/[^a-zA-Z]/g, '').toLowerCase();
   const hNiche = phrase.split(' ')[0].replace(/[^a-zA-Z]/g, '').toLowerCase();
-  const sources = [
-    ...(selectedNiches.has('real_estate') ? [{ name: '99acres', color: '#c0392b', abbr: '99', url: `https://www.99acres.com/search/property/buy/${encodeURIComponent((area || city).toLowerCase().replace(/\s+/g, '-'))}?city=${encodeURIComponent(city)}` }] : []),
+  const loc = encodeURIComponent(area || city);
+  const universal = [
     { name: 'Google Maps', color: '#2d7d46', abbr: 'GM', url: `https://www.google.com/maps/search/${q}` },
     { name: 'Google', color: '#2a5db0', abbr: 'G', url: `https://www.google.com/search?q=${q}` },
     { name: 'Instagram', color: '#b3306b', abbr: 'IG', url: `https://www.instagram.com/explore/tags/${hNiche}${hCity}/` },
-    { name: 'JustDial', color: '#3b3b3b', abbr: 'JD', url: `https://www.justdial.com/${encodeURIComponent(city)}/${encodeURIComponent(phrase.replace(/\s+/g, '-'))}` },
     { name: 'Facebook', color: '#1f5fae', abbr: 'FB', url: `https://www.facebook.com/search/pages/?q=${q}` },
   ];
-  document.getElementById('links-heading').textContent = `Search links — ${label} in ${location}`;
+  const localByCountry = {
+    'India': [
+      ...(selectedNiches.has('real_estate') ? [{ name: '99acres', color: '#c0392b', abbr: '99', url: `https://www.99acres.com/search/property/buy/${encodeURIComponent((area || city).toLowerCase().replace(/\s+/g, '-'))}?city=${encodeURIComponent(city)}` }] : []),
+      { name: 'JustDial', color: '#3b3b3b', abbr: 'JD', url: `https://www.justdial.com/${encodeURIComponent(city)}/${encodeURIComponent(phrase.replace(/\s+/g, '-'))}` },
+    ],
+    'United States': [
+      { name: 'Yelp', color: '#d32323', abbr: 'Y', url: `https://www.yelp.com/search?find_desc=${encodeURIComponent(phrase)}&find_loc=${loc}` },
+    ],
+    'United Kingdom': [
+      { name: 'Yell', color: '#7a1fa2', abbr: 'Y', url: `https://www.yell.com/ucs/UcsSearchAction.do?keywords=${encodeURIComponent(phrase)}&location=${loc}` },
+    ],
+    'Canada': [
+      { name: 'YellowPages.ca', color: '#e2b400', abbr: 'YP', url: `https://www.yellowpages.ca/search/si/1/${encodeURIComponent(phrase)}/${loc}` },
+    ],
+    'Australia': [
+      { name: 'Yellow Pages AU', color: '#e2b400', abbr: 'YP', url: `https://www.yellowpages.com.au/search/listings?clue=${encodeURIComponent(phrase)}&locationClue=${loc}` },
+    ],
+    'United Arab Emirates': [],
+    'Singapore': [],
+  };
+  const sources = [...(localByCountry[country] || []), ...universal];
+  document.getElementById('links-heading').textContent = `Search links — ${label} in ${location}, ${country}`;
   document.getElementById('links-grid').innerHTML = sources.map(s => `<a class="link-item" href="${s.url}" target="_blank" rel="noopener"><span>${s.name}</span><span class="link-icon" style="background:${s.color};">${s.abbr}</span></a>`).join('');
   document.getElementById('links-card').style.display = 'block';
   document.getElementById('paste-card').style.display = 'block';
@@ -932,6 +947,7 @@ async function clearAllLeads() {
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
 initNicheUI();
+updateCityOptions('India');
 initStorage();
 </script>
 </body>
