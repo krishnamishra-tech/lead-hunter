@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Volkrion Lead Hunter</title>
+<title>LocalScout — Find. Message. Close.</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --navy: #0e7c6b; --navy2: #149e89; --gold: #c9971f; --gold-light: #e0b84a;
@@ -100,15 +101,68 @@
 
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 999; }
   .toast.show { opacity: 1; }
+
+  /* Auth screen */
+  #auth-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--paper); }
+  .auth-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 32px 28px; width: 100%; max-width: 380px; }
+  .auth-logo { font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 4px; color: var(--ink); }
+  .auth-logo span { color: var(--gold); }
+  .auth-tagline { text-align: center; font-size: 12px; color: var(--grey); margin-bottom: 24px; }
+  .auth-field { margin-bottom: 12px; }
+  .auth-field label { display: block; font-size: 11px; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: .02em; margin-bottom: 4px; }
+  .auth-field input { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--cream); color: var(--ink); }
+  .auth-btn { width: 100%; padding: 11px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 6px; }
+  .auth-btn-primary { background: var(--navy); color: #fff; }
+  .auth-btn-primary:hover { background: var(--navy2); }
+  .auth-btn-primary:disabled { opacity: .6; cursor: default; }
+  .auth-btn-google { background: #fff; color: var(--ink); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .auth-btn-google:hover { border-color: #bbb; }
+  .auth-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; font-size: 11px; color: var(--grey); text-transform: uppercase; }
+  .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .auth-switch { text-align: center; font-size: 12px; color: var(--grey); margin-top: 16px; }
+  .auth-switch a { color: var(--navy); font-weight: 700; text-decoration: none; cursor: pointer; }
+  .auth-err { background: #fdf1ef; border: 1px solid #e8c4bc; color: #a3402f; padding: 9px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; display: none; }
+  .auth-msg { background: #eef7f5; border: 1px solid #c9e3dc; color: var(--navy); padding: 9px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; display: none; }
+  #app-root { display: none; }
+  .plan-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.15); color: #fff; margin-left: 8px; }
+  .upgrade-box { background: #fdf8ec; border: 1px solid #edd9a3; border-radius: 10px; padding: 16px; text-align: center; margin-top: 10px; }
+  .upgrade-box p { font-size: 13px; color: #8a6d1d; margin-bottom: 10px; }
 </style>
 </head>
 <body>
 
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">Local<span>Scout</span></div>
+    <div class="auth-tagline">Find local leads. Close local deals.</div>
+
+    <div class="auth-err" id="auth-err"></div>
+    <div class="auth-msg" id="auth-msg"></div>
+
+    <button class="auth-btn auth-btn-google" onclick="signInWithGoogle()">
+      <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.4-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 19 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3 15.6 3 8.4 7.8 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 36.2 26.7 37 24 37c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.4 40.2 16.1 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.2 5.2C40.8 36 44 30.6 44 24c0-1.4-.1-2.7-.4-3.5z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="auth-divider">or</div>
+
+    <div class="auth-field"><label>Email</label><input type="email" id="auth-email" placeholder="you@business.com"></div>
+    <div class="auth-field"><label>Password</label><input type="password" id="auth-password" placeholder="••••••••"></div>
+
+    <button class="auth-btn auth-btn-primary" id="auth-submit-btn" onclick="authSubmit()">Log in</button>
+
+    <div class="auth-switch" id="auth-switch">
+      New here? <a onclick="toggleAuthMode()">Create an account</a>
+    </div>
+  </div>
+</div>
+
+<div id="app-root">
 <header>
-  <div class="brand">Volkrion <span>Lead Hunter</span></div>
+  <div class="brand">Local<span>Scout</span><span class="plan-badge" id="plan-badge">Free</span></div>
   <div class="api-status">
     <div class="dot"></div>
-    <span>Leads sync to Supabase ✓</span>
+    <span id="account-email">Leads synced ✓</span>
   </div>
 </header>
 
@@ -123,7 +177,7 @@
   <section id="view-hunt" class="view active">
     <div class="card">
       <div class="card-title">Search an area</div>
-      <div class="card-sub">Enter city + area, then pick one or more business types — Claude searches the web for real businesses with a working phone number or an active Instagram, so you always have a way to message them.</div>
+      <div class="card-sub">Enter city + area, then pick one or more business types — LocalScout generates search links across Google Maps, JustDial, Instagram and more so you can pull real leads in seconds.</div>
       <div class="grid">
         <div class="field"><label>Country</label>
           <select id="h-country" onchange="updateCityOptions(this.value); document.getElementById('h-city').value=''; document.getElementById('h-area').value=''; updateAreaSuggestions('');">
@@ -147,18 +201,9 @@
         <p class="chip-note">Selecting several types runs one combined search and returns a wide mix of leads in a single click.</p>
       </div>
       <div class="btn-row">
-        <button class="btn btn-navy" id="ai-btn" onclick="aiFindLeads()">✦ Find businesses with Claude</button>
-        <button class="btn btn-outline" onclick="generateLinks()">🔗 Free search links</button>
+        <button class="btn btn-navy" onclick="generateLinks()">🔗 Get search links</button>
       </div>
-      <p style="font-size:11px;color:var(--grey);margin-top:10px;">✦ Only returns businesses with a real phone number (WhatsApp) or a real Instagram account — nothing you can't actually message. 🔗 Free links open manual search tabs instead.</p>
-    </div>
-
-    <div id="ai-results-card" class="card" style="display:none;">
-      <div class="section-label">
-        <span id="ai-results-heading">Results</span>
-        <button class="btn-saveall" id="save-all-btn" onclick="saveAllResults()" style="display:none;">💾 Save all leads</button>
-      </div>
-      <div id="ai-results"></div>
+      <p style="font-size:11px;color:var(--grey);margin-top:10px;">Opens ready-made search tabs across Google Maps, JustDial, Instagram and more for your selected types — copy results and paste them below to import instantly.</p>
     </div>
 
     <div id="links-card" class="card" style="display:none;">
@@ -232,9 +277,12 @@ Gomti Nagar" style="width:100%;height:160px;margin-top:10px;padding:10px;border:
 
   <section id="view-settings" class="view">
     <div class="card">
-      <div class="card-title">Claude connection</div>
-      <div class="card-sub">This tool calls Claude directly — there's no API key to manage and nothing is sent anywhere except Anthropic's own servers when you run a search.</div>
-      <div class="api-status" style="color:var(--navy);"><div class="dot"></div><span>Connected to Claude ✓ — using web search</span></div>
+      <div class="card-title">Account</div>
+      <div class="card-sub" id="settings-account-email">Signed in</div>
+      <div id="plan-status-box"></div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="signOut()">Sign out</button>
+      </div>
     </div>
 
     <div class="card">
@@ -248,6 +296,7 @@ Gomti Nagar" style="width:100%;height:160px;margin-top:10px;padding:10px;border:
   </section>
 
 </main>
+</div><!-- /app-root -->
 
 <div class="toast" id="toast"></div>
 
@@ -336,6 +385,18 @@ const NICHE_LIST = [
   { key:'clinics', label:'Doctor / clinic', phrase:'doctors and clinics', customer:'patients', item:'services' },
   { key:'wedding', label:'Wedding studio', phrase:'wedding photographers and studios', customer:'clients', item:'portfolio' },
   { key:'pet_services', label:'Pet grooming', phrase:'pet grooming and pet stores', customer:'customers', item:'services' },
+  { key:'spas', label:'Spa', phrase:'spas and wellness centers', customer:'clients', item:'services' },
+  { key:'clothing_boutiques', label:'Fashion store', phrase:'fashion and clothing stores', customer:'customers', item:'collection' },
+  { key:'bakeries', label:'Bakery', phrase:'bakeries and cake shops', customer:'customers', item:'menu' },
+  { key:'tuition_centers', label:'Tuition / school', phrase:'tuition centers and schools', customer:'students', item:'courses' },
+  { key:'travel_agents', label:'Travel agency', phrase:'travel agents and tour operators', customer:'travelers', item:'packages' },
+  { key:'jewellers', label:'Jeweller', phrase:'jewellery stores', customer:'customers', item:'collection' },
+  { key:'furniture_stores', label:'Furniture store', phrase:'furniture and home decor stores', customer:'customers', item:'collection' },
+  { key:'car_dealers', label:'Auto dealer / garage', phrase:'car dealers and auto repair garages', customer:'customers', item:'services' },
+  { key:'law_firms', label:'Law firm', phrase:'law firms and lawyers', customer:'clients', item:'services' },
+  { key:'ca_firms', label:'CA / accountant', phrase:'chartered accountants and tax consultants', customer:'clients', item:'services' },
+  { key:'daycare', label:'Daycare / preschool', phrase:'daycares and preschools', customer:'parents', item:'programs' },
+  { key:'hotels', label:'Hotel / homestay', phrase:'hotels and homestays', customer:'guests', item:'rooms' },
 ];
 function nicheInfo(key) { return NICHE_LIST.find(n => n.key === key) || { customer:'customers', item:'work', label: key || 'Business' }; }
 function nicheKeyToLabel(k) { return nicheInfo(k).label; }
@@ -345,14 +406,14 @@ function nicheKeyToLabel(k) { return nicheInfo(k).label; }
 // ── Storage (Supabase — real database, synced across all your devices) ──
 const SUPABASE_URL = 'https://bjnoxnnbnynygmgpkhql.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqbm94bm5ibnlueWdtZ3BraHFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MjA0NTksImV4cCI6MjA5OTI5NjQ1OX0.fwbQkRFu-xU_GoB3zSRRdzH48EsXKRCRBoWmpWgf77Q';
-const sbHeaders = {
-  apikey: SUPABASE_KEY,
-  Authorization: `Bearer ${SUPABASE_KEY}`,
-  'Content-Type': 'application/json'
-};
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const FREE_TIER_MONTHLY_LIMIT = 20;
+let currentUser = null;
+let currentPlan = 'free'; // 'free' | 'pro' — flip to 'pro' manually in the profiles table once you take payments
 
 function toRow(l) {
-  return { id: l.id, name: l.name, phone: l.phone || '', instagram: l.instagram || '', area: l.area || '',
+  return { id: l.id, user_id: currentUser.id, name: l.name, phone: l.phone || '', instagram: l.instagram || '', area: l.area || '',
     niche: l.niche || '', niche_label: l.nicheLabel || '', has_website: !!l.hasWebsite, source: l.source || '',
     status: l.status || 'New', added: l.added || new Date().toLocaleDateString(), notes: l.notes || '',
     status_updated: l.statusUpdated || new Date().toISOString() };
@@ -360,56 +421,155 @@ function toRow(l) {
 function fromRow(r) {
   return { id: r.id, name: r.name, phone: r.phone, instagram: r.instagram, area: r.area,
     niche: r.niche, nicheLabel: r.niche_label, hasWebsite: r.has_website, source: r.source,
-    status: r.status, added: r.added, notes: r.notes, statusUpdated: r.status_updated };
+    status: r.status, added: r.added, notes: r.notes, statusUpdated: r.status_updated, createdAt: r.created_at };
 }
 
 async function fetchLeads() {
   try {
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*&order=id.desc`, { headers: sbHeaders });
-    if (!resp.ok) throw new Error('Failed to load leads');
-    const rows = await resp.json();
-    return rows.map(fromRow);
+    const { data, error } = await sb.from('leads').select('*').order('id', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(fromRow);
   } catch (e) { console.error('Load error', e); showToast('Could not load leads — check connection'); return []; }
 }
+
+// Free-tier gate: counts this calendar month's leads for the signed-in user.
+async function leadsAddedThisMonth() {
+  const start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
+  try {
+    const { count, error } = await sb.from('leads').select('id', { count: 'exact', head: true }).gte('created_at', start.toISOString());
+    if (error) throw error;
+    return count || 0;
+  } catch (e) { console.error('Count error', e); return 0; }
+}
+async function canAddLeads(n) {
+  if (currentPlan === 'pro') return true;
+  const used = await leadsAddedThisMonth();
+  return (used + n) <= FREE_TIER_MONTHLY_LIMIT;
+}
+function showUpgradeBlock() {
+  showToast(`Free plan limit reached (${FREE_TIER_MONTHLY_LIMIT}/month)`);
+  alert(`You've hit the free plan limit of ${FREE_TIER_MONTHLY_LIMIT} leads this month. Upgrade to Pro for unlimited leads — reach out to upgrade.`);
+}
+
 async function insertLeadRemote(lead) {
   try {
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
-      method: 'POST', headers: { ...sbHeaders, Prefer: 'return=minimal' },
-      body: JSON.stringify(toRow(lead))
-    });
-    if (!resp.ok) throw new Error(await resp.text());
+    const { error } = await sb.from('leads').insert(toRow(lead));
+    if (error) throw error;
   } catch (e) { console.error('Insert error', e); showToast('Save failed — check connection'); }
 }
 async function insertLeadsRemoteBulk(leadsArr) {
   try {
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
-      method: 'POST', headers: { ...sbHeaders, Prefer: 'return=minimal' },
-      body: JSON.stringify(leadsArr.map(toRow))
-    });
-    if (!resp.ok) throw new Error(await resp.text());
+    const { error } = await sb.from('leads').insert(leadsArr.map(toRow));
+    if (error) throw error;
   } catch (e) { console.error('Bulk insert error', e); showToast('Save failed — check connection'); }
 }
 async function updateLeadRemote(id, status) {
   try {
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
-      method: 'PATCH', headers: { ...sbHeaders, Prefer: 'return=minimal' },
-      body: JSON.stringify({ status, status_updated: new Date().toISOString() })
-    });
-    if (!resp.ok) throw new Error(await resp.text());
+    const { error } = await sb.from('leads').update({ status, status_updated: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
   } catch (e) { console.error('Update error', e); showToast('Update failed — check connection'); }
 }
 async function deleteLeadRemote(id) {
   try {
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, { method: 'DELETE', headers: sbHeaders });
-    if (!resp.ok) throw new Error(await resp.text());
+    const { error } = await sb.from('leads').delete().eq('id', id);
+    if (error) throw error;
   } catch (e) { console.error('Delete error', e); showToast('Delete failed — check connection'); }
 }
 async function clearAllLeadsRemote() {
   try {
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=neq.__none__`, { method: 'DELETE', headers: sbHeaders });
-    if (!resp.ok) throw new Error(await resp.text());
+    const { error } = await sb.from('leads').delete().eq('user_id', currentUser.id);
+    if (error) throw error;
   } catch (e) { console.error('Clear error', e); showToast('Clear failed — check connection'); }
 }
+
+// ── Auth ──────────────────────────────────────────────────────────
+let authMode = 'login'; // 'login' | 'signup'
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'signup' : 'login';
+  document.getElementById('auth-submit-btn').textContent = authMode === 'login' ? 'Log in' : 'Create account';
+  document.getElementById('auth-switch').innerHTML = authMode === 'login'
+    ? 'New here? <a onclick="toggleAuthMode()">Create an account</a>'
+    : 'Already have an account? <a onclick="toggleAuthMode()">Log in</a>';
+  hideAuthMessages();
+}
+function hideAuthMessages() {
+  document.getElementById('auth-err').style.display = 'none';
+  document.getElementById('auth-msg').style.display = 'none';
+}
+function showAuthErr(msg) {
+  const el = document.getElementById('auth-err');
+  el.textContent = msg; el.style.display = 'block';
+  document.getElementById('auth-msg').style.display = 'none';
+}
+function showAuthMsg(msg) {
+  const el = document.getElementById('auth-msg');
+  el.textContent = msg; el.style.display = 'block';
+  document.getElementById('auth-err').style.display = 'none';
+}
+async function authSubmit() {
+  hideAuthMessages();
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  if (!email || !password) { showAuthErr('Enter both email and password.'); return; }
+  const btn = document.getElementById('auth-submit-btn');
+  btn.disabled = true;
+  try {
+    if (authMode === 'login') {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } else {
+      const { error } = await sb.auth.signUp({ email, password });
+      if (error) throw error;
+      showAuthMsg('Account created! Check your email to confirm, then log in.');
+    }
+  } catch (e) {
+    showAuthErr(e.message || 'Something went wrong. Try again.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+async function signInWithGoogle() {
+  hideAuthMessages();
+  try {
+    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
+    if (error) throw error;
+  } catch (e) { showAuthErr(e.message || 'Google sign-in failed.'); }
+}
+async function signOut() {
+  await sb.auth.signOut();
+  document.getElementById('app-root').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+async function onAuthReady(user) {
+  currentUser = user;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-root').style.display = 'block';
+  document.getElementById('account-email').textContent = user.email || 'Signed in';
+  document.getElementById('settings-account-email').textContent = user.email || 'Signed in';
+  await refreshPlanBadge();
+  initNicheUI();
+  updateCityOptions('India');
+  await initStorage();
+}
+async function refreshPlanBadge() {
+  const usedCount = await leadsAddedThisMonth();
+  const badge = document.getElementById('plan-badge');
+  badge.textContent = currentPlan === 'pro' ? 'Pro' : 'Free';
+  const box = document.getElementById('plan-status-box');
+  if (box) {
+    box.innerHTML = currentPlan === 'pro'
+      ? `<p style="font-size:12px;color:var(--navy);font-weight:700;">Pro plan — unlimited leads ✓</p>`
+      : `<div class="upgrade-box"><p><strong>${usedCount}/${FREE_TIER_MONTHLY_LIMIT}</strong> leads used this month on the Free plan.</p></div>`;
+  }
+}
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (session?.user) { onAuthReady(session.user); }
+});
+sb.auth.getSession().then(({ data }) => {
+  if (data?.session?.user) onAuthReady(data.session.user);
+});
 
 let leads = [];
 let savedIds = new Set();
@@ -427,7 +587,6 @@ function needsFollowup(l) {
   return ['Messaged', 'Follow-up 1', 'Follow-up 2'].includes(l.status) && daysSince(l.statusUpdated) >= 3;
 }
 let selectedNiches = new Set(['real_estate']);
-let currentResults = []; // last search results, kept for "save all"
 
 async function initStorage() {
   leads = await fetchLeads();
@@ -462,204 +621,6 @@ function switchTab(view) {
   document.getElementById('view-' + view).classList.add('active');
   document.querySelector('nav button[data-view="' + view + '"]').classList.add('active');
   if (view === 'leads') renderLeads();
-}
-
-// ── AI search (Claude, built in — no key needed) ────────────────────
-async function searchOneNiche(niche, location) {
-  const systemPrompt = `You find real, currently operating local businesses using web search. After searching, reply with ONLY a raw JSON array, no markdown, no explanation, no code fences.
-Each item: {"name": string, "phone": string or null (digits only, include country code 91 for India, e.g. 919876543210), "instagram": string or null (just the handle without @ or URL), "area": string, "hasWebsite": boolean, "notes": string (one short fact: rating, specialty, or years operating)}.
-Only include a business if you found a real phone number OR a real active Instagram handle for it in search results — skip anything with neither. Never invent a business, number, or handle. Max 6 results. If none found, return [].`;
-  const userMsg = `Search the web and find ${niche.phrase} in ${location}, India. I need real businesses that have either a working phone number or an active Instagram account, for B2B web design outreach. Prioritize ones without a website, but include a few with websites too.`;
-
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMsg }],
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }]
-    })
-  });
-
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(`${niche.label}: ${err.error?.message || 'API error ' + resp.status}`);
-  }
-
-  const data = await resp.json();
-
-  // If Claude ran out of room mid-search or mid-answer, say so instead of quietly returning nothing.
-  if (data.stop_reason === 'max_tokens') {
-    console.warn(`${niche.label}: response was cut off (max_tokens). Raw content:`, data.content);
-  }
-
-  const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
-  if (!text.trim()) {
-    console.warn(`${niche.label}: no text content in response.`, data);
-    throw new Error(`${niche.label}: Claude returned no text (stop_reason: ${data.stop_reason || 'unknown'}).`);
-  }
-
-  const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
-  const match = clean.match(/\[[\s\S]*\]/);
-  let raw = match ? match[0] : clean;
-  let businesses;
-  try {
-    businesses = JSON.parse(raw);
-  } catch (parseErr) {
-    // Truncated JSON (ran out of tokens mid-array) — salvage whatever complete objects exist.
-    const lastGoodComma = raw.lastIndexOf('},');
-    if (lastGoodComma > -1) {
-      try { businesses = JSON.parse(raw.slice(0, lastGoodComma + 1) + ']'); }
-      catch { businesses = null; }
-    } else {
-      businesses = null;
-    }
-    if (!businesses) {
-      console.error(`${niche.label}: JSON parse failed. Raw text:`, text);
-      throw new Error(`${niche.label}: couldn't parse Claude's response — it may have been cut off. Try again or narrow to one type.`);
-    }
-  }
-  if (!Array.isArray(businesses)) businesses = [];
-
-  return businesses
-    .filter(b => (b.phone && String(b.phone).replace(/[^0-9]/g, '')) || (b.instagram && String(b.instagram).trim()))
-    .map(b => ({ ...b, nicheKey: niche.key }));
-}
-
-async function aiFindLeads() {
-  const country = document.getElementById('h-country').value;
-  const city = document.getElementById('h-city').value.trim();
-  const area = document.getElementById('h-area').value.trim();
-  const btn = document.getElementById('ai-btn');
-  const niches = NICHE_LIST.filter(n => selectedNiches.has(n.key));
-
-  if (!city) { alert('Enter at least a city.'); return; }
-  if (!niches.length) { alert('Select at least one business type.'); return; }
-
-  const location = (area ? `${area}, ${city}` : city) + (country !== 'India' ? `, ${country}` : '');
-  const card = document.getElementById('ai-results-card');
-  const heading = document.getElementById('ai-results-heading');
-  const resultsEl = document.getElementById('ai-results');
-  const saveAllBtn = document.getElementById('save-all-btn');
-
-  card.style.display = 'block';
-  saveAllBtn.style.display = 'none';
-  const typeLabel = niches.map(n => n.label.toLowerCase()).join(', ');
-  heading.textContent = `Searching ${typeLabel} in ${location}...`;
-  resultsEl.innerHTML = `<div class="loading-msg"><span class="spinner"></span>Searching ${niches.length} business type${niches.length > 1 ? 's' : ''}, give it a few seconds...</div>`;
-  btn.disabled = true; btn.textContent = 'Searching...';
-
-  try {
-    const settled = await Promise.allSettled(niches.map(n => searchOneNiche(n, location)));
-    const businesses = [];
-    const errors = [];
-    settled.forEach((r, i) => {
-      if (r.status === 'fulfilled') businesses.push(...r.value);
-      else errors.push(r.reason?.message || `${niches[i].label}: unknown error`);
-    });
-    currentResults = businesses;
-
-    if (!businesses.length && errors.length) {
-      // Every niche failed outright — show the real reason, not a fake "no results".
-      heading.textContent = 'Search failed';
-      resultsEl.innerHTML = `<div class="err-box"><strong>Error${errors.length > 1 ? 's' : ''}:</strong><br>${errors.map(e => esc(e)).join('<br>')}<br><br>Try again, narrow to one business type, or try a broader area name.</div>`;
-    } else if (!businesses.length) {
-      heading.textContent = `No results — ${typeLabel} in ${location}`;
-      resultsEl.innerHTML = `<div class="empty">No businesses with a phone number or Instagram found here. Try a broader area name or different types.</div>`;
-    } else {
-      heading.textContent = `${businesses.length} found — ${typeLabel} in ${location}`;
-      let html = businesses.map(b => renderResult(b, location)).join('');
-      if (errors.length) {
-        html += `<div class="err-box">Some searches didn't complete: ${errors.map(e => esc(e)).join('; ')}. The results above are from the ones that did.</div>`;
-      }
-      resultsEl.innerHTML = html;
-      saveAllBtn.style.display = 'inline-block';
-    }
-  } catch (e) {
-    heading.textContent = 'Search failed';
-    resultsEl.innerHTML = `<div class="err-box"><strong>Error:</strong> ${esc(e.message)}<br><br>Try a different or broader area name, or try again in a moment.</div>`;
-  } finally {
-    btn.disabled = false; btn.textContent = '✦ Find businesses with Claude';
-  }
-}
-
-function renderResult(b, location) {
-  const name = b.name || 'Unknown';
-  const phone = (b.phone || '').replace(/[^0-9]/g, '');
-  const instagram = (b.instagram || '').replace(/[@\/].*$/, '').replace('@', '').trim();
-  const area = b.area || location;
-  const hasWebsite = !!b.hasWebsite;
-  const notes = b.notes || '';
-  const nicheKey = b.nicheKey;
-  const nicheLabel = nicheKeyToLabel(nicheKey);
-  const hasPhone = !!phone;
-  const hasInstagram = !!instagram;
-  const waLink = hasPhone ? `https://wa.me/${phone}` : null;
-  const igLink = hasInstagram ? `https://www.instagram.com/${instagram}/` : null;
-  const idKey = phone || instagram || name;
-  const isSaved = savedIds.has(idKey);
-
-  return `
-    <div class="result-row" id="res-${esc(idKey)}">
-      <div class="result-main">
-        <span class="result-name">${esc(name)}</span>
-        <span class="badge" style="background:#f0f0f0;color:#555;">${esc(nicheLabel)}</span>
-        <span class="badge ${hasWebsite ? 'badge-yes' : 'badge-no'}">${hasWebsite ? 'Has website' : 'No website'}</span>
-        <div class="result-meta">${esc(area)}${hasPhone ? ' · ' + phone : ''}${hasInstagram ? ' · @' + esc(instagram) : ''}${notes ? ' · ' + esc(notes) : ''}</div>
-      </div>
-      ${waLink ? `<a class="btn btn-green btn" href="${waLink}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
-      ${igLink ? `<a class="btn btn-pink btn" href="${igLink}" target="_blank" rel="noopener">📸 Instagram</a>` : ''}
-      <button class="btn-save" onclick='saveFromResult(${JSON.stringify({ name, phone, instagram, area, hasWebsite, nicheKey, notes })})' id="save-${esc(idKey)}" ${isSaved ? 'style="display:none;"' : ''}>+ Save</button>
-      <button class="btn-saved" id="saved-${esc(idKey)}" ${isSaved ? '' : 'style="display:none;"'}>✓ Saved</button>
-    </div>`;
-}
-
-async function saveFromResult(data) {
-  const { name, phone, instagram, area, hasWebsite, nicheKey, notes } = data;
-  const idKey = phone || instagram || name;
-  if (savedIds.has(idKey)) return;
-  leads.unshift({
-    id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name, phone: phone || '', instagram: instagram || '', area,
-    niche: nicheKey, nicheLabel: nicheKeyToLabel(nicheKey),
-    hasWebsite, source: 'AI Search', status: 'New', notes: notes || '',
-    added: new Date().toLocaleDateString()
-  });
-  savedIds.add(idKey);
-  await insertLeadRemote(leads[0]);
-  localStorage.setItem('vlh_saved_ids', JSON.stringify([...savedIds]));
-  const saveBtn = document.getElementById('save-' + idKey);
-  const savedBtn = document.getElementById('saved-' + idKey);
-  if (saveBtn) saveBtn.style.display = 'none';
-  if (savedBtn) savedBtn.style.display = 'inline-block';
-}
-
-async function saveAllResults() {
-  if (!currentResults.length) return;
-  let added = 0;
-  const newlyAdded = [];
-  for (const b of currentResults) {
-    const phone = (b.phone || '').replace(/[^0-9]/g, '');
-    const instagram = (b.instagram || '').replace(/[@\/].*$/, '').replace('@', '').trim();
-    const idKey = phone || instagram || b.name;
-    if (savedIds.has(idKey)) continue;
-    const newLead = {
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name: b.name, phone, instagram, area: b.area || '',
-      niche: b.nicheKey, nicheLabel: nicheKeyToLabel(b.nicheKey),
-      hasWebsite: !!b.hasWebsite, source: 'AI Search', status: 'New', notes: b.notes || '',
-      added: new Date().toLocaleDateString()
-    };
-    leads.unshift(newLead);
-    newlyAdded.push(newLead);
-    savedIds.add(idKey);
-    added++;
-  }
-  if (newlyAdded.length) await insertLeadsRemoteBulk(newlyAdded);
-  localStorage.setItem('vlh_saved_ids', JSON.stringify([...savedIds]));
-  document.querySelectorAll('#ai-results .btn-save').forEach(b => b.style.display = 'none');
-  document.querySelectorAll('#ai-results .btn-saved').forEach(b => b.style.display = 'inline-block');
-  showToast(`Saved ${added} new lead${added === 1 ? '' : 's'}`);
 }
 
 // ── Free search links ──────────────────────────────────────────────
@@ -797,6 +758,7 @@ async function parsePastedLeads() {
 }
 
 async function saveParsedLead(i, phone, instagram, area, city, nicheKey) {
+  if (!(await canAddLeads(1))) { showUpgradeBlock(); return; }
   const nameEl = document.getElementById(`pname-${i}`);
   const name = nameEl ? nameEl.value.trim() : 'Unknown';
   const nicheLabel = nicheKeyToLabel(nicheKey);
@@ -808,6 +770,7 @@ async function saveParsedLead(i, phone, instagram, area, city, nicheKey) {
   };
   leads.unshift(newLead);
   await insertLeadRemote(newLead);
+  await refreshPlanBadge();
   const btn = document.getElementById(`pbtn-${i}`);
   if (btn) { btn.textContent = '✓ Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
   showToast(`Saved: ${name}`);
@@ -817,8 +780,15 @@ async function saveAllParsed(indices) {
   const city = document.getElementById('h-city').value.trim();
   const area = document.getElementById('h-area').value.trim();
   const niche = NICHE_LIST.find(n => selectedNiches.has(n.key)) || NICHE_LIST[0];
+  let remaining = Infinity;
+  if (currentPlan !== 'pro') {
+    const used = await leadsAddedThisMonth();
+    remaining = Math.max(0, FREE_TIER_MONTHLY_LIMIT - used);
+    if (remaining === 0) { showUpgradeBlock(); return; }
+  }
   const newLeads = [];
   for (const i of indices) {
+    if (newLeads.length >= remaining) break;
     const nameEl = document.getElementById(`pname-${i}`);
     if (!nameEl) continue;
     const btn = document.getElementById(`pbtn-${i}`);
@@ -836,7 +806,11 @@ async function saveAllParsed(indices) {
   if (newLeads.length) {
     leads.unshift(...newLeads);
     await insertLeadsRemoteBulk(newLeads);
+    await refreshPlanBadge();
     showToast(`Saved ${newLeads.length} leads`);
+  }
+  if (currentPlan !== 'pro' && newLeads.length < indices.length) {
+    showUpgradeBlock();
   }
 }
 async function addLeadManual() {
@@ -855,9 +829,11 @@ async function addLeadManual() {
     const field = phone && dup.phone === phone ? 'phone number' : 'Instagram handle';
     if (!confirm(`"${dup.name}" is already in your leads with this ${field}. Add anyway?`)) return;
   }
+  if (!(await canAddLeads(1))) { showUpgradeBlock(); return; }
   const newLead = { id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name, phone, instagram, area, niche, nicheLabel, hasWebsite, source, status: 'New', added: new Date().toLocaleDateString() };
   leads.unshift(newLead);
   await insertLeadRemote(newLead);
+  await refreshPlanBadge();
   document.getElementById('l-name').value = '';
   document.getElementById('l-phone').value = '';
   document.getElementById('l-instagram').value = '';
@@ -932,7 +908,7 @@ function exportLeads() {
   const csv = [cols.join(','), ...rows].join('\n');
   const a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  a.download = 'volkrion_leads.csv';
+  a.download = 'localscout_leads.csv';
   a.click();
 }
 
@@ -945,10 +921,6 @@ async function clearAllLeads() {
 }
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-
-initNicheUI();
-updateCityOptions('India');
-initStorage();
 </script>
 </body>
 </html>
