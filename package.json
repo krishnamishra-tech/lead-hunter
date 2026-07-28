@@ -1,0 +1,10 @@
+{
+  "name": "localscout",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LocalScout — B2B lead-gen SaaS. Static HTML frontend + Vercel serverless functions for Razorpay billing.",
+  "dependencies": {
+    "razorpay": "^2.9.4",
+    "@supabase/supabase-js": "^2.45.4"
+  }
+}
