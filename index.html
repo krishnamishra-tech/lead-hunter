@@ -491,6 +491,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const FREE_TIER_MONTHLY_LIMIT = 20;
+const ENFORCE_LEAD_LIMIT = false; // set to true later to bring back the free-tier cap
 let currentUser = null;
 let currentPlan = 'free'; // 'free' | 'pro' — kept in sync with the profiles table (updated automatically after payment)
 
@@ -524,6 +525,7 @@ async function leadsAddedThisMonth() {
   } catch (e) { console.error('Count error', e); return 0; }
 }
 async function canAddLeads(n) {
+  if (!ENFORCE_LEAD_LIMIT) return true;
   if (currentPlan === 'pro') return true;
   const used = await leadsAddedThisMonth();
   return (used + n) <= FREE_TIER_MONTHLY_LIMIT;
@@ -655,7 +657,6 @@ async function fetchProfile() {
 
 async function refreshPlanBadge() {
   const profile = await fetchProfile();
-  const usedCount = currentPlan === 'pro' ? 0 : await leadsAddedThisMonth();
   const badge = document.getElementById('plan-badge');
   badge.textContent = currentPlan === 'pro' ? 'Pro' : 'Free';
   const box = document.getElementById('plan-status-box');
@@ -669,7 +670,13 @@ async function refreshPlanBadge() {
         <button class="btn btn-outline" onclick="startCheckout('monthly')">Renew Monthly — ₹499</button>
         <button class="btn btn-outline" onclick="startCheckout('yearly')">Renew Yearly — ₹4,999</button>
       </div>`;
+  } else if (!ENFORCE_LEAD_LIMIT) {
+    box.innerHTML = `
+      <div class="upgrade-box">
+        <p><strong>Unlimited leads</strong> — the free-tier limit is switched off for now.</p>
+      </div>`;
   } else {
+    const usedCount = await leadsAddedThisMonth();
     box.innerHTML = `
       <div class="upgrade-box">
         <p><strong>${usedCount}/${FREE_TIER_MONTHLY_LIMIT}</strong> leads used this month on the Free plan.</p>
@@ -948,7 +955,7 @@ async function saveAiLead(i, nicheKey, fallbackArea) {
 
 async function saveAllAiLeads(nicheKey, fallbackArea) {
   let remaining = Infinity;
-  if (currentPlan !== 'pro') {
+  if (ENFORCE_LEAD_LIMIT && currentPlan !== 'pro') {
     const used = await leadsAddedThisMonth();
     remaining = Math.max(0, FREE_TIER_MONTHLY_LIMIT - used);
     if (remaining === 0) { showUpgradeBlock(); return; }
@@ -967,7 +974,7 @@ async function saveAllAiLeads(nicheKey, fallbackArea) {
     await refreshPlanBadge();
     showToast(`Saved ${newLeads.length} leads`);
   }
-  if (currentPlan !== 'pro' && newLeads.length < aiSearchResults.length) {
+  if (ENFORCE_LEAD_LIMIT && currentPlan !== 'pro' && newLeads.length < aiSearchResults.length) {
     showUpgradeBlock();
   }
 }
@@ -1079,7 +1086,7 @@ async function saveAllParsed(indices) {
   const area = document.getElementById('h-area').value.trim();
   const niche = NICHE_LIST.find(n => selectedNiches.has(n.key)) || NICHE_LIST[0];
   let remaining = Infinity;
-  if (currentPlan !== 'pro') {
+  if (ENFORCE_LEAD_LIMIT && currentPlan !== 'pro') {
     const used = await leadsAddedThisMonth();
     remaining = Math.max(0, FREE_TIER_MONTHLY_LIMIT - used);
     if (remaining === 0) { showUpgradeBlock(); return; }
@@ -1107,7 +1114,7 @@ async function saveAllParsed(indices) {
     await refreshPlanBadge();
     showToast(`Saved ${newLeads.length} leads`);
   }
-  if (currentPlan !== 'pro' && newLeads.length < indices.length) {
+  if (ENFORCE_LEAD_LIMIT && currentPlan !== 'pro' && newLeads.length < indices.length) {
     showUpgradeBlock();
   }
 }
@@ -1157,6 +1164,8 @@ function renderLeads() {
   leads.forEach(l => { if (c[l.status] !== undefined) c[l.status]++; });
   const filters = {
     total: { label: 'Total', n: leads.length, test: () => true },
+    no_website: { label: 'No website', n: leads.filter(l => !l.hasWebsite).length, test: l => !l.hasWebsite },
+    has_website: { label: 'Has website', n: leads.filter(l => l.hasWebsite).length, test: l => !!l.hasWebsite },
     not_messaged: { label: 'Not messaged', n: c['New'], test: l => l.status === 'New' },
     followup: { label: 'Needs follow-up', n: leads.filter(needsFollowup).length, test: needsFollowup },
     replied: { label: 'Replied', n: c['Replied'] + c['Interested'] + c['Quoted'], test: l => ['Replied', 'Interested', 'Quoted'].includes(l.status) },
