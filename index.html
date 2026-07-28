@@ -271,6 +271,13 @@
     <div id="ai-search-card" class="card" style="display:none;">
       <div class="card-title">🤖 Auto-search leads (beta)</div>
       <div class="card-sub">Pulls real businesses straight from Google for your selected city, area, and business type — name, phone, address, and whether they have a website. Uses your first selected business type.</div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Multiple areas (optional) — one per line, runs a combined search across all and merges results</label>
+        <textarea id="ai-bulk-areas" placeholder="Leave blank to just use the Area field above, or list several:
+Gomti Nagar
+Hazratganj
+Aliganj" style="width:100%;height:70px;padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;background:var(--paper);color:var(--ink);box-sizing:border-box;resize:vertical;"></textarea>
+      </div>
       <div id="ai-search-results"></div>
     </div>
 
@@ -322,6 +329,7 @@ Gomti Nagar" style="width:100%;height:160px;margin-top:10px;padding:10px;border:
             <option value="yes">Has a website</option>
           </select>
         </div>
+        <div class="field"><label>Website URL (optional)</label><input id="l-website" placeholder="e.g. https://example.com"></div>
         <div class="field">
           <label>Source</label>
           <select id="l-source">
@@ -499,12 +507,17 @@ function toRow(l) {
   return { id: l.id, user_id: currentUser.id, name: l.name, phone: l.phone || '', instagram: l.instagram || '', area: l.area || '',
     niche: l.niche || '', niche_label: l.nicheLabel || '', has_website: !!l.hasWebsite, source: l.source || '',
     status: l.status || 'New', added: l.added || new Date().toLocaleDateString(), notes: l.notes || '',
-    status_updated: l.statusUpdated || new Date().toISOString() };
+    status_updated: l.statusUpdated || new Date().toISOString(),
+    website: l.website || null, rating: l.rating || null, rating_count: l.ratingCount || null,
+    website_score: (typeof l.websiteScore === 'number') ? l.websiteScore : null,
+    website_score_checked_at: l.websiteScoreCheckedAt || null };
 }
 function fromRow(r) {
   return { id: r.id, name: r.name, phone: r.phone, instagram: r.instagram, area: r.area,
     niche: r.niche, nicheLabel: r.niche_label, hasWebsite: r.has_website, source: r.source,
-    status: r.status, added: r.added, notes: r.notes, statusUpdated: r.status_updated, createdAt: r.created_at };
+    status: r.status, added: r.added, notes: r.notes, statusUpdated: r.status_updated, createdAt: r.created_at,
+    website: r.website, rating: r.rating, ratingCount: r.rating_count,
+    websiteScore: r.website_score, websiteScoreCheckedAt: r.website_score_checked_at };
 }
 
 async function fetchLeads() {
@@ -554,6 +567,39 @@ async function updateLeadRemote(id, status) {
     const { error } = await sb.from('leads').update({ status, status_updated: new Date().toISOString() }).eq('id', id);
     if (error) throw error;
   } catch (e) { console.error('Update error', e); showToast('Update failed — check connection'); }
+}
+async function updateWebsiteScoreRemote(id, score) {
+  try {
+    const { error } = await sb.from('leads').update({ website_score: score, website_score_checked_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+  } catch (e) { console.error('Score update error', e); }
+}
+// Runs a real Google PageSpeed check on the lead's website — on-demand per
+// lead (not automatic on every search), because a real Lighthouse audit
+// takes several seconds and we don't want to slow down search results.
+async function checkWebsiteSpeed(id) {
+  const l = leads.find(x => x.id === id);
+  if (!l || !l.website) return;
+  const btn = document.getElementById(`speed-btn-${id}`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Checking...'; }
+  try {
+    const res = await fetch('/api/check-website', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: l.website }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Check failed');
+    l.websiteScore = data.score;
+    l.websiteScoreCheckedAt = new Date().toISOString();
+    await updateWebsiteScoreRemote(id, data.score);
+    showToast(`Website score: ${data.score}/100`);
+    renderLeads();
+  } catch (e) {
+    console.error('Website speed check error', e);
+    showToast('Could not check website — try again later');
+    if (btn) { btn.disabled = false; btn.innerHTML = '⚡ Check site speed'; }
+  }
 }
 async function deleteLeadRemote(id) {
   try {
@@ -772,6 +818,18 @@ function daysSince(dateStr) {
 function needsFollowup(l) {
   return ['Messaged', 'Follow-up 1', 'Follow-up 2'].includes(l.status) && daysSince(l.statusUpdated) >= 3;
 }
+// Simple, transparent scoring — no black box: no website is the single biggest
+// signal (that's literally what we're selling), good rating + review volume
+// on top of that means the business is active and worth prioritizing.
+function leadHotScore(l) {
+  let score = 0;
+  if (!l.hasWebsite) score += 3;
+  if (l.rating && l.rating >= 4) score += 2;
+  if (l.ratingCount && l.ratingCount >= 20) score += 1;
+  if (typeof l.websiteScore === 'number' && l.websiteScore < 50) score += 2; // has a site but it's bad
+  return score;
+}
+function isHotLead(l) { return leadHotScore(l) >= 4; }
 let selectedNiches = new Set(['real_estate']);
 
 async function initStorage() {
@@ -866,34 +924,52 @@ function generateLinks() {
 async function aiSearchLeads() {
   const country = document.getElementById('h-country').value;
   const city = document.getElementById('h-city').value.trim();
-  const area = document.getElementById('h-area').value.trim();
+  const singleArea = document.getElementById('h-area').value.trim();
+  const bulkRaw = document.getElementById('ai-bulk-areas').value.trim();
   const niches = NICHE_LIST.filter(n => selectedNiches.has(n.key));
   if (!city) { alert('Enter at least a city.'); return; }
   if (!niches.length) { alert('Select at least one business type.'); return; }
   if (niches.length > 1) showToast('Auto-search uses your first selected type for best results');
   const niche = niches[0];
-  const location = area ? `${area}, ${city}` : city;
-  const query = `${niche.phrase} in ${location}, ${country}`;
+
+  const areas = bulkRaw ? bulkRaw.split('\n').map(a => a.trim()).filter(Boolean) : [singleArea];
 
   const card = document.getElementById('ai-search-card');
   const resultsEl = document.getElementById('ai-search-results');
   card.style.display = 'block';
   card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  resultsEl.innerHTML = `<div class="loading-msg"><span class="spinner"></span>Searching Google for real businesses...</div>`;
 
-  try {
-    const res = await fetch('/api/search-places', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Search failed');
-    renderAiSearchResults(data.results || [], niche, area || city);
-  } catch (e) {
-    console.error('Auto-search error', e);
-    resultsEl.innerHTML = `<div class="err-box">${esc(e.message || 'Could not search right now. Try again in a moment.')}</div>`;
+  const merged = [];
+  const seenKeys = new Set();
+  let failedAreas = 0;
+
+  for (let idx = 0; idx < areas.length; idx++) {
+    const area = areas[idx];
+    const location = area ? `${area}, ${city}` : city;
+    const query = `${niche.phrase} in ${location}, ${country}`;
+    resultsEl.innerHTML = `<div class="loading-msg"><span class="spinner"></span>Searching ${esc(area || city)}${areas.length > 1 ? ` (${idx + 1}/${areas.length})` : ''}...</div>`;
+    try {
+      const res = await fetch('/api/search-places', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Search failed');
+      (data.results || []).forEach(r => {
+        const key = r.placeId || `${r.name}|${r.phone}`;
+        if (seenKeys.has(key)) return;
+        seenKeys.add(key);
+        merged.push(r);
+      });
+    } catch (e) {
+      console.error('Auto-search error for area', area, e);
+      failedAreas++;
+    }
   }
+
+  if (failedAreas) showToast(`Could not search ${failedAreas} area${failedAreas !== 1 ? 's' : ''} — showing what we found`);
+  renderAiSearchResults(merged, niche, singleArea || city);
 }
 
 let aiSearchResults = [];
@@ -933,6 +1009,9 @@ function aiLeadToRecord(r, nicheKey, fallbackArea) {
     niche: nicheKey,
     nicheLabel: nicheKeyToLabel(nicheKey),
     hasWebsite: !!r.website,
+    website: r.website || '',
+    rating: r.rating || null,
+    ratingCount: r.ratingCount || null,
     source: 'Google Search (auto)',
     status: 'New',
     notes: '',
@@ -1127,6 +1206,7 @@ async function addLeadManual() {
   const niche = nicheSel.value;
   const nicheLabel = nicheSel.selectedOptions[0].textContent;
   const hasWebsite = document.getElementById('l-haswebsite').value === 'yes';
+  const website = document.getElementById('l-website').value.trim();
   const source = document.getElementById('l-source').value;
   if (!name || (!phone && !instagram)) { alert('Enter a business name, and at least a phone number or Instagram handle.'); return; }
   const dup = leads.find(l => (phone && l.phone === phone) || (instagram && l.instagram && l.instagram.toLowerCase() === instagram.toLowerCase()));
@@ -1135,7 +1215,7 @@ async function addLeadManual() {
     if (!confirm(`"${dup.name}" is already in your leads with this ${field}. Add anyway?`)) return;
   }
   if (!(await canAddLeads(1))) { showUpgradeBlock(); return; }
-  const newLead = { id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name, phone, instagram, area, niche, nicheLabel, hasWebsite, source, status: 'New', added: new Date().toLocaleDateString() };
+  const newLead = { id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name, phone, instagram, area, niche, nicheLabel, hasWebsite, website, source, status: 'New', added: new Date().toLocaleDateString() };
   leads.unshift(newLead);
   await insertLeadRemote(newLead);
   await refreshPlanBadge();
@@ -1143,6 +1223,7 @@ async function addLeadManual() {
   document.getElementById('l-phone').value = '';
   document.getElementById('l-instagram').value = '';
   document.getElementById('l-area').value = '';
+  document.getElementById('l-website').value = '';
   renderLeads();
 }
 
@@ -1164,6 +1245,7 @@ function renderLeads() {
   leads.forEach(l => { if (c[l.status] !== undefined) c[l.status]++; });
   const filters = {
     total: { label: 'Total', n: leads.length, test: () => true },
+    hot: { label: '🔥 Hot leads', n: leads.filter(isHotLead).length, test: isHotLead },
     no_website: { label: 'No website', n: leads.filter(l => !l.hasWebsite).length, test: l => !l.hasWebsite },
     has_website: { label: 'Has website', n: leads.filter(l => l.hasWebsite).length, test: l => !!l.hasWebsite },
     not_messaged: { label: 'Not messaged', n: c['New'], test: l => l.status === 'New' },
@@ -1186,15 +1268,29 @@ function renderLeads() {
     const hasInstagram = !!l.instagram;
     const wa = hasPhone ? `https://wa.me/${l.phone}` : null;
     const ig = hasInstagram ? `https://www.instagram.com/${l.instagram}/` : null;
+    let scoreBadge = '';
+    if (l.hasWebsite && l.website) {
+      if (typeof l.websiteScore === 'number') {
+        const good = l.websiteScore >= 70, ok = l.websiteScore >= 50;
+        const color = good ? 'var(--green-text)' : (ok ? '#8a611f' : 'var(--rust)');
+        const bg = good ? 'var(--green-soft)' : (ok ? 'var(--brass-soft)' : 'var(--rust-soft)');
+        scoreBadge = `<span class="badge" style="background:${bg};color:${color};" title="Google PageSpeed performance score (mobile)">⚡ ${l.websiteScore}/100</span>`;
+      } else {
+        scoreBadge = `<button class="btn-save" id="speed-btn-${l.id}" onclick="checkWebsiteSpeed('${l.id}')" style="margin-left:6px;">⚡ Check site speed</button>`;
+      }
+    }
     return `<div class="lead-row">
       <div class="lead-main">
         <span class="lead-name">${esc(l.name)}</span>
         <span class="badge" style="background:#f0f0f0;color:#555;">${esc(l.nicheLabel || '')}</span>
+        ${isHotLead(l) ? `<span class="badge" style="background:var(--rust-soft);color:var(--rust);">🔥 Hot</span>` : ''}
         ${needsFollowup(l) ? `<span class="badge" style="background:#fdecea;color:#b3492f;">⏰ Follow up</span>` : ''}
+        ${scoreBadge}
         <div class="lead-meta">
           ${hasPhone ? `<span class="meta-item">📞 ${esc(l.phone)}</span>` : ''}
           ${hasInstagram ? `<span class="meta-item">📸 @${esc(l.instagram)}</span>` : ''}
           ${l.area ? `<span class="meta-item">📍 ${esc(l.area)}</span>` : ''}
+          ${l.rating ? `<span class="meta-item">⭐ ${l.rating}${l.ratingCount ? ' (' + l.ratingCount + ')' : ''}</span>` : ''}
           <span class="meta-trail">${l.hasWebsite ? 'Has website' : 'No website'} · ${esc(l.source || '')} · Added ${l.added}</span>
         </div>
       </div>
