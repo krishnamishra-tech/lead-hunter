@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <style>
   :root {
     /* Field-scout palette: pine forest + brass, warm parchment ground */
@@ -262,8 +263,15 @@
       </div>
       <div class="btn-row">
         <button class="btn btn-navy" onclick="generateLinks()">🔗 Get search links</button>
+        <button class="btn btn-outline" onclick="aiSearchLeads()">🤖 Auto-search leads (beta)</button>
       </div>
-      <p style="font-size:11px;color:var(--grey);margin-top:10px;">Opens ready-made search tabs across Google Maps, JustDial, Instagram and more for your selected types — copy results and paste them below to import instantly.</p>
+      <p style="font-size:11px;color:var(--grey);margin-top:10px;">Opens ready-made search tabs across Google Maps, JustDial, Instagram and more for your selected types — copy results and paste them below to import instantly. Or use Auto-search to pull real businesses directly, no copy-pasting.</p>
+    </div>
+
+    <div id="ai-search-card" class="card" style="display:none;">
+      <div class="card-title">🤖 Auto-search leads (beta)</div>
+      <div class="card-sub">Pulls real businesses straight from Google for your selected city, area, and business type — name, phone, address, and whether they have a website. Uses your first selected business type.</div>
+      <div id="ai-search-results"></div>
     </div>
 
     <div id="links-card" class="card" style="display:none;">
@@ -484,7 +492,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const FREE_TIER_MONTHLY_LIMIT = 20;
 let currentUser = null;
-let currentPlan = 'free'; // 'free' | 'pro' — flip to 'pro' manually in the profiles table once you take payments
+let currentPlan = 'free'; // 'free' | 'pro' — kept in sync with the profiles table (updated automatically after payment)
 
 function toRow(l) {
   return { id: l.id, user_id: currentUser.id, name: l.name, phone: l.phone || '', instagram: l.instagram || '', area: l.area || '',
@@ -522,7 +530,9 @@ async function canAddLeads(n) {
 }
 function showUpgradeBlock() {
   showToast(`Free plan limit reached (${FREE_TIER_MONTHLY_LIMIT}/month)`);
-  alert(`You've hit the free plan limit of ${FREE_TIER_MONTHLY_LIMIT} leads this month. Upgrade to Pro for unlimited leads — reach out to upgrade.`);
+  if (confirm(`You've hit the free plan limit of ${FREE_TIER_MONTHLY_LIMIT} leads this month. Upgrade to Pro for unlimited leads?`)) {
+    switchTab('settings');
+  }
 }
 
 async function insertLeadRemote(lead) {
@@ -626,15 +636,110 @@ async function onAuthReady(user) {
   updateCityOptions('India');
   await initStorage();
 }
+
+// Reads the user's row from `profiles` (plan + plan_expiry) and syncs currentPlan.
+// A plan is only "pro" if it hasn't passed its expiry — this makes renewals self-enforcing.
+async function fetchProfile() {
+  try {
+    const { data, error } = await sb.from('profiles').select('plan, plan_expiry').eq('id', currentUser.id).single();
+    if (error) throw error;
+    const expired = data.plan === 'pro' && data.plan_expiry && new Date(data.plan_expiry) < new Date();
+    currentPlan = (data.plan === 'pro' && !expired) ? 'pro' : 'free';
+    return data;
+  } catch (e) {
+    console.error('Profile fetch error', e);
+    currentPlan = 'free';
+    return null;
+  }
+}
+
 async function refreshPlanBadge() {
-  const usedCount = await leadsAddedThisMonth();
+  const profile = await fetchProfile();
+  const usedCount = currentPlan === 'pro' ? 0 : await leadsAddedThisMonth();
   const badge = document.getElementById('plan-badge');
   badge.textContent = currentPlan === 'pro' ? 'Pro' : 'Free';
   const box = document.getElementById('plan-status-box');
-  if (box) {
-    box.innerHTML = currentPlan === 'pro'
-      ? `<p style="font-size:12px;color:var(--navy);font-weight:700;">Pro plan — unlimited leads ✓</p>`
-      : `<div class="upgrade-box"><p><strong>${usedCount}/${FREE_TIER_MONTHLY_LIMIT}</strong> leads used this month on the Free plan.</p></div>`;
+  if (!box) return;
+
+  if (currentPlan === 'pro') {
+    const expiryStr = profile && profile.plan_expiry ? new Date(profile.plan_expiry).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    box.innerHTML = `
+      <p style="font-size:12px;color:var(--navy);font-weight:700;">Pro plan — unlimited leads ✓${expiryStr ? ` (valid till ${expiryStr})` : ''}</p>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="startCheckout('monthly')">Renew Monthly — ₹499</button>
+        <button class="btn btn-outline" onclick="startCheckout('yearly')">Renew Yearly — ₹4,999</button>
+      </div>`;
+  } else {
+    box.innerHTML = `
+      <div class="upgrade-box">
+        <p><strong>${usedCount}/${FREE_TIER_MONTHLY_LIMIT}</strong> leads used this month on the Free plan.</p>
+        <div class="btn-row" style="justify-content:center;">
+          <button class="btn btn-navy" onclick="startCheckout('monthly')">Upgrade Monthly — ₹499/mo</button>
+          <button class="btn btn-navy" onclick="startCheckout('yearly')">Upgrade Yearly — ₹4,999/yr</button>
+        </div>
+      </div>`;
+  }
+}
+
+// ── Payments (Razorpay) ─────────────────────────────────────────────
+// Flow: create-order (serverless) → Razorpay Checkout popup → verify-payment (serverless,
+// verifies signature + writes plan/plan_expiry to `profiles` using the service-role key).
+// Nothing here can grant Pro on its own — the browser never has the secret key.
+async function startCheckout(plan) {
+  if (!currentUser) return;
+  if (typeof Razorpay === 'undefined') { showToast('Payment library failed to load — refresh and try again'); return; }
+  try {
+    showToast('Opening payment window...');
+    const orderRes = await fetch('/api/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, userId: currentUser.id }),
+    });
+    const order = await orderRes.json();
+    if (!orderRes.ok) throw new Error(order.error || 'Could not start checkout');
+
+    const rzp = new Razorpay({
+      key: order.keyId,
+      amount: order.amount,
+      currency: order.currency,
+      order_id: order.orderId,
+      name: 'LocalScout',
+      description: plan === 'monthly' ? 'LocalScout Pro — Monthly' : 'LocalScout Pro — Yearly',
+      prefill: { email: currentUser.email || '' },
+      theme: { color: '#1f4a3a' },
+      handler: async function (response) {
+        showToast('Verifying payment...');
+        try {
+          const verifyRes = await fetch('/api/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              userId: currentUser.id,
+              plan,
+            }),
+          });
+          const result = await verifyRes.json();
+          if (verifyRes.ok && result.success) {
+            showToast('Upgraded to Pro! 🎉');
+            await refreshPlanBadge();
+          } else {
+            showToast('Payment verification failed — contact support');
+          }
+        } catch (e) {
+          console.error('Verify error', e);
+          showToast('Could not verify payment — contact support');
+        }
+      },
+      modal: { ondismiss: function () { showToast('Payment cancelled'); } },
+    });
+    rzp.on('payment.failed', function () { showToast('Payment failed — please try again'); });
+    rzp.open();
+  } catch (e) {
+    console.error('Checkout error', e);
+    showToast(e.message || 'Could not start checkout');
   }
 }
 
@@ -695,6 +800,7 @@ function switchTab(view) {
   document.getElementById('view-' + view).classList.add('active');
   document.querySelector('nav button[data-view="' + view + '"]').classList.add('active');
   if (view === 'leads') renderLeads();
+  if (view === 'settings') refreshPlanBadge();
 }
 
 // ── Free search links ──────────────────────────────────────────────
@@ -746,6 +852,124 @@ function generateLinks() {
   document.getElementById('paste-card').style.display = 'block';
   document.getElementById('paste-results').innerHTML = '';
   document.getElementById('paste-box').value = '';
+}
+
+// ── Auto-search leads (Google Places API, via serverless proxy) ─────
+// Pulls real business data — no AI generation, no hallucination risk.
+async function aiSearchLeads() {
+  const country = document.getElementById('h-country').value;
+  const city = document.getElementById('h-city').value.trim();
+  const area = document.getElementById('h-area').value.trim();
+  const niches = NICHE_LIST.filter(n => selectedNiches.has(n.key));
+  if (!city) { alert('Enter at least a city.'); return; }
+  if (!niches.length) { alert('Select at least one business type.'); return; }
+  if (niches.length > 1) showToast('Auto-search uses your first selected type for best results');
+  const niche = niches[0];
+  const location = area ? `${area}, ${city}` : city;
+  const query = `${niche.phrase} in ${location}, ${country}`;
+
+  const card = document.getElementById('ai-search-card');
+  const resultsEl = document.getElementById('ai-search-results');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  resultsEl.innerHTML = `<div class="loading-msg"><span class="spinner"></span>Searching Google for real businesses...</div>`;
+
+  try {
+    const res = await fetch('/api/search-places', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Search failed');
+    renderAiSearchResults(data.results || [], niche, area || city);
+  } catch (e) {
+    console.error('Auto-search error', e);
+    resultsEl.innerHTML = `<div class="err-box">${esc(e.message || 'Could not search right now. Try again in a moment.')}</div>`;
+  }
+}
+
+let aiSearchResults = [];
+function renderAiSearchResults(results, niche, fallbackArea) {
+  aiSearchResults = results;
+  const resultsEl = document.getElementById('ai-search-results');
+  if (!results.length) {
+    resultsEl.innerHTML = `<div class="err-box">No businesses found for this search. Try a broader area or a different business type.</div>`;
+    return;
+  }
+  resultsEl.innerHTML = `
+    <div style="font-size:13px;color:var(--grey);margin-bottom:10px;">Found <strong>${results.length}</strong> real business${results.length !== 1 ? 'es' : ''} via Google — review and save:</div>
+    ${results.map((r, i) => `
+      <div class="result-row" id="ai-res-${i}">
+        <div class="result-main">
+          <div class="result-name">${esc(r.name)}</div>
+          <div class="result-meta">
+            ${r.phone ? `📞 ${esc(r.phone)}` : '<span style="color:#c0392b">No phone listed</span>'}
+            ${r.website ? ` · 🌐 has website` : ' · <strong>no website</strong>'}
+            ${r.rating ? ` · ⭐ ${r.rating}${r.ratingCount ? ' (' + r.ratingCount + ')' : ''}` : ''}
+          </div>
+          <div class="result-meta">${esc(r.address || '')}</div>
+        </div>
+        <button class="btn btn-green" onclick="saveAiLead(${i},'${niche.key}','${esc(fallbackArea)}')" id="ai-btn-${i}">+ Save</button>
+      </div>`).join('')}
+    <button class="btn-primary" style="margin-top:12px;width:100%;" onclick="saveAllAiLeads('${niche.key}','${esc(fallbackArea)}')">💾 Save all ${results.length} leads</button>
+  `;
+}
+
+function aiLeadToRecord(r, nicheKey, fallbackArea) {
+  return {
+    id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+    name: r.name || 'Unknown',
+    phone: (r.phone || '').replace(/[^0-9]/g, ''),
+    instagram: '',
+    area: r.address || fallbackArea,
+    niche: nicheKey,
+    nicheLabel: nicheKeyToLabel(nicheKey),
+    hasWebsite: !!r.website,
+    source: 'Google Search (auto)',
+    status: 'New',
+    notes: '',
+    added: new Date().toLocaleDateString(),
+  };
+}
+
+async function saveAiLead(i, nicheKey, fallbackArea) {
+  if (!(await canAddLeads(1))) { showUpgradeBlock(); return; }
+  const r = aiSearchResults[i];
+  if (!r) return;
+  const newLead = aiLeadToRecord(r, nicheKey, fallbackArea);
+  leads.unshift(newLead);
+  await insertLeadRemote(newLead);
+  await refreshPlanBadge();
+  const btn = document.getElementById(`ai-btn-${i}`);
+  if (btn) { btn.textContent = '✓ Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
+  showToast(`Saved: ${newLead.name}`);
+}
+
+async function saveAllAiLeads(nicheKey, fallbackArea) {
+  let remaining = Infinity;
+  if (currentPlan !== 'pro') {
+    const used = await leadsAddedThisMonth();
+    remaining = Math.max(0, FREE_TIER_MONTHLY_LIMIT - used);
+    if (remaining === 0) { showUpgradeBlock(); return; }
+  }
+  const newLeads = [];
+  aiSearchResults.forEach((r, i) => {
+    if (newLeads.length >= remaining) return;
+    const btn = document.getElementById(`ai-btn-${i}`);
+    if (btn && btn.disabled) return;
+    newLeads.push(aiLeadToRecord(r, nicheKey, fallbackArea));
+    if (btn) { btn.textContent = '✓ Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
+  });
+  if (newLeads.length) {
+    leads.unshift(...newLeads);
+    await insertLeadsRemoteBulk(newLeads);
+    await refreshPlanBadge();
+    showToast(`Saved ${newLeads.length} leads`);
+  }
+  if (currentPlan !== 'pro' && newLeads.length < aiSearchResults.length) {
+    showUpgradeBlock();
+  }
 }
 
 // ── Paste & Parse leads ────────────────────────────────────────────
