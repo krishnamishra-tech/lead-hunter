@@ -1014,6 +1014,7 @@ async function aiSearchLeads() {
   const merged = [];
   const seenKeys = new Set();
   let failedAreas = 0;
+  let lastError = '';
 
   for (let idx = 0; idx < areas.length; idx++) {
     const area = areas[idx];
@@ -1027,7 +1028,7 @@ async function aiSearchLeads() {
         body: JSON.stringify({ query }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Search failed');
+      if (!res.ok) throw new Error(data.error || `Search failed (${res.status})`);
       (data.results || []).forEach(r => {
         const key = r.placeId || `${r.name}|${r.phone}`;
         if (seenKeys.has(key)) return;
@@ -1036,8 +1037,14 @@ async function aiSearchLeads() {
       });
     } catch (e) {
       console.error('Auto-search error for area', area, e);
+      lastError = e.message || 'Search failed';
       failedAreas++;
     }
+  }
+
+  if (failedAreas === areas.length && merged.length === 0) {
+    resultsEl.innerHTML = `<div class="err-box">Search failed: ${esc(lastError)}</div>`;
+    return;
   }
 
   if (failedAreas) showToast(`Could not search ${failedAreas} area${failedAreas !== 1 ? 's' : ''} — showing what we found`);
