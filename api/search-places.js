@@ -1,13 +1,10 @@
+// POST /api/search-places
+// Pulls REAL business data from Google Places API (New) — Text Search.
+// No AI generation involved, so no hallucination risk: every result is an
+// actual listed business with (where available) a real phone number.
+const { verifyUser, supabaseAdmin } = require('./_lib/verifyUser');
 
-// POST /api/check-website
-// Runs a real Google PageSpeed Insights (Lighthouse) check on a lead's website
-// and returns a 0-100 mobile performance score. This is a genuine audit, not
-// AI-generated — same tool Google itself uses, so the number is trustworthy
-// enough to put in front of a prospect ("your site scores 34/100 on mobile speed").
-//
-// Uses the same GOOGLE_PLACES_API_KEY — just make sure "PageSpeed Insights API"
-// is also enabled for that key's project in Google Cloud Console → Library.
-// PageSpeed Insights API is free with no billing account required.
+const DAILY_SEARCH_LIMIT = 200;
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,56 +12,91 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  const user = await verifyUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Please sign in to search' });
+    return;
+  }
+
   try {
-    const { url } = req.body || {};
-    if (!url || typeof url !== 'string' || !url.trim()) {
-      res.status(400).json({ error: 'Missing website URL' });
+    const { query } = req.body || {};
+    if (!query || typeof query !== 'string' || !query.trim()) {
+      res.status(400).json({ error: 'Missing search query' });
+      return;
+    }
+    if (query.length > 300) {
+      res.status(400).json({ error: 'Search query too long' });
+      return;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: usageRow } = await supabaseAdmin
+      .from('api_usage')
+      .select('places_searches')
+      .eq('user_id', user.id)
+      .eq('usage_date', today)
+      .maybeSingle();
+    const currentCount = (usageRow && usageRow.places_searches) || 0;
+    if (currentCount >= DAILY_SEARCH_LIMIT) {
+      res.status(429).json({ error: 'Daily search limit reached — please try again tomorrow' });
       return;
     }
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) {
-      res.status(500).json({ error: 'Website check is not configured yet — missing API key' });
+      res.status(500).json({ error: 'Search is not configured yet — missing API key' });
       return;
     }
 
-    let targetUrl = url.trim();
-    if (!/^https?:\/\//i.test(targetUrl)) targetUrl = 'https://' + targetUrl;
+    const fieldMask = [
+      'places.displayName',
+      'places.formattedAddress',
+      'places.internationalPhoneNumber',
+      'places.nationalPhoneNumber',
+      'places.websiteUri',
+      'places.rating',
+      'places.userRatingCount',
+      'places.id',
+    ].join(',');
 
-    const psiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(targetUrl)}&key=${apiKey}&strategy=mobile&category=performance`;
+    const placesRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': fieldMask,
+      },
+      body: JSON.stringify({ textQuery: query.trim(), pageSize: 20 }),
+    });
 
-    // Lighthouse audits are slow — give this extra time before giving up.
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000);
+    const data = await placesRes.json();
 
-    let data;
-    try {
-      const psiRes = await fetch(psiUrl, { signal: controller.signal });
-      data = await psiRes.json();
-      if (!psiRes.ok) {
-        console.error('PageSpeed API error:', data);
-        res.status(502).json({ error: (data.error && data.error.message) || 'Could not analyze this website' });
-        return;
-      }
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    const rawScore = data && data.lighthouseResult && data.lighthouseResult.categories &&
-      data.lighthouseResult.categories.performance && data.lighthouseResult.categories.performance.score;
-
-    if (typeof rawScore !== 'number') {
-      res.status(502).json({ error: 'Could not get a score for this site — it may be blocking automated checks' });
+    if (!placesRes.ok) {
+      console.error('Places API error:', data);
+      res.status(502).json({ error: (data.error && data.error.message) || 'Google Places request failed' });
       return;
     }
 
-    res.status(200).json({ score: Math.round(rawScore * 100) });
+    await supabaseAdmin
+      .from('api_usage')
+      .upsert(
+        { user_id: user.id, usage_date: today, places_searches: currentCount + 1 },
+        { onConflict: 'user_id,usage_date' }
+      );
+
+    const results = (data.places || []).map((p) => ({
+      name: (p.displayName && p.displayName.text) || 'Unknown',
+      phone: p.internationalPhoneNumber || p.nationalPhoneNumber || '',
+      address: p.formattedAddress || '',
+      website: p.websiteUri || '',
+      rating: p.rating || null,
+      ratingCount: p.userRatingCount || null,
+      placeId: p.id || '',
+    }));
+
+    res.status(200).json({ results });
   } catch (err) {
-    if (err.name === 'AbortError') {
-      res.status(504).json({ error: 'Website check timed out — the site may be slow or unreachable' });
-      return;
-    }
-    console.error('check-website error:', err);
-    res.status(500).json({ error: 'Website check failed — please try again' });
+    console.error('search-places error:', err);
+    res.status(500).json({ error: 'Search failed — please try again' });
   }
 };
