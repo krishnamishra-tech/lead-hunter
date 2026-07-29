@@ -53,13 +53,21 @@
   .api-status { font-size: 11px; display: flex; align-items: center; gap: 6px; position: relative; z-index: 1; color: rgba(255,255,255,.85); font-family: 'IBM Plex Mono', monospace; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: #6fcf9e; flex-shrink: 0; }
 
-  nav { display: flex; gap: 2px; padding: 0 22px; background: var(--card); border-bottom: 1px solid var(--line); }
+  nav { display: flex; gap: 2px; padding: 0 22px; background: var(--card); border-bottom: 1px solid var(--line); overflow-x: auto; }
   nav button {
     background: none; border: none; padding: 14px 16px; font-size: 12.5px; font-weight: 600;
     color: var(--ink-soft); cursor: pointer; border-bottom: 2.5px solid transparent;
-    text-transform: uppercase; letter-spacing: .05em; font-family: 'Inter', sans-serif;
+    text-transform: uppercase; letter-spacing: .05em; font-family: 'Inter', sans-serif; white-space: nowrap; flex-shrink: 0;
   }
   nav button.active { color: var(--forest); border-bottom-color: var(--brass); }
+
+  @media (max-width: 640px) {
+    main { padding: 14px 12px 60px; }
+    header { padding: 14px 16px; }
+    nav { padding: 0 12px; }
+    .stat-n { font-size: 20px; }
+    .kanban-col { width: 78vw; max-width: 220px; }
+  }
 
   main { max-width: 960px; margin: 0 auto; padding: 22px 20px 60px; }
   .view { display: none; }
@@ -143,6 +151,25 @@
   .link-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px; text-decoration: none; color: var(--ink); font-size: 13px; font-weight: 600; }
   .link-item:hover { border-color: var(--forest); }
   .link-icon { width: 24px; height: 24px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #fff; flex-shrink: 0; }
+
+  .kanban-board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; }
+  .kanban-col { flex-shrink: 0; width: 220px; }
+  .kanban-col-head { display: flex; align-items: center; justify-content: space-between; padding: 0 2px 8px; }
+  .kanban-col-title { font-size: 12px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; font-family: 'IBM Plex Mono', monospace; }
+  .kanban-col-count { font-size: 11px; color: var(--ink-soft); font-family: 'IBM Plex Mono', monospace; }
+  .kanban-card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+  .kanban-card:hover { border-color: var(--forest2); }
+  .kanban-card-name { font-size: 13px; font-weight: 700; color: var(--forest); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kanban-card-meta { font-size: 11px; color: var(--ink-soft); }
+  .kanban-empty { border: 1px dashed var(--line); border-radius: 8px; padding: 18px 10px; text-align: center; font-size: 12px; color: #9a988e; }
+
+  .report-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .report-bar-label { font-size: 12.5px; color: var(--ink-soft); width: 96px; flex-shrink: 0; }
+  .report-bar-track { flex: 1; height: 8px; background: var(--paper); border-radius: 4px; overflow: hidden; }
+  .report-bar-fill { height: 100%; background: var(--forest); }
+  .report-bar-n { font-size: 12.5px; color: var(--ink-soft); width: 26px; text-align: right; flex-shrink: 0; }
+  .report-list-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .report-list-row:last-child { border-bottom: none; }
 
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--forest); color: #fff;
@@ -230,6 +257,8 @@
 <nav>
   <button class="active" data-view="hunt" onclick="switchTab('hunt')">🔍 Hunt</button>
   <button data-view="leads" onclick="switchTab('leads')">📋 My Leads</button>
+  <button data-view="pipeline" onclick="switchTab('pipeline')">🗂 Pipeline</button>
+  <button data-view="reports" onclick="switchTab('reports')">📊 Reports</button>
   <button data-view="settings" onclick="switchTab('settings')">⚙ Settings</button>
 </nav>
 
@@ -348,6 +377,30 @@ Gomti Nagar" style="width:100%;height:160px;margin-top:10px;padding:10px;border:
       <div class="section-label"><span>Your leads</span></div>
       <input id="lead-search" type="text" placeholder="🔍 Search by name or phone..." style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--cream);color:var(--ink);margin-bottom:12px;box-sizing:border-box;" oninput="setLeadsSearch(this.value)">
       <div id="leads-list"></div>
+    </div>
+  </section>
+
+  <section id="view-pipeline" class="view">
+    <div class="card">
+      <div class="card-title">Pipeline</div>
+      <div class="card-sub">Leads grouped by stage — scroll sideways to see every column. Change a lead's stage from here or from My Leads.</div>
+      <div id="pipeline-board" class="kanban-board"></div>
+    </div>
+  </section>
+
+  <section id="view-reports" class="view">
+    <div class="stats" id="report-stats"></div>
+    <div class="card">
+      <div class="section-label"><span>Pipeline breakdown</span></div>
+      <div id="report-pipeline-bars"></div>
+    </div>
+    <div class="card">
+      <div class="section-label"><span>Best-performing areas</span></div>
+      <div id="report-by-area"></div>
+    </div>
+    <div class="card">
+      <div class="section-label"><span>By business type</span></div>
+      <div id="report-by-niche"></div>
     </div>
   </section>
 
@@ -893,6 +946,8 @@ function switchTab(view) {
   document.querySelector('nav button[data-view="' + view + '"]').classList.add('active');
   if (view === 'leads') renderLeads();
   if (view === 'settings') refreshPlanBadge();
+  if (view === 'pipeline') renderPipeline();
+  if (view === 'reports') renderReports();
 }
 
 // ── Free search links ──────────────────────────────────────────────
@@ -1331,6 +1386,105 @@ function renderLeads() {
       <button class="btn-del" onclick="deleteLead('${l.id}')">✕</button>
     </div>`;
   }).join('');
+}
+
+// ── Pipeline (Kanban) ────────────────────────────────────────────────
+const PIPELINE_STAGES = ['New', 'Messaged', 'Follow-up 1', 'Follow-up 2', 'Replied', 'Interested', 'Quoted', 'Closed - Won', 'Closed - Lost', 'No response'];
+const PIPELINE_COLUMNS = [
+  { key: 'New', label: 'New', statuses: ['New'] },
+  { key: 'Messaged', label: 'Messaged', statuses: ['Messaged'] },
+  { key: 'Follow-up', label: 'Follow-up', statuses: ['Follow-up 1', 'Follow-up 2'] },
+  { key: 'Replied', label: 'Replied', statuses: ['Replied', 'Interested', 'Quoted'] },
+  { key: 'Won', label: 'Won', statuses: ['Closed - Won'] },
+  { key: 'Lost', label: 'Lost / No response', statuses: ['Closed - Lost', 'No response'] },
+];
+function renderPipeline() {
+  const board = document.getElementById('pipeline-board');
+  if (!board) return;
+  if (!leads.length) {
+    board.innerHTML = '<div class="kanban-empty" style="width:100%;">No leads yet. Find some in the Hunt tab first.</div>';
+    return;
+  }
+  board.innerHTML = PIPELINE_COLUMNS.map(col => {
+    const colLeads = leads.filter(l => col.statuses.includes(l.status));
+    const cards = colLeads.length
+      ? colLeads.map(l => `
+        <div class="kanban-card" onclick="switchTab('leads')">
+          ${isHotLead(l) ? `<span class="badge" style="background:var(--rust-soft);color:var(--rust);margin-bottom:4px;display:inline-block;">🔥 Hot</span>` : ''}
+          ${needsFollowup(l) ? `<span class="badge" style="background:#fdecea;color:#b3492f;margin-bottom:4px;display:inline-block;">⏰ Follow up</span>` : ''}
+          <div class="kanban-card-name">${esc(l.name)}</div>
+          <div class="kanban-card-meta">${esc(l.area || '')}</div>
+        </div>`).join('')
+      : '<div class="kanban-empty">No leads</div>';
+    return `<div class="kanban-col">
+      <div class="kanban-col-head">
+        <span class="kanban-col-title">${col.label}</span>
+        <span class="kanban-col-count">${colLeads.length}</span>
+      </div>
+      ${cards}
+    </div>`;
+  }).join('');
+}
+
+// ── Reports ──────────────────────────────────────────────────────────
+function renderReports() {
+  const messagedOrLater = leads.filter(l => l.status !== 'New').length;
+  const repliedCount = leads.filter(l => ['Replied', 'Interested', 'Quoted', 'Closed - Won'].includes(l.status)).length;
+  const wonCount = leads.filter(l => l.status === 'Closed - Won').length;
+  const replyRate = messagedOrLater ? Math.round((repliedCount / messagedOrLater) * 100) : 0;
+  const winRate = messagedOrLater ? Math.round((wonCount / messagedOrLater) * 100) : 0;
+
+  const statsEl = document.getElementById('report-stats');
+  if (statsEl) {
+    statsEl.innerHTML = `
+      <div class="stat"><div class="stat-n">${replyRate}%</div><div class="stat-l">Reply rate</div></div>
+      <div class="stat"><div class="stat-n">${winRate}%</div><div class="stat-l">Win rate</div></div>
+      <div class="stat"><div class="stat-n">${leads.length}</div><div class="stat-l">Total leads</div></div>
+      <div class="stat"><div class="stat-n">${leads.filter(isHotLead).length}</div><div class="stat-l">Hot leads</div></div>
+    `;
+  }
+
+  const barsEl = document.getElementById('report-pipeline-bars');
+  if (barsEl) {
+    const total = leads.length || 1;
+    barsEl.innerHTML = PIPELINE_COLUMNS.map(col => {
+      const n = leads.filter(l => col.statuses.includes(l.status)).length;
+      const pct = Math.round((n / total) * 100);
+      return `<div class="report-bar-row">
+        <span class="report-bar-label">${col.label}</span>
+        <div class="report-bar-track"><div class="report-bar-fill" style="width:${pct}%;"></div></div>
+        <span class="report-bar-n">${n}</span>
+      </div>`;
+    }).join('');
+  }
+
+  const areaEl = document.getElementById('report-by-area');
+  if (areaEl) {
+    const byArea = {};
+    leads.forEach(l => {
+      const key = (l.area || 'Unknown').trim() || 'Unknown';
+      if (!byArea[key]) byArea[key] = { total: 0, replied: 0 };
+      byArea[key].total++;
+      if (['Replied', 'Interested', 'Quoted', 'Closed - Won'].includes(l.status)) byArea[key].replied++;
+    });
+    const rows = Object.entries(byArea).sort((a, b) => b[1].total - a[1].total).slice(0, 8);
+    areaEl.innerHTML = rows.length
+      ? rows.map(([area, d]) => `<div class="report-list-row"><span>${esc(area)}</span><span style="color:var(--ink-soft);">${d.total} leads · ${d.replied} replied</span></div>`).join('')
+      : '<div class="empty">No leads yet.</div>';
+  }
+
+  const nicheEl = document.getElementById('report-by-niche');
+  if (nicheEl) {
+    const byNiche = {};
+    leads.forEach(l => {
+      const key = l.nicheLabel || 'Other';
+      byNiche[key] = (byNiche[key] || 0) + 1;
+    });
+    const rows = Object.entries(byNiche).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    nicheEl.innerHTML = rows.length
+      ? rows.map(([niche, n]) => `<div class="report-list-row"><span>${esc(niche)}</span><span style="color:var(--ink-soft);">${n} leads</span></div>`).join('')
+      : '<div class="empty">No leads yet.</div>';
+  }
 }
 
 function exportLeads() {
