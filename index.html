@@ -611,6 +611,24 @@ async function checkWebsiteSpeed(id) {
     if (btn) { btn.disabled = false; btn.innerHTML = '⚡ Check site speed'; }
   }
 }
+// For leads saved before website URLs were captured (hasWebsite=true but no
+// stored URL) — lets you backfill it manually so the speed check can run.
+async function promptAddWebsite(id) {
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+  const url = prompt(`Website URL for "${l.name}":`, 'https://');
+  if (!url || !url.trim() || url.trim() === 'https://') return;
+  l.website = url.trim();
+  try {
+    const { error } = await sb.from('leads').update({ website: l.website }).eq('id', id);
+    if (error) throw error;
+    showToast('Website saved');
+    renderLeads();
+  } catch (e) {
+    console.error('Add website error', e);
+    showToast('Could not save website — check connection');
+  }
+}
 async function deleteLeadRemote(id) {
   try {
     const { error } = await sb.from('leads').delete().eq('id', id);
@@ -838,7 +856,7 @@ function leadHotScore(l) {
   if (typeof l.websiteScore === 'number' && l.websiteScore < 50) score += 2; // has a site but it's bad
   return score;
 }
-function isHotLead(l) { return leadHotScore(l) >= 4; }
+function isHotLead(l) { return leadHotScore(l) >= 3; }
 let selectedNiches = new Set(['real_estate']);
 
 async function initStorage() {
@@ -1287,6 +1305,8 @@ function renderLeads() {
       } else {
         scoreBadge = `<button class="btn-save" id="speed-btn-${l.id}" onclick="checkWebsiteSpeed('${l.id}')" style="margin-left:6px;">⚡ Check site speed</button>`;
       }
+    } else if (l.hasWebsite && !l.website) {
+      scoreBadge = `<button class="btn-save" onclick="promptAddWebsite('${l.id}')" style="margin-left:6px;">+ Add website URL</button>`;
     }
     return `<div class="lead-row">
       <div class="lead-main">
