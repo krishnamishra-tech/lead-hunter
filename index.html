@@ -498,6 +498,16 @@ const SUPABASE_URL = 'https://bjnoxnnbnynygmgpkhql.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqbm94bm5ibnlueWdtZ3BraHFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MjA0NTksImV4cCI6MjA5OTI5NjQ1OX0.fwbQkRFu-xU_GoB3zSRRdzH48EsXKRCRBoWmpWgf77Q';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Attaches the signed-in user's Supabase access token to a request so our
+// serverless functions can verify who's calling (see api/_lib/verifyUser.js).
+// Without this, the backend has no way to tell a real logged-in user apart
+// from anyone who just found the API URL.
+async function authHeaders() {
+  const { data } = await sb.auth.getSession();
+  const token = data && data.session && data.session.access_token;
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 const FREE_TIER_MONTHLY_LIMIT = 20;
 const ENFORCE_LEAD_LIMIT = false; // set to true later to bring back the free-tier cap
 let currentUser = null;
@@ -585,7 +595,7 @@ async function checkWebsiteSpeed(id) {
   try {
     const res = await fetch('/api/check-website', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       body: JSON.stringify({ url: l.website }),
     });
     const data = await res.json();
@@ -745,8 +755,8 @@ async function startCheckout(plan) {
     showToast('Opening payment window...');
     const orderRes = await fetch('/api/create-order', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, userId: currentUser.id }),
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify({ plan }),
     });
     const order = await orderRes.json();
     if (!orderRes.ok) throw new Error(order.error || 'Could not start checkout');
@@ -765,12 +775,11 @@ async function startCheckout(plan) {
         try {
           const verifyRes = await fetch('/api/verify-payment', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
             body: JSON.stringify({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              userId: currentUser.id,
               plan,
             }),
           });
@@ -951,7 +960,7 @@ async function aiSearchLeads() {
     try {
       const res = await fetch('/api/search-places', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ query }),
       });
       const data = await res.json();
