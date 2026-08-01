@@ -650,7 +650,7 @@ async function checkWebsiteSpeed(id) {
     renderLeads();
   } catch (e) {
     console.error('Website speed check error', e);
-    showToast('Could not check website — try again later');
+    showToast(e.message || 'Could not check website — try again later');
     if (btn) { btn.disabled = false; btn.innerHTML = 'Check site speed'; }
   }
 }
