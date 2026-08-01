@@ -73,7 +73,12 @@ module.exports = async function handler(req, res) {
       data = await psiRes.json();
       if (!psiRes.ok) {
         console.error('PageSpeed API error:', data);
-        res.status(502).json({ error: (data.error && data.error.message) || 'Could not analyze this website' });
+        const rawMsg = (data.error && data.error.message) || '';
+        if (rawMsg.includes('NO_FCP')) {
+          res.status(502).json({ error: 'Could not load this site to test it — it may be slow, down, or blocking automated checks' });
+          return;
+        }
+        res.status(502).json({ error: rawMsg || 'Could not analyze this website' });
         return;
       }
     } finally {
