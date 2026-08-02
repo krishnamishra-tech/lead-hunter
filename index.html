@@ -728,6 +728,35 @@ async function promptAddWebsite(id) {
   }
 }
 
+// ── Find Instagram (zero-cost: Google search, no scraping/paid API) ──
+// Instagram has no public "search by business name" API, and scraping their
+// site directly breaks their ToS and is unreliable. A Google site-search for
+// the business name is free, legal, and usually surfaces the right profile
+// in the first couple of results — same pattern as the existing search-links
+// feature, just pre-filled for one specific lead.
+function findInstagram(id) {
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+  const q = encodeURIComponent(`site:instagram.com "${l.name}" ${l.area || ''}`);
+  window.open(`https://www.google.com/search?q=${q}`, '_blank', 'noopener');
+}
+async function promptAddInstagram(id) {
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+  const handle = prompt(`Instagram handle for "${l.name}" (without @):`, '');
+  if (!handle || !handle.trim()) return;
+  l.instagram = handle.trim().replace('@', '');
+  try {
+    const { error } = await sb.from('leads').update({ instagram: l.instagram }).eq('id', id);
+    if (error) throw error;
+    showToast('Instagram handle saved');
+    renderLeads();
+  } catch (e) {
+    console.error('Add Instagram error', e);
+    showToast('Could not save — check connection');
+  }
+}
+
 // ── AI Research + Message (Phase 1 MVP) ──────────────────────────────
 // Uses only data already sitting on the lead record (no live web research
 // yet — see build prompt) to draft a short WhatsApp opener. "AI found"
@@ -1774,7 +1803,10 @@ function renderLeads() {
       <button class="btn btn-outline" onclick="toggleAiPanel('${l.id}')">AI message</button>
       <button class="btn btn-outline" onclick="toggleNotesPanel('${l.id}')">Notes</button>
       ${wa ? `<a class="btn btn-green btn" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
-      ${ig ? `<a class="btn btn-pink btn" href="${ig}" target="_blank" rel="noopener">Instagram</a>` : ''}
+      ${ig ? `<a class="btn btn-pink btn" href="${ig}" target="_blank" rel="noopener">Instagram</a>` : `
+        <button class="btn btn-outline" onclick="findInstagram('${l.id}')">Find Instagram</button>
+        <button class="btn-save" onclick="promptAddInstagram('${l.id}')">+ Add handle</button>
+      `}
       <button class="btn-del" onclick="deleteLead('${l.id}')">✕</button>
     </div>
     <div class="ai-panel" id="ai-panel-${l.id}" style="display:none;"></div>
