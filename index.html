@@ -4,11 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LocalScout — Find. Message. Close.</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#16181c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
   :root {
     /* Professional palette: near-black primary, blue accent, neutral surfaces */
@@ -164,6 +168,15 @@
   .report-list-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
   .report-list-row:last-child { border-bottom: none; }
 
+  .ai-panel { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin: -2px 0 8px; }
+  .ai-found-list { list-style: none; margin: 0 0 12px; padding: 0; }
+  .ai-found-list li { font-size: 12.5px; color: var(--ink-soft); padding-left: 14px; position: relative; margin-bottom: 4px; }
+  .ai-found-list li::before { content: '•'; position: absolute; left: 0; color: var(--brass); }
+  .ai-msg-box { width: 100%; min-height: 90px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; font-family: inherit; background: var(--card); color: var(--ink); box-sizing: border-box; resize: vertical; }
+  .ai-chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .ai-chip { font-size: 11.5px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); cursor: pointer; }
+  .ai-chip:hover { border-color: var(--brass); color: var(--ink); }
+
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--forest); color: #fff;
     padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity .25s;
@@ -255,6 +268,7 @@
 <main>
 
   <section id="view-hunt" class="view active">
+    <div id="followup-digest" style="display:none;margin-bottom:16px;"></div>
     <div class="card">
       <div class="card-title">Search an area</div>
       <div class="card-sub">Enter city + area, then pick one or more business types — LocalScout generates search links across Google Maps, JustDial, Instagram and more so you can pull real leads in seconds.</div>
@@ -322,6 +336,11 @@ Gomti Nagar" style="width:100%;height:160px;margin-top:10px;padding:10px;border:
         <button class="btn-primary" onclick="parsePastedLeads()" style="flex:1;min-width:140px;">Extract leads</button>
         <button onclick="document.getElementById('paste-box').value=''" style="padding:10px 16px;border:1px solid var(--border);border-radius:8px;background:var(--cream);color:var(--ink);cursor:pointer;font-size:13px;">Clear</button>
       </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);">
+        <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:6px;">Or upload a CSV file</label>
+        <input type="file" id="csv-file-input" accept=".csv" onchange="handleCsvUpload(event)" style="font-size:12.5px;">
+        <p style="font-size:11px;color:var(--ink-soft);margin-top:6px;">Expects columns like name/business, phone/mobile, instagram, area/city — column order doesn't matter, header names are matched flexibly.</p>
+      </div>
       <div id="paste-results" style="margin-top:14px;"></div>
     </div>
   </section>
@@ -369,6 +388,7 @@ Gomti Nagar" style="width:100%;height:160px;margin-top:10px;padding:10px;border:
         <input id="lead-search" type="text" placeholder="Search by name or phone..." style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--cream);color:var(--ink);box-sizing:border-box;" oninput="setLeadsSearch(this.value)">
         <button class="btn btn-outline" id="check-all-btn" onclick="checkAllWebsites()">Check all sites</button>
       </div>
+      <div id="bulk-toolbar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px;"></div>
       <div id="leads-list"></div>
     </div>
   </section>
@@ -699,6 +719,100 @@ async function promptAddWebsite(id) {
     showToast('Could not save website — check connection');
   }
 }
+
+// ── AI Research + Message (Phase 1 MVP) ──────────────────────────────
+// Uses only data already sitting on the lead record (no live web research
+// yet — see build prompt) to draft a short WhatsApp opener. "AI found"
+// bullets are computed locally for free; only the drafted message costs
+// an API call.
+function buildAiFoundBullets(l) {
+  const bullets = [];
+  bullets.push(l.hasWebsite === false ? 'No website found for this business' : (typeof l.websiteScore === 'number' ? `Website speed score: ${l.websiteScore}/100${l.websiteScore < 50 ? ' (slow)' : ''}` : 'Has a website (not speed-checked yet)'));
+  if (l.rating) bullets.push(`Google rating: ${l.rating}★${l.ratingCount ? ` from ${l.ratingCount} reviews` : ''}`);
+  if (!l.instagram) bullets.push('No Instagram handle on file');
+  bullets.push(`Status: ${l.status}${l.area ? ' · ' + l.area : ''}`);
+  return bullets;
+}
+
+function renderAiPanelShell(l) {
+  const bullets = buildAiFoundBullets(l);
+  return `
+    <p style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px;">What we know</p>
+    <ul class="ai-found-list">${bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+    <div id="ai-draft-area-${l.id}">
+      <button class="btn btn-navy" onclick="generateAiMessage('${l.id}')">Draft a message</button>
+    </div>
+  `;
+}
+
+function toggleAiPanel(id) {
+  const panel = document.getElementById(`ai-panel-${id}`);
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) { panel.style.display = 'none'; return; }
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+  panel.innerHTML = renderAiPanelShell(l);
+  panel.style.display = 'block';
+}
+
+async function generateAiMessage(id, instruction) {
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+  const draftArea = document.getElementById(`ai-draft-area-${id}`);
+  if (!draftArea) return;
+  draftArea.innerHTML = `<div class="loading-msg"><span class="spinner"></span>Drafting message...</div>`;
+  try {
+    const res = await fetch('/api/generate-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify({
+        name: l.name, niche: l.nicheLabel, area: l.area,
+        rating: l.rating, ratingCount: l.ratingCount,
+        hasWebsite: l.hasWebsite, websiteScore: l.websiteScore,
+        instruction: instruction || undefined,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Message generation failed');
+    draftArea.innerHTML = `
+      <textarea class="ai-msg-box" id="ai-msg-text-${id}">${esc(data.message)}</textarea>
+      <div class="ai-chip-row">
+        <span class="ai-chip" onclick="generateAiMessage('${id}','Make it shorter, under 30 words')">Shorter</span>
+        <span class="ai-chip" onclick="generateAiMessage('${id}','Make the tone more formal and professional')">More formal</span>
+        <span class="ai-chip" onclick="generateAiMessage('${id}')">Regenerate</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn-save" onclick="copyAiMessage('${id}')">Copy</button>
+        ${l.phone ? `<button class="btn btn-green" onclick="sendAiMessageWhatsApp('${id}')">Send on WhatsApp</button>` : ''}
+      </div>
+    `;
+  } catch (e) {
+    console.error('AI message generation error', e);
+    draftArea.innerHTML = `<div class="err-box">${esc(e.message || 'Could not draft a message — try again')}</div><button class="btn btn-navy" style="margin-top:8px;" onclick="generateAiMessage('${id}')">Try again</button>`;
+  }
+}
+
+async function copyAiMessage(id) {
+  const ta = document.getElementById(`ai-msg-text-${id}`);
+  if (!ta || !ta.value) return;
+  try {
+    await navigator.clipboard.writeText(ta.value);
+    showToast('Message copied');
+  } catch (e) {
+    ta.select();
+    try { document.execCommand('copy'); showToast('Message copied'); }
+    catch (e2) { showToast('Could not copy — select and copy manually'); }
+  }
+}
+
+function sendAiMessageWhatsApp(id) {
+  const l = leads.find(x => x.id === id);
+  const ta = document.getElementById(`ai-msg-text-${id}`);
+  if (!l || !l.phone || !ta) return;
+  const url = `https://wa.me/${l.phone}?text=${encodeURIComponent(ta.value)}`;
+  window.open(url, '_blank', 'noopener');
+}
 async function deleteLeadRemote(id) {
   try {
     const { error } = await sb.from('leads').delete().eq('id', id);
@@ -893,6 +1007,12 @@ async function startCheckout(plan) {
   }
 }
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
 sb.auth.onAuthStateChange((event, session) => {
   if (session?.user) { onAuthReady(session.user); }
 });
@@ -904,6 +1024,58 @@ let leads = [];
 let savedIds = new Set();
 let leadsFilter = 'total';
 let leadsSearch = '';
+let selectedLeadIds = new Set();
+function toggleLeadSelection(id, checked) {
+  if (checked) selectedLeadIds.add(id); else selectedLeadIds.delete(id);
+  renderBulkToolbar();
+}
+function clearSelection() {
+  selectedLeadIds.clear();
+  document.querySelectorAll('.lead-checkbox').forEach(cb => cb.checked = false);
+  renderBulkToolbar();
+}
+function renderBulkToolbar() {
+  const el = document.getElementById('bulk-toolbar');
+  if (!el) return;
+  const n = selectedLeadIds.size;
+  if (!n) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <span style="font-size:12.5px;font-weight:600;">${n} selected</span>
+    <select class="status-sel" id="bulk-status-sel" style="max-width:160px;">
+      ${PIPELINE_STAGES.map(s => `<option value="${s}">${s}</option>`).join('')}
+    </select>
+    <button class="btn-save" onclick="bulkChangeStatus()">Apply status</button>
+    <button class="btn-save" onclick="bulkCopyPhones()">Copy phone numbers</button>
+    <button class="btn-outline btn" onclick="clearSelection()">Clear</button>
+  `;
+}
+async function bulkChangeStatus() {
+  const sel = document.getElementById('bulk-status-sel');
+  if (!sel) return;
+  const status = sel.value;
+  const ids = [...selectedLeadIds];
+  for (const id of ids) {
+    const l = leads.find(x => x.id === id);
+    if (l) { l.status = status; l.statusUpdated = new Date().toISOString(); }
+    await updateLeadRemote(id, status);
+    logLeadEvent(id, 'status_change', `Status changed to "${status}" (bulk update)`);
+  }
+  showToast(`Updated ${ids.length} lead${ids.length !== 1 ? 's' : ''} to "${status}"`);
+  clearSelection();
+  renderLeads();
+}
+async function bulkCopyPhones() {
+  const numbers = [...selectedLeadIds].map(id => leads.find(l => l.id === id)).filter(l => l && l.phone).map(l => l.phone);
+  if (!numbers.length) { showToast('No phone numbers in selection'); return; }
+  const text = numbers.join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast(`Copied ${numbers.length} phone number${numbers.length !== 1 ? 's' : ''}`);
+  } catch (e) {
+    showToast('Could not copy — try again');
+  }
+}
 function setLeadsFilter(key) { leadsFilter = key; renderLeads(); }
 function setLeadsSearch(val) { leadsSearch = val; renderLeads(); }
 function daysSince(dateStr) {
@@ -933,6 +1105,25 @@ async function initStorage() {
   leads = await fetchLeads();
   savedIds = new Set(JSON.parse(localStorage.getItem('vlh_saved_ids') || '[]'));
   renderLeads();
+  renderFollowupDigest();
+}
+function renderFollowupDigest() {
+  const el = document.getElementById('followup-digest');
+  if (!el) return;
+  const dueCount = leads.filter(needsFollowup).length;
+  const hotCount = leads.filter(isHotLead).length;
+  if (!dueCount && !hotCount) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const parts = [];
+  if (dueCount) parts.push(`<strong>${dueCount}</strong> lead${dueCount !== 1 ? 's' : ''} need${dueCount === 1 ? 's' : ''} follow-up`);
+  if (hotCount) parts.push(`<strong>${hotCount}</strong> hot lead${hotCount !== 1 ? 's' : ''} not yet closed`);
+  el.innerHTML = `
+    <div class="card" style="border-color:var(--brass-light);">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <span style="font-size:13px;">${parts.join(' · ')} today.</span>
+        <button class="btn btn-navy" onclick="switchTab('leads')">Go to My Leads</button>
+      </div>
+    </div>`;
 }
 
 function initNicheUI() {
@@ -1129,12 +1320,19 @@ async function saveAiLead(i, nicheKey, fallbackArea) {
   if (!(await canAddLeads(1))) { showUpgradeBlock(); return; }
   const r = aiSearchResults[i];
   if (!r) return;
+  const existing = r.phone && findExistingLeadByPhone(r.phone);
+  if (existing) {
+    showToast(`Already in your leads: ${existing.name}`);
+    const btn = document.getElementById(`ai-btn-${i}`);
+    if (btn) { btn.textContent = 'Already saved'; btn.disabled = true; }
+    return;
+  }
   const newLead = aiLeadToRecord(r, nicheKey, fallbackArea);
   leads.unshift(newLead);
   await insertLeadRemote(newLead);
   await refreshPlanBadge();
   const btn = document.getElementById(`ai-btn-${i}`);
-  if (btn) { btn.textContent = '✓ Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
+  if (btn) { btn.textContent = 'Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
   showToast(`Saved: ${newLead.name}`);
 }
 
@@ -1146,18 +1344,26 @@ async function saveAllAiLeads(nicheKey, fallbackArea) {
     if (remaining === 0) { showUpgradeBlock(); return; }
   }
   const newLeads = [];
+  let skippedDupes = 0;
   aiSearchResults.forEach((r, i) => {
     if (newLeads.length >= remaining) return;
     const btn = document.getElementById(`ai-btn-${i}`);
     if (btn && btn.disabled) return;
+    if (r.phone && findExistingLeadByPhone(r.phone)) {
+      skippedDupes++;
+      if (btn) { btn.textContent = 'Already saved'; btn.disabled = true; }
+      return;
+    }
     newLeads.push(aiLeadToRecord(r, nicheKey, fallbackArea));
-    if (btn) { btn.textContent = '✓ Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
+    if (btn) { btn.textContent = 'Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
   });
   if (newLeads.length) {
     leads.unshift(...newLeads);
     await insertLeadsRemoteBulk(newLeads);
     await refreshPlanBadge();
-    showToast(`Saved ${newLeads.length} leads`);
+    showToast(`Saved ${newLeads.length} leads${skippedDupes ? `, skipped ${skippedDupes} duplicate${skippedDupes !== 1 ? 's' : ''}` : ''}`);
+  } else if (skippedDupes) {
+    showToast(`All ${skippedDupes} were already in your leads`);
   }
   if (ENFORCE_LEAD_LIMIT && currentPlan !== 'pro' && newLeads.length < aiSearchResults.length) {
     showUpgradeBlock();
@@ -1224,7 +1430,85 @@ async function parsePastedLeads() {
     resultsEl.innerHTML = `<div class="err-box">Could not find any business names or phone numbers in the pasted text. Make sure you copy the full listing text from Google Maps or JustDial.</div>`;
     return;
   }
+  renderParsedResults(parsed);
+}
 
+// ── CSV file upload import ───────────────────────────────────────────
+const CSV_NAME_KEYS = ['name', 'business', 'businessname', 'company', 'title'];
+const CSV_PHONE_KEYS = ['phone', 'mobile', 'contact', 'phonenumber', 'number', 'whatsapp'];
+const CSV_INSTAGRAM_KEYS = ['instagram', 'ig', 'instagramhandle', 'handle'];
+const CSV_AREA_KEYS = ['area', 'city', 'location', 'address', 'locality'];
+
+function matchCsvColumn(headers, keys) {
+  const normalized = headers.map(h => (h || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+  for (const key of keys) {
+    const idx = normalized.indexOf(key);
+    if (idx !== -1) return headers[idx];
+  }
+  return null;
+}
+
+function handleCsvUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  if (typeof Papa === 'undefined') { alert('CSV parser failed to load — refresh and try again.'); return; }
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: function (results) {
+      const rows = results.data || [];
+      if (!rows.length) { alert('No rows found in this CSV.'); event.target.value = ''; return; }
+      const headers = results.meta.fields || [];
+      const nameCol = matchCsvColumn(headers, CSV_NAME_KEYS);
+      const phoneCol = matchCsvColumn(headers, CSV_PHONE_KEYS);
+      const igCol = matchCsvColumn(headers, CSV_INSTAGRAM_KEYS);
+      const areaCol = matchCsvColumn(headers, CSV_AREA_KEYS);
+
+      if (!nameCol && !phoneCol) {
+        alert('Could not find a name or phone column in this CSV. Expected headers like "Name", "Phone", "Instagram", "Area".');
+        event.target.value = '';
+        return;
+      }
+
+      const seen = new Set();
+      const parsed = [];
+      rows.forEach(row => {
+        const name = (nameCol ? (row[nameCol] || '') : '').toString().trim().substring(0, 60);
+        const rawPhone = (phoneCol ? (row[phoneCol] || '') : '').toString();
+        const digits = rawPhone.replace(/\D/g, '');
+        const phone = digits ? (digits.length === 12 && digits.startsWith('91') ? digits : '91' + digits.slice(-10)) : '';
+        const instagram = (igCol ? (row[igCol] || '') : '').toString().replace('@', '').trim();
+        const area = (areaCol ? (row[areaCol] || '') : '').toString().trim();
+        if (!name && !phone && !instagram) return;
+        const key = phone || instagram || name;
+        if (seen.has(key)) return;
+        seen.add(key);
+        parsed.push({ name: name || 'Unknown', phone, instagram, area, key });
+      });
+
+      if (!parsed.length) {
+        alert('No usable rows found — check that the CSV has name/phone data.');
+        event.target.value = '';
+        return;
+      }
+
+      document.getElementById('links-card').style.display = 'none';
+      document.getElementById('paste-card').style.display = 'block';
+      renderParsedResults(parsed);
+      showToast(`Found ${parsed.length} leads in CSV`);
+      event.target.value = '';
+    },
+    error: function (err) {
+      console.error('CSV parse error', err);
+      alert('Could not read this CSV file.');
+      event.target.value = '';
+    },
+  });
+}
+
+function renderParsedResults(parsed) {
+  const resultsEl = document.getElementById('paste-results');
   const city = document.getElementById('h-city').value.trim();
   const area = document.getElementById('h-area').value.trim();
   const niche = NICHE_LIST.find(n => selectedNiches.has(n.key)) || NICHE_LIST[0];
@@ -1240,7 +1524,7 @@ async function parsePastedLeads() {
             ${p.instagram ? ` · @${esc(p.instagram)}` : ''}
           </div>
         </div>
-        <button class="btn btn-green" onclick="saveParsedLead(${i},'${esc(p.phone)}','${esc(p.instagram)}','${esc(area)}','${esc(city)}','${niche.key}')" id="pbtn-${i}">+ Save</button>
+        <button class="btn btn-green" onclick="saveParsedLead(${i},'${esc(p.phone)}','${esc(p.instagram)}','${esc(p.area || area)}','${esc(city)}','${niche.key}')" id="pbtn-${i}">+ Save</button>
         <button style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--cream);color:var(--grey);cursor:pointer;font-size:12px;" onclick="document.getElementById('pres-${i}').remove()">✕</button>
       </div>`).join('')}
     <button class="btn-primary" style="margin-top:12px;width:100%;" onclick="saveAllParsed(${JSON.stringify(parsed.map((p,i)=>i))})">Save all ${parsed.length} leads</button>
@@ -1249,6 +1533,13 @@ async function parsePastedLeads() {
 
 async function saveParsedLead(i, phone, instagram, area, city, nicheKey) {
   if (!(await canAddLeads(1))) { showUpgradeBlock(); return; }
+  const btn = document.getElementById(`pbtn-${i}`);
+  const existing = phone && findExistingLeadByPhone(phone);
+  if (existing) {
+    showToast(`Already in your leads: ${existing.name}`);
+    if (btn) { btn.textContent = 'Already saved'; btn.disabled = true; }
+    return;
+  }
   const nameEl = document.getElementById(`pname-${i}`);
   const name = nameEl ? nameEl.value.trim() : 'Unknown';
   const nicheLabel = nicheKeyToLabel(nicheKey);
@@ -1261,8 +1552,7 @@ async function saveParsedLead(i, phone, instagram, area, city, nicheKey) {
   leads.unshift(newLead);
   await insertLeadRemote(newLead);
   await refreshPlanBadge();
-  const btn = document.getElementById(`pbtn-${i}`);
-  if (btn) { btn.textContent = '✓ Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
+  if (btn) { btn.textContent = 'Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
   showToast(`Saved: ${name}`);
 }
 
@@ -1277,6 +1567,7 @@ async function saveAllParsed(indices) {
     if (remaining === 0) { showUpgradeBlock(); return; }
   }
   const newLeads = [];
+  let skippedDupes = 0;
   for (const i of indices) {
     if (newLeads.length >= remaining) break;
     const nameEl = document.getElementById(`pname-${i}`);
@@ -1285,19 +1576,26 @@ async function saveAllParsed(indices) {
     if (btn && btn.disabled) continue; // already saved
     const name = nameEl.value.trim() || 'Unknown';
     const phone = btn ? btn.getAttribute('onclick').match(/'([0-9]*)'/)?.[1] || '' : '';
+    if (phone && findExistingLeadByPhone(phone)) {
+      skippedDupes++;
+      if (btn) { btn.textContent = 'Already saved'; btn.disabled = true; }
+      continue;
+    }
     newLeads.push({
       id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
       name, phone, instagram: '', area: area || city, niche: niche.key, nicheLabel: niche.label,
       hasWebsite: false, source: 'Paste Import', status: 'New', notes: '',
       added: new Date().toLocaleDateString()
     });
-    if (btn) { btn.textContent = '✓ Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
+    if (btn) { btn.textContent = 'Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
   }
   if (newLeads.length) {
     leads.unshift(...newLeads);
     await insertLeadsRemoteBulk(newLeads);
     await refreshPlanBadge();
-    showToast(`Saved ${newLeads.length} leads`);
+    showToast(`Saved ${newLeads.length} leads${skippedDupes ? `, skipped ${skippedDupes} duplicate${skippedDupes !== 1 ? 's' : ''}` : ''}`);
+  } else if (skippedDupes) {
+    showToast(`All ${skippedDupes} were already in your leads`);
   }
   if (ENFORCE_LEAD_LIMIT && currentPlan !== 'pro' && newLeads.length < indices.length) {
     showUpgradeBlock();
@@ -1315,9 +1613,9 @@ async function addLeadManual() {
   const website = document.getElementById('l-website').value.trim();
   const source = document.getElementById('l-source').value;
   if (!name || (!phone && !instagram)) { alert('Enter a business name, and at least a phone number or Instagram handle.'); return; }
-  const dup = leads.find(l => (phone && l.phone === phone) || (instagram && l.instagram && l.instagram.toLowerCase() === instagram.toLowerCase()));
+  const dup = (phone && findExistingLeadByPhone(phone)) || leads.find(l => instagram && l.instagram && l.instagram.toLowerCase() === instagram.toLowerCase());
   if (dup) {
-    const field = phone && dup.phone === phone ? 'phone number' : 'Instagram handle';
+    const field = phone && normalizePhone(dup.phone) === normalizePhone(phone) ? 'phone number' : 'Instagram handle';
     if (!confirm(`"${dup.name}" is already in your leads with this ${field}. Add anyway?`)) return;
   }
   if (!(await canAddLeads(1))) { showUpgradeBlock(); return; }
@@ -1335,6 +1633,7 @@ async function addLeadManual() {
 
 async function deleteLead(id) {
   leads = leads.filter(l => l.id !== id);
+  selectedLeadIds.delete(id);
   await deleteLeadRemote(id);
   renderLeads();
 }
@@ -1342,7 +1641,61 @@ async function updateStatus(id, status) {
   const l = leads.find(l => l.id === id);
   if (l) { l.status = status; l.statusUpdated = new Date().toISOString(); }
   await updateLeadRemote(id, status);
+  logLeadEvent(id, 'status_change', `Status changed to "${status}"`);
   renderLeads();
+}
+
+// ── Notes + activity timeline ────────────────────────────────────────
+async function logLeadEvent(leadId, type, content) {
+  try {
+    const { error } = await sb.from('lead_events').insert({ user_id: currentUser.id, lead_id: leadId, type, content });
+    if (error) throw error;
+  } catch (e) { console.error('Log event error', e); }
+}
+async function fetchLeadEvents(leadId) {
+  try {
+    const { data, error } = await sb.from('lead_events').select('*').eq('lead_id', leadId).order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (e) { console.error('Fetch events error', e); return []; }
+}
+function renderNotesPanelContent(leadId, events) {
+  const timelineHtml = events.length
+    ? events.map(ev => `
+      <div style="padding:8px 0;border-bottom:1px dashed var(--line);">
+        <p style="font-size:12.5px;color:var(--ink);margin:0 0 2px;">${ev.type === 'status_change' ? '↻ ' : ''}${esc(ev.content)}</p>
+        <p style="font-size:11px;color:var(--ink-soft);margin:0;">${new Date(ev.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+      </div>`).join('')
+    : '<p style="font-size:12.5px;color:var(--ink-soft);">No activity yet.</p>';
+  return `
+    <p style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px;">Add a note</p>
+    <textarea class="ai-msg-box" id="note-text-${leadId}" placeholder="e.g. Spoke on call, interested but wants a quote by Friday..." style="min-height:60px;"></textarea>
+    <div class="btn-row">
+      <button class="btn-save" onclick="addNote('${leadId}')">Save note</button>
+    </div>
+    <p style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);margin:16px 0 4px;">Activity</p>
+    <div>${timelineHtml}</div>
+  `;
+}
+async function toggleNotesPanel(id) {
+  const panel = document.getElementById(`notes-panel-${id}`);
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  panel.innerHTML = '<div class="loading-msg"><span class="spinner"></span>Loading activity...</div>';
+  const events = await fetchLeadEvents(id);
+  panel.innerHTML = renderNotesPanelContent(id, events);
+}
+async function addNote(id) {
+  const ta = document.getElementById(`note-text-${id}`);
+  if (!ta || !ta.value.trim()) return;
+  const content = ta.value.trim();
+  await logLeadEvent(id, 'note', content);
+  showToast('Note saved');
+  const events = await fetchLeadEvents(id);
+  const panel = document.getElementById(`notes-panel-${id}`);
+  if (panel) panel.innerHTML = renderNotesPanelContent(id, events);
 }
 
 function renderLeads() {
@@ -1388,6 +1741,7 @@ function renderLeads() {
       scoreBadge = `<button class="btn-save" onclick="promptAddWebsite('${l.id}')" style="margin-left:6px;">+ Add website URL</button>`;
     }
     return `<div class="lead-row">
+      <input type="checkbox" class="lead-checkbox" data-lead-id="${l.id}" onchange="toggleLeadSelection('${l.id}', this.checked)" ${selectedLeadIds.has(l.id) ? 'checked' : ''} style="margin-right:2px;flex-shrink:0;width:16px;height:16px;">
       <div class="lead-main">
         <div class="avatar-circle">${getInitials(l.name)}</div>
         <div style="flex:1;min-width:0;">
@@ -1408,11 +1762,16 @@ function renderLeads() {
       <select class="status-sel" onchange="updateStatus('${l.id}',this.value)">
         ${statuses.map(s => `<option value="${s}" ${l.status === s ? 'selected' : ''}>${s}</option>`).join('')}
       </select>
+      <button class="btn btn-outline" onclick="toggleAiPanel('${l.id}')">AI message</button>
+      <button class="btn btn-outline" onclick="toggleNotesPanel('${l.id}')">Notes</button>
       ${wa ? `<a class="btn btn-green btn" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
       ${ig ? `<a class="btn btn-pink btn" href="${ig}" target="_blank" rel="noopener">Instagram</a>` : ''}
       <button class="btn-del" onclick="deleteLead('${l.id}')">✕</button>
-    </div>`;
+    </div>
+    <div class="ai-panel" id="ai-panel-${l.id}" style="display:none;"></div>
+    <div class="ai-panel" id="notes-panel-${l.id}" style="display:none;"></div>`;
   }).join('');
+  renderBulkToolbar();
 }
 
 // ── Pipeline (Kanban) ────────────────────────────────────────────────
@@ -1534,6 +1893,18 @@ async function clearAllLeads() {
 }
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+// Normalizes phone numbers to last 10 digits so "919876543210", "9876543210",
+// and "+91 98765-43210" all compare equal — without this, the same business
+// could get added as a "new" lead just because of formatting differences.
+function normalizePhone(phone) {
+  const digits = (phone || '').replace(/\D/g, '');
+  return digits.slice(-10);
+}
+function findExistingLeadByPhone(phone) {
+  const norm = normalizePhone(phone);
+  if (!norm) return null;
+  return leads.find(l => normalizePhone(l.phone) === norm) || null;
+}
 function getInitials(name) {
   const words = (name || '').trim().split(/\s+/).filter(Boolean);
   if (!words.length) return '?';
