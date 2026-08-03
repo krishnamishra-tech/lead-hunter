@@ -1868,7 +1868,7 @@ function renderLeads() {
   const filters = {
     total: { label: 'Total', n: leads.length, test: () => true },
     hot: { label: 'Hot leads', n: leads.filter(isHotLead).length, test: isHotLead },
-    no_website: { label: 'No website', n: leads.filter(l => !l.hasWebsite).length, test: l => !l.hasWebsite },
+    no_website: { label: 'No website', n: leads.filter(l => !l.hasWebsite && l.status === 'New').length, test: l => !l.hasWebsite && l.status === 'New' },
     no_phone: { label: 'No phone', n: leads.filter(l => !l.phone).length, test: l => !l.phone },
     has_website: { label: 'Has website', n: leads.filter(l => l.hasWebsite).length, test: l => !!l.hasWebsite },
     not_messaged: { label: 'Not messaged', n: c['New'], test: l => l.status === 'New' },
