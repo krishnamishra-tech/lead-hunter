@@ -3,8 +3,15 @@
 // No AI generation involved, so no hallucination risk: every result is an
 // actual listed business with (where available) a real phone number.
 //
-// Supports pulling more than one page of results (Google gives up to ~60
-// results / 3 pages per query) via the `maxResults` param from the client.
+// Supports:
+// - Pulling more than one page of results (Google gives up to ~60 results /
+//   3 pages per query) via the `maxResults` param from the client.
+// - Radius search: pass { lat, lng, radiusKm } to bias results to a circle
+//   around a point (e.g. "near my current location") instead of relying
+//   purely on the text query's city/area.
+// - Opportunity-score signals: whether the business has listed hours and
+//   how many photos its Google profile has — both come free in the same
+//   Places API call, no extra cost, and feed into the Hot Lead score.
 //
 // SECURITY: requires a valid Supabase login (Authorization: Bearer <token>).
 // Without this check, anyone who discovers this URL could call it directly —
@@ -33,7 +40,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { query, maxResults } = req.body || {};
+    const { query, maxResults, lat, lng, radiusKm } = req.body || {};
     if (!query || typeof query !== 'string' || !query.trim()) {
       res.status(400).json({ error: 'Missing search query' });
       return;
@@ -44,6 +51,12 @@ module.exports = async function handler(req, res) {
     }
     const wantedCount = Math.min(Math.max(parseInt(maxResults, 10) || PAGE_SIZE, PAGE_SIZE), PAGE_SIZE * MAX_PAGES);
     const wantedPages = Math.ceil(wantedCount / PAGE_SIZE);
+
+    let locationBias = null;
+    if (typeof lat === 'number' && typeof lng === 'number') {
+      const radiusMeters = Math.min(Math.max(parseFloat(radiusKm) || 5, 1), 50) * 1000;
+      locationBias = { circle: { center: { latitude: lat, longitude: lng }, radius: radiusMeters } };
+    }
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) {
@@ -60,6 +73,8 @@ module.exports = async function handler(req, res) {
       'places.rating',
       'places.userRatingCount',
       'places.id',
+      'places.regularOpeningHours',
+      'places.photos',
       'nextPageToken',
     ].join(',');
 
@@ -85,7 +100,7 @@ module.exports = async function handler(req, res) {
 
       const body = pageToken
         ? { textQuery: query.trim(), pageSize: PAGE_SIZE, pageToken }
-        : { textQuery: query.trim(), pageSize: PAGE_SIZE };
+        : { textQuery: query.trim(), pageSize: PAGE_SIZE, ...(locationBias ? { locationBias } : {}) };
 
       const placesRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
         method: 'POST',
@@ -134,6 +149,8 @@ module.exports = async function handler(req, res) {
       rating: p.rating || null,
       ratingCount: p.userRatingCount || null,
       placeId: p.id || '',
+      hasHours: !!(p.regularOpeningHours && p.regularOpeningHours.periods && p.regularOpeningHours.periods.length),
+      photoCount: (p.photos && p.photos.length) || 0,
     }));
 
     res.status(200).json({ results });
