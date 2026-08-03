@@ -314,6 +314,22 @@ Aliganj" style="width:100%;height:70px;padding:9px 10px;border:1px solid var(--l
             <option value="60">Up to 60 (slowest)</option>
           </select>
         </div>
+        <div class="field" style="margin-top:12px;">
+          <label>Search near a location instead (optional)</label>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button type="button" class="btn btn-outline" onclick="useMyLocation()" id="use-location-btn">Use my current location</button>
+            <select id="ai-radius-km" style="max-width:160px;">
+              <option value="1">Within 1 km</option>
+              <option value="3">Within 3 km</option>
+              <option value="5" selected>Within 5 km</option>
+              <option value="10">Within 10 km</option>
+              <option value="20">Within 20 km</option>
+              <option value="50">Within 50 km</option>
+            </select>
+            <span id="location-status" style="font-size:12px;color:var(--ink-soft);"></span>
+          </div>
+          <p style="font-size:11px;color:var(--ink-soft);margin-top:6px;">When a location is set, this replaces the City/Area fields for this search — clear it below to go back to city/area search.</p>
+        </div>
       </div>
     </div>
 
@@ -613,14 +629,18 @@ function toRow(l) {
     status_updated: l.statusUpdated || new Date().toISOString(),
     website: l.website || null, rating: l.rating || null, rating_count: l.ratingCount || null,
     website_score: (typeof l.websiteScore === 'number') ? l.websiteScore : null,
-    website_score_checked_at: l.websiteScoreCheckedAt || null };
+    website_score_checked_at: l.websiteScoreCheckedAt || null,
+    has_hours: (typeof l.hasHours === 'boolean') ? l.hasHours : null,
+    photo_count: (typeof l.photoCount === 'number') ? l.photoCount : null,
+    email: l.email || null };
 }
 function fromRow(r) {
   return { id: r.id, name: r.name, phone: r.phone, instagram: r.instagram, area: r.area,
     niche: r.niche, nicheLabel: r.niche_label, hasWebsite: r.has_website, source: r.source,
     status: r.status, added: r.added, notes: r.notes, statusUpdated: r.status_updated, createdAt: r.created_at,
     website: r.website, rating: r.rating, ratingCount: r.rating_count,
-    websiteScore: r.website_score, websiteScoreCheckedAt: r.website_score_checked_at };
+    websiteScore: r.website_score, websiteScoreCheckedAt: r.website_score_checked_at,
+    hasHours: r.has_hours, photoCount: r.photo_count, email: r.email };
 }
 
 async function fetchLeads() {
@@ -728,6 +748,36 @@ async function checkAllWebsites() {
   if (btn) { btn.disabled = false; btn.textContent = 'Check all sites'; }
   showToast(`Checked ${ok} site${ok !== 1 ? 's' : ''}${failed ? `, ${failed} could not be checked` : ''}`);
 }
+// Looks up an email address from the lead's own website (see api/find-email.js
+// for how — just reading public pages, no scraping or paid API).
+async function findLeadEmail(id) {
+  const l = leads.find(x => x.id === id);
+  if (!l || !l.website) return;
+  const btn = document.getElementById(`email-btn-${id}`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Looking...'; }
+  try {
+    const res = await fetch('/api/find-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify({ url: l.website }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Lookup failed');
+    if (!data.email) {
+      showToast(data.message || 'No email found on their site');
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Find email'; }
+      return;
+    }
+    l.email = data.email;
+    await sb.from('leads').update({ email: l.email }).eq('id', id);
+    showToast(`Found: ${data.email}`);
+    renderLeads();
+  } catch (e) {
+    console.error('Find email error', e);
+    showToast(e.message || 'Could not look up email — try again later');
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Find email'; }
+  }
+}
 // For leads saved before website URLs were captured (hasWebsite=true but no
 // stored URL) — lets you backfill it manually so the speed check can run.
 async function promptAddWebsite(id) {
@@ -785,6 +835,9 @@ function buildAiFoundBullets(l) {
   const bullets = [];
   bullets.push(l.hasWebsite === false ? 'No website found for this business' : (typeof l.websiteScore === 'number' ? `Website speed score: ${l.websiteScore}/100${l.websiteScore < 50 ? ' (slow)' : ''}` : 'Has a website (not speed-checked yet)'));
   if (l.rating) bullets.push(`Google rating: ${l.rating}★${l.ratingCount ? ` from ${l.ratingCount} reviews` : ''}`);
+  if (l.hasHours === false) bullets.push('No business hours listed on Google');
+  if (typeof l.photoCount === 'number' && l.photoCount < 3) bullets.push('Very few photos on Google profile');
+  if (l.email) bullets.push(`Email on file: ${l.email}`);
   if (!l.instagram) bullets.push('No Instagram handle on file');
   bullets.push(`Status: ${l.status}${l.area ? ' · ' + l.area : ''}`);
   return bullets;
@@ -1154,6 +1207,8 @@ function leadHotScore(l) {
   if (l.rating && l.rating >= 4) score += 2;
   if (l.ratingCount && l.ratingCount >= 20) score += 1;
   if (typeof l.websiteScore === 'number' && l.websiteScore < 50) score += 2; // has a site but it's bad
+  if (l.hasHours === false) score += 1; // no listed hours — incomplete Google profile
+  if (typeof l.photoCount === 'number' && l.photoCount < 3) score += 1; // barely any photos
   return score;
 }
 function isHotLead(l) { return leadHotScore(l) >= 3; }
@@ -1266,6 +1321,36 @@ function generateLinks() {
 
 // ── Auto-search leads (Google Places API, via serverless proxy) ─────
 // Pulls real business data — no AI generation, no hallucination risk.
+// ── Radius search — "near my current location" ──────────────────────
+// Uses the browser's built-in geolocation (free, no Maps JavaScript API /
+// billing needed) instead of an embedded map picker, to keep this zero-cost.
+let userLocation = null;
+function useMyLocation() {
+  if (!navigator.geolocation) { showToast('Geolocation is not supported in this browser'); return; }
+  const btn = document.getElementById('use-location-btn');
+  const statusEl = document.getElementById('location-status');
+  if (btn) { btn.disabled = true; btn.textContent = 'Getting location...'; }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (btn) { btn.disabled = false; btn.textContent = 'Use my current location'; }
+      if (statusEl) statusEl.innerHTML = `Location set (${userLocation.lat.toFixed(3)}, ${userLocation.lng.toFixed(3)}) — <span style="text-decoration:underline;cursor:pointer;" onclick="clearLocation()">Clear</span>`;
+      showToast('Location set — will search near you instead of city/area');
+    },
+    (err) => {
+      console.error('Geolocation error', err);
+      if (btn) { btn.disabled = false; btn.textContent = 'Use my current location'; }
+      showToast('Could not get your location — check browser permissions');
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+function clearLocation() {
+  userLocation = null;
+  const statusEl = document.getElementById('location-status');
+  if (statusEl) statusEl.innerHTML = '';
+  showToast('Location cleared — back to city/area search');
+}
 function toggleAiAdvanced() {
   const el = document.getElementById('ai-advanced-options');
   const caret = document.getElementById('ai-advanced-caret');
@@ -1286,13 +1371,14 @@ async function aiSearchLeads() {
   const singleArea = document.getElementById('h-area').value.trim();
   const bulkRaw = document.getElementById('ai-bulk-areas').value.trim();
   const maxResults = parseInt(document.getElementById('ai-lead-count').value, 10) || 20;
+  const radiusKm = parseInt(document.getElementById('ai-radius-km').value, 10) || 5;
   const niches = NICHE_LIST.filter(n => selectedNiches.has(n.key));
-  if (!city) { alert('Enter at least a city.'); return; }
+  if (!userLocation && !city) { alert('Enter at least a city, or use "Use my current location".'); return; }
   if (!niches.length) { alert('Select at least one business type.'); return; }
   if (niches.length > 1) showToast('Auto-search uses your first selected type for best results');
   const niche = niches[0];
 
-  const areas = bulkRaw ? bulkRaw.split('\n').map(a => a.trim()).filter(Boolean) : [singleArea];
+  const areas = userLocation ? [''] : (bulkRaw ? bulkRaw.split('\n').map(a => a.trim()).filter(Boolean) : [singleArea]);
 
   const card = document.getElementById('ai-search-card');
   const resultsEl = document.getElementById('ai-search-results');
@@ -1307,13 +1393,17 @@ async function aiSearchLeads() {
   for (let idx = 0; idx < areas.length; idx++) {
     const area = areas[idx];
     const location = area ? `${area}, ${city}` : city;
-    const query = `${niche.phrase} in ${location}, ${country}`;
-    resultsEl.innerHTML = `<div class="loading-msg"><span class="spinner"></span>Searching ${esc(area || city)}${areas.length > 1 ? ` (${idx + 1}/${areas.length})` : ''}${maxResults > 20 ? ' — pulling up to ' + maxResults + ' leads, this can take a bit longer' : ''}...</div>`;
+    const query = userLocation ? niche.phrase : `${niche.phrase} in ${location}, ${country}`;
+    const searchLabel = userLocation ? `within ${radiusKm}km of your location` : (area || city);
+    resultsEl.innerHTML = `<div class="loading-msg"><span class="spinner"></span>Searching ${esc(searchLabel)}${areas.length > 1 ? ` (${idx + 1}/${areas.length})` : ''}${maxResults > 20 ? ' — pulling up to ' + maxResults + ' leads, this can take a bit longer' : ''}...</div>`;
     try {
       const res = await fetch('/api/search-places', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ query, maxResults }),
+        body: JSON.stringify({
+          query, maxResults,
+          ...(userLocation ? { lat: userLocation.lat, lng: userLocation.lng, radiusKm } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Search failed (${res.status})`);
@@ -1340,6 +1430,19 @@ async function aiSearchLeads() {
 }
 
 let aiSearchResults = [];
+function computeMarketGapSummary(results) {
+  const total = results.length;
+  if (!total) return null;
+  const noWebsite = results.filter(r => !r.website).length;
+  const lowReviews = results.filter(r => !r.ratingCount || r.ratingCount < 10).length;
+  const noHours = results.filter(r => r.hasHours === false).length;
+  const fewPhotos = results.filter(r => typeof r.photoCount === 'number' && r.photoCount < 3).length;
+  const ratings = results.filter(r => r.rating).map(r => r.rating);
+  const avgRating = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : null;
+  const pct = (n) => Math.round((n / total) * 100);
+  return { total, noWebsite, lowReviews, noHours, fewPhotos, avgRating, pct };
+}
+
 function renderAiSearchResults(results, niche, fallbackArea) {
   aiSearchResults = results;
   const resultsEl = document.getElementById('ai-search-results');
@@ -1347,7 +1450,17 @@ function renderAiSearchResults(results, niche, fallbackArea) {
     resultsEl.innerHTML = `<div class="err-box">No businesses found for this search. Try a broader area or a different business type.</div>`;
     return;
   }
+  const gap = computeMarketGapSummary(results);
+  const gapHtml = gap ? `
+    <div style="background:var(--brass-soft);border:1px dashed var(--brass-light);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <p style="font-size:12px;font-weight:600;color:#8a611f;margin-bottom:6px;">Market gap in this search</p>
+      <p style="font-size:12.5px;color:#8a611f;line-height:1.6;margin:0;">
+        <strong>${gap.pct(gap.noWebsite)}%</strong> of these ${gap.total} ${esc(niche.label.toLowerCase())} businesses have no website ·
+        <strong>${gap.pct(gap.lowReviews)}%</strong> have fewer than 10 reviews${gap.avgRating ? ` · average rating <strong>${gap.avgRating}★</strong>` : ''}${gap.noHours ? ` · <strong>${gap.pct(gap.noHours)}%</strong> haven't listed business hours` : ''}
+      </p>
+    </div>` : '';
   resultsEl.innerHTML = `
+    ${gapHtml}
     <div style="font-size:13px;color:var(--grey);margin-bottom:10px;">Found <strong>${results.length}</strong> real business${results.length !== 1 ? 'es' : ''} via Google — review and save:</div>
     ${results.map((r, i) => `
       <div class="result-row" id="ai-res-${i}">
@@ -1357,6 +1470,8 @@ function renderAiSearchResults(results, niche, fallbackArea) {
             ${r.phone ? `${esc(r.phone)}` : '<span style="color:#c0392b">No phone listed</span>'}
             ${r.website ? ` · has website` : ' · <strong>no website</strong>'}
             ${r.rating ? ` · ⭐ ${r.rating}${r.ratingCount ? ' (' + r.ratingCount + ')' : ''}` : ''}
+            ${r.hasHours === false ? ` · no hours listed` : ''}
+            ${typeof r.photoCount === 'number' && r.photoCount < 3 ? ` · few photos` : ''}
           </div>
           <div class="result-meta">${esc(r.address || '')}</div>
         </div>
@@ -1365,6 +1480,7 @@ function renderAiSearchResults(results, niche, fallbackArea) {
     <button class="btn-primary" style="margin-top:12px;width:100%;" onclick="saveAllAiLeads('${niche.key}','${esc(fallbackArea)}')">Save all ${results.length} leads</button>
   `;
 }
+
 
 function aiLeadToRecord(r, nicheKey, fallbackArea) {
   return {
@@ -1379,6 +1495,8 @@ function aiLeadToRecord(r, nicheKey, fallbackArea) {
     website: r.website || '',
     rating: r.rating || null,
     ratingCount: r.ratingCount || null,
+    hasHours: typeof r.hasHours === 'boolean' ? r.hasHours : null,
+    photoCount: typeof r.photoCount === 'number' ? r.photoCount : null,
     source: 'Google Search (auto)',
     status: 'New',
     notes: '',
@@ -1828,6 +1946,8 @@ function renderLeads() {
           <button class="btn btn-outline" onclick="findInstagram('${l.id}')">Find Instagram</button>
           <button class="btn-save" onclick="promptAddInstagram('${l.id}')">+ Add handle</button>
         ` : ''}
+        ${l.hasWebsite && l.website && !l.email ? `<button class="btn btn-outline" id="email-btn-${l.id}" onclick="findLeadEmail('${l.id}')">Find email</button>` : ''}
+        ${l.email ? `<span class="badge" style="background:var(--green-soft);color:var(--green-text);" title="Click to copy">${esc(l.email)}</span>` : ''}
         <button class="btn" style="background:#fdf1ef;color:var(--red);border:1px solid #e8c4bc;" onclick="deleteLead('${l.id}')">Delete lead</button>
       </div>
     </div>
