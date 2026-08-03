@@ -1872,6 +1872,8 @@ function renderLeads() {
     no_phone: { label: 'No phone', n: leads.filter(l => !l.phone).length, test: l => !l.phone },
     has_website: { label: 'Has website', n: leads.filter(l => l.hasWebsite).length, test: l => !!l.hasWebsite },
     not_messaged: { label: 'Not messaged', n: c['New'], test: l => l.status === 'New' },
+    messaged_status: { label: 'Messaged', n: c['Messaged'], test: l => l.status === 'Messaged' },
+    followup1_status: { label: 'Follow-up 1', n: c['Follow-up 1'], test: l => l.status === 'Follow-up 1' },
     followup: { label: 'Needs follow-up', n: leads.filter(needsFollowup).length, test: needsFollowup },
     replied: { label: 'Replied', n: c['Replied'] + c['Interested'] + c['Quoted'], test: l => ['Replied', 'Interested', 'Quoted'].includes(l.status) },
     won: { label: 'Won', n: c['Closed - Won'], test: l => l.status === 'Closed - Won' },
