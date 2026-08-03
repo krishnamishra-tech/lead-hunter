@@ -845,13 +845,36 @@ function buildAiFoundBullets(l) {
 
 function renderAiPanelShell(l) {
   const bullets = buildAiFoundBullets(l);
+  const lang = aiMessageLanguage[l.id] || 'english';
   return `
     <p style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px;">What we know</p>
     <ul class="ai-found-list">${bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+    <div class="ai-lang-row" style="margin:10px 0;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span style="font-size:11px;color:var(--ink-soft);">Message language:</span>
+      <span class="chip ai-lang-chip ${lang === 'english' ? 'selected' : ''}" style="padding:5px 11px;font-size:11px;" onclick="setAiMessageLanguage('${l.id}','english')">English</span>
+      <span class="chip ai-lang-chip ${lang === 'hinglish' ? 'selected' : ''}" style="padding:5px 11px;font-size:11px;" onclick="setAiMessageLanguage('${l.id}','hinglish')">Hinglish</span>
+      <span class="chip ai-lang-chip ${lang === 'hindi' ? 'selected' : ''}" style="padding:5px 11px;font-size:11px;" onclick="setAiMessageLanguage('${l.id}','hindi')">हिंदी</span>
+    </div>
     <div id="ai-draft-area-${l.id}">
       <button class="btn btn-navy" onclick="generateAiMessage('${l.id}')">Draft a message</button>
     </div>
   `;
+}
+
+// Remembers the last-picked message language per lead (English / Hindi / Hinglish)
+// so switching languages and regenerating doesn't reset the choice.
+let aiMessageLanguage = {};
+function setAiMessageLanguage(id, lang) {
+  aiMessageLanguage[id] = lang;
+  const panel = document.getElementById(`ai-panel-${id}`);
+  if (panel) {
+    panel.querySelectorAll('.ai-lang-chip').forEach(chip => chip.classList.remove('selected'));
+    const active = [...panel.querySelectorAll('.ai-lang-chip')].find(chip => chip.textContent.trim() === (lang === 'english' ? 'English' : lang === 'hinglish' ? 'Hinglish' : 'हिंदी'));
+    if (active) active.classList.add('selected');
+  }
+  // If a draft is already showing, regenerate it in the newly picked language.
+  const draftArea = document.getElementById(`ai-draft-area-${id}`);
+  if (draftArea && draftArea.querySelector('textarea')) generateAiMessage(id);
 }
 
 function toggleAiPanel(id) {
@@ -870,6 +893,7 @@ async function generateAiMessage(id, instruction) {
   if (!l) return;
   const draftArea = document.getElementById(`ai-draft-area-${id}`);
   if (!draftArea) return;
+  const language = aiMessageLanguage[id] || 'english';
   draftArea.innerHTML = `<div class="loading-msg"><span class="spinner"></span>Drafting message...</div>`;
   try {
     const res = await fetch('/api/generate-message', {
@@ -879,6 +903,7 @@ async function generateAiMessage(id, instruction) {
         name: l.name, niche: l.nicheLabel, area: l.area,
         rating: l.rating, ratingCount: l.ratingCount,
         hasWebsite: l.hasWebsite, websiteScore: l.websiteScore,
+        language, // 'english' | 'hindi' | 'hinglish' — backend should draft the message in this language/style
         instruction: instruction || undefined,
       }),
     });
@@ -889,6 +914,7 @@ async function generateAiMessage(id, instruction) {
       <div class="ai-chip-row">
         <span class="ai-chip" onclick="generateAiMessage('${id}','Make it shorter, under 30 words')">Shorter</span>
         <span class="ai-chip" onclick="generateAiMessage('${id}','Make the tone more formal and professional')">More formal</span>
+        <span class="ai-chip" onclick="generateAiMessage('${id}','Offer to build a free quick demo homepage preview for their business and mention sending a preview link — this works best when they have no website or a weak one')">Demo pitch</span>
         <span class="ai-chip" onclick="generateAiMessage('${id}')">Regenerate</span>
       </div>
       <div class="btn-row">
@@ -1036,7 +1062,8 @@ async function refreshPlanBadge() {
       <div class="btn-row">
         <button class="btn btn-outline" onclick="startCheckout('monthly')">Renew Monthly — ₹499</button>
         <button class="btn btn-outline" onclick="startCheckout('yearly')">Renew Yearly — ₹4,999</button>
-      </div>`;
+      </div>
+      <p style="font-size:10.5px;color:var(--ink-soft);margin-top:6px;">UPI · Cards · Netbanking — no hidden fees</p>`;
   } else if (!ENFORCE_LEAD_LIMIT) {
     box.innerHTML = `
       <div class="upgrade-box">
@@ -1051,6 +1078,7 @@ async function refreshPlanBadge() {
           <button class="btn btn-navy" onclick="startCheckout('monthly')">Upgrade Monthly — ₹499/mo</button>
           <button class="btn btn-navy" onclick="startCheckout('yearly')">Upgrade Yearly — ₹4,999/yr</button>
         </div>
+        <p style="font-size:10.5px;color:var(--ink-soft);margin-top:6px;text-align:center;">UPI · Cards · Netbanking — no hidden fees</p>
       </div>`;
   }
 }
@@ -1212,6 +1240,18 @@ function leadHotScore(l) {
   return score;
 }
 function isHotLead(l) { return leadHotScore(l) >= 3; }
+// Explains leadHotScore in plain language so the badge isn't a black box —
+// same signals, same order, so the number and the reasons always agree.
+function hotReasons(l) {
+  const reasons = [];
+  if (!l.hasWebsite) reasons.push('No website (+3)');
+  if (l.rating && l.rating >= 4) reasons.push(`${l.rating}★ rating (+2)`);
+  if (l.ratingCount && l.ratingCount >= 20) reasons.push(`${l.ratingCount} reviews (+1)`);
+  if (typeof l.websiteScore === 'number' && l.websiteScore < 50) reasons.push(`Slow website — ${l.websiteScore}/100 (+2)`);
+  if (l.hasHours === false) reasons.push('No hours listed on Google (+1)');
+  if (typeof l.photoCount === 'number' && l.photoCount < 3) reasons.push('Very few photos (+1)');
+  return reasons;
+}
 let selectedNiches = new Set(['real_estate']);
 
 async function initStorage() {
@@ -1224,7 +1264,8 @@ function renderFollowupDigest() {
   const el = document.getElementById('followup-digest');
   if (!el) return;
   const dueCount = leads.filter(needsFollowup).length;
-  const hotCount = leads.filter(isHotLead).length;
+  const OPEN_STATUSES_FOR_HOT = ['New', 'Messaged', 'Follow-up 1', 'Follow-up 2', 'Replied', 'Interested', 'Quoted'];
+  const hotCount = leads.filter(l => isHotLead(l) && OPEN_STATUSES_FOR_HOT.includes(l.status)).length;
   if (!dueCount && !hotCount) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   const parts = [];
@@ -1430,6 +1471,7 @@ async function aiSearchLeads() {
 }
 
 let aiSearchResults = [];
+let parsedLeadsCache = []; // enriched rows from Paste/CSV import, indexed to match the review list
 function computeMarketGapSummary(results) {
   const total = results.length;
   if (!total) return null;
@@ -1443,8 +1485,12 @@ function computeMarketGapSummary(results) {
   return { total, noWebsite, lowReviews, noHours, fewPhotos, avgRating, pct };
 }
 
+let aiSearchNicheKey = '';
+let aiSearchFallbackArea = '';
 function renderAiSearchResults(results, niche, fallbackArea) {
   aiSearchResults = results;
+  aiSearchNicheKey = niche.key;
+  aiSearchFallbackArea = fallbackArea;
   const resultsEl = document.getElementById('ai-search-results');
   if (!results.length) {
     resultsEl.innerHTML = `<div class="err-box">No businesses found for this search. Try a broader area or a different business type.</div>`;
@@ -1475,9 +1521,9 @@ function renderAiSearchResults(results, niche, fallbackArea) {
           </div>
           <div class="result-meta">${esc(r.address || '')}</div>
         </div>
-        <button class="btn btn-green" onclick="saveAiLead(${i},'${niche.key}','${esc(fallbackArea)}')" id="ai-btn-${i}">+ Save</button>
+        <button class="btn btn-green" onclick="saveAiLead(${i})" id="ai-btn-${i}">+ Save</button>
       </div>`).join('')}
-    <button class="btn-primary" style="margin-top:12px;width:100%;" onclick="saveAllAiLeads('${niche.key}','${esc(fallbackArea)}')">Save all ${results.length} leads</button>
+    <button class="btn-primary" style="margin-top:12px;width:100%;" onclick="saveAllAiLeads()">Save all ${results.length} leads</button>
   `;
 }
 
@@ -1504,7 +1550,7 @@ function aiLeadToRecord(r, nicheKey, fallbackArea) {
   };
 }
 
-async function saveAiLead(i, nicheKey, fallbackArea) {
+async function saveAiLead(i) {
   if (!(await canAddLeads(1))) { showUpgradeBlock(); return; }
   const r = aiSearchResults[i];
   if (!r) return;
@@ -1515,7 +1561,7 @@ async function saveAiLead(i, nicheKey, fallbackArea) {
     if (btn) { btn.textContent = 'Already saved'; btn.disabled = true; }
     return;
   }
-  const newLead = aiLeadToRecord(r, nicheKey, fallbackArea);
+  const newLead = aiLeadToRecord(r, aiSearchNicheKey, aiSearchFallbackArea);
   leads.unshift(newLead);
   await insertLeadRemote(newLead);
   await refreshPlanBadge();
@@ -1524,7 +1570,7 @@ async function saveAiLead(i, nicheKey, fallbackArea) {
   showToast(`Saved: ${newLead.name}`);
 }
 
-async function saveAllAiLeads(nicheKey, fallbackArea) {
+async function saveAllAiLeads() {
   let remaining = Infinity;
   if (ENFORCE_LEAD_LIMIT && currentPlan !== 'pro') {
     const used = await leadsAddedThisMonth();
@@ -1542,7 +1588,7 @@ async function saveAllAiLeads(nicheKey, fallbackArea) {
       if (btn) { btn.textContent = 'Already saved'; btn.disabled = true; }
       return;
     }
-    newLeads.push(aiLeadToRecord(r, nicheKey, fallbackArea));
+    newLeads.push(aiLeadToRecord(r, aiSearchNicheKey, aiSearchFallbackArea));
     if (btn) { btn.textContent = 'Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
   });
   if (newLeads.length) {
@@ -1701,39 +1747,51 @@ function renderParsedResults(parsed) {
   const area = document.getElementById('h-area').value.trim();
   const niche = NICHE_LIST.find(n => selectedNiches.has(n.key)) || NICHE_LIST[0];
 
+  // Cache the enriched rows instead of smuggling phone/instagram/area through the
+  // onclick attribute string — that broke on names/areas containing an apostrophe
+  // (esc() only escapes HTML, not JS-string quotes) and made bulk "Save all" fall
+  // back to the Hunt tab's city/area instead of each row's own parsed area.
+  parsedLeadsCache = parsed.map(p => ({
+    name: p.name, phone: p.phone, instagram: p.instagram,
+    area: p.area || area, city,
+    nicheKey: niche.key, nicheLabel: niche.label,
+  }));
+
   resultsEl.innerHTML = `
     <div style="font-size:13px;color:var(--grey);margin-bottom:10px;">Found <strong>${parsed.length}</strong> lead${parsed.length !== 1 ? 's' : ''} — review and save:</div>
-    ${parsed.map((p, i) => `
+    ${parsedLeadsCache.map((p, i) => `
       <div class="result-row" id="pres-${i}" style="flex-wrap:wrap;gap:8px;">
         <div class="result-main" style="flex:1;min-width:200px;">
           <input value="${esc(p.name)}" id="pname-${i}" style="font-weight:600;border:1px solid var(--border);border-radius:6px;padding:4px 8px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--ink);">
           <div class="result-meta" style="margin-top:4px;">
             ${p.phone ? `${p.phone}` : '<span style="color:#c0392b">No phone found</span>'}
             ${p.instagram ? ` · @${esc(p.instagram)}` : ''}
+            ${p.area ? ` · ${esc(p.area)}` : ''}
           </div>
         </div>
-        <button class="btn btn-green" onclick="saveParsedLead(${i},'${esc(p.phone)}','${esc(p.instagram)}','${esc(p.area || area)}','${esc(city)}','${niche.key}')" id="pbtn-${i}">+ Save</button>
+        <button class="btn btn-green" onclick="saveParsedLead(${i})" id="pbtn-${i}">+ Save</button>
         <button style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--cream);color:var(--grey);cursor:pointer;font-size:12px;" onclick="document.getElementById('pres-${i}').remove()">✕</button>
       </div>`).join('')}
-    <button class="btn-primary" style="margin-top:12px;width:100%;" onclick="saveAllParsed(${JSON.stringify(parsed.map((p,i)=>i))})">Save all ${parsed.length} leads</button>
+    <button class="btn-primary" style="margin-top:12px;width:100%;" onclick="saveAllParsed(${JSON.stringify(parsedLeadsCache.map((p,i)=>i))})">Save all ${parsed.length} leads</button>
   `;
 }
 
-async function saveParsedLead(i, phone, instagram, area, city, nicheKey) {
+async function saveParsedLead(i) {
   if (!(await canAddLeads(1))) { showUpgradeBlock(); return; }
+  const row = parsedLeadsCache[i];
+  if (!row) return;
   const btn = document.getElementById(`pbtn-${i}`);
-  const existing = phone && findExistingLeadByPhone(phone);
+  const existing = row.phone && findExistingLeadByPhone(row.phone);
   if (existing) {
     showToast(`Already in your leads: ${existing.name}`);
     if (btn) { btn.textContent = 'Already saved'; btn.disabled = true; }
     return;
   }
   const nameEl = document.getElementById(`pname-${i}`);
-  const name = nameEl ? nameEl.value.trim() : 'Unknown';
-  const nicheLabel = nicheKeyToLabel(nicheKey);
+  const name = nameEl ? nameEl.value.trim() : (row.name || 'Unknown');
   const newLead = {
     id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
-    name, phone, instagram, area: area || city, niche: nicheKey, nicheLabel,
+    name, phone: row.phone, instagram: row.instagram, area: row.area, niche: row.nicheKey, nicheLabel: row.nicheLabel,
     hasWebsite: false, source: 'Paste Import', status: 'New', notes: '',
     added: new Date().toLocaleDateString()
   };
@@ -1745,9 +1803,6 @@ async function saveParsedLead(i, phone, instagram, area, city, nicheKey) {
 }
 
 async function saveAllParsed(indices) {
-  const city = document.getElementById('h-city').value.trim();
-  const area = document.getElementById('h-area').value.trim();
-  const niche = NICHE_LIST.find(n => selectedNiches.has(n.key)) || NICHE_LIST[0];
   let remaining = Infinity;
   if (ENFORCE_LEAD_LIMIT && currentPlan !== 'pro') {
     const used = await leadsAddedThisMonth();
@@ -1758,20 +1813,21 @@ async function saveAllParsed(indices) {
   let skippedDupes = 0;
   for (const i of indices) {
     if (newLeads.length >= remaining) break;
+    const row = parsedLeadsCache[i];
+    if (!row) continue;
     const nameEl = document.getElementById(`pname-${i}`);
     if (!nameEl) continue;
     const btn = document.getElementById(`pbtn-${i}`);
     if (btn && btn.disabled) continue; // already saved
-    const name = nameEl.value.trim() || 'Unknown';
-    const phone = btn ? btn.getAttribute('onclick').match(/'([0-9]*)'/)?.[1] || '' : '';
-    if (phone && findExistingLeadByPhone(phone)) {
+    const name = nameEl.value.trim() || row.name || 'Unknown';
+    if (row.phone && findExistingLeadByPhone(row.phone)) {
       skippedDupes++;
       if (btn) { btn.textContent = 'Already saved'; btn.disabled = true; }
       continue;
     }
     newLeads.push({
       id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
-      name, phone, instagram: '', area: area || city, niche: niche.key, nicheLabel: niche.label,
+      name, phone: row.phone, instagram: row.instagram, area: row.area, niche: row.nicheKey, nicheLabel: row.nicheLabel,
       hasWebsite: false, source: 'Paste Import', status: 'New', notes: '',
       added: new Date().toLocaleDateString()
     });
@@ -1821,7 +1877,7 @@ function renderNotesPanelContent(leadId, events) {
   const timelineHtml = events.length
     ? events.map(ev => `
       <div style="padding:8px 0;border-bottom:1px dashed var(--line);">
-        <p style="font-size:12.5px;color:var(--ink);margin:0 0 2px;">${ev.type === 'status_change' ? '↻ ' : ''}${esc(ev.content)}</p>
+        <p style="font-size:12.5px;color:var(--ink);margin:0 0 2px;">${ev.type === 'status_change' ? '↻ ' : ev.type === 'reply' ? '↩ ' : ''}${esc(ev.content)}</p>
         <p style="font-size:11px;color:var(--ink-soft);margin:0;">${new Date(ev.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
       </div>`).join('')
     : '<p style="font-size:12.5px;color:var(--ink-soft);">No activity yet.</p>';
@@ -1859,6 +1915,27 @@ async function addNote(id) {
   const events = await fetchLeadEvents(id);
   const panel = document.getElementById(`notes-panel-${id}`);
   if (panel) panel.innerHTML = renderNotesPanelContent(id, events);
+}
+
+// Closes the loop on outreach: a quick way to log what a lead said back on
+// WhatsApp/Instagram without opening the full Notes panel first, and offers
+// to move the status to "Replied" in the same step so the pipeline stays honest.
+const OPEN_STATUSES_BEFORE_REPLY = ['New', 'Messaged', 'Follow-up 1', 'Follow-up 2'];
+async function logReply(id) {
+  const text = prompt('What did the lead reply? (Saved to their activity log)');
+  if (!text || !text.trim()) return;
+  const content = text.trim();
+  await logLeadEvent(id, 'reply', content);
+  showToast('Reply logged');
+  const l = leads.find(x => x.id === id);
+  if (l && OPEN_STATUSES_BEFORE_REPLY.includes(l.status) && confirm('Mark this lead as "Replied"?')) {
+    await updateStatus(id, 'Replied');
+  }
+  const panel = document.getElementById(`notes-panel-${id}`);
+  if (panel && panel.style.display !== 'none') {
+    const events = await fetchLeadEvents(id);
+    panel.innerHTML = renderNotesPanelContent(id, events);
+  }
 }
 
 function renderLeads() {
@@ -1921,7 +1998,7 @@ function renderLeads() {
         <div style="flex:1;min-width:0;">
         <span class="lead-name">${esc(l.name)}</span>
         <span class="badge" style="background:#f0f0f0;color:#555;">${esc(l.nicheLabel || '')}</span>
-        ${isHotLead(l) ? `<span class="badge" style="background:var(--rust-soft);color:var(--rust);">Hot</span>` : ''}
+        ${isHotLead(l) ? `<span class="badge" style="background:var(--rust-soft);color:var(--rust);" title="${esc(hotReasons(l).join(' · '))}">Hot</span>` : ''}
         ${needsFollowup(l) ? `<span class="badge" style="background:#fdecea;color:#b3492f;">Follow up</span>` : ''}
         ${scoreBadge}
         <div class="lead-meta">
@@ -1944,6 +2021,7 @@ function renderLeads() {
       <div class="btn-row" style="margin-top:0;">
         <button class="btn btn-outline" onclick="toggleAiPanel('${l.id}')">AI message</button>
         <button class="btn btn-outline" onclick="toggleNotesPanel('${l.id}')">Notes</button>
+        <button class="btn btn-outline" onclick="logReply('${l.id}')">Log reply</button>
         ${!ig ? `
           <button class="btn btn-outline" onclick="findInstagram('${l.id}')">Find Instagram</button>
           <button class="btn-save" onclick="promptAddInstagram('${l.id}')">+ Add handle</button>
@@ -1981,7 +2059,7 @@ function renderPipeline() {
     const cards = colLeads.length
       ? colLeads.map(l => `
         <div class="kanban-card" onclick="switchTab('leads')">
-          ${isHotLead(l) ? `<span class="badge" style="background:var(--rust-soft);color:var(--rust);margin-bottom:4px;display:inline-block;">Hot</span>` : ''}
+          ${isHotLead(l) ? `<span class="badge" style="background:var(--rust-soft);color:var(--rust);margin-bottom:4px;display:inline-block;" title="${esc(hotReasons(l).join(' · '))}">Hot</span>` : ''}
           ${needsFollowup(l) ? `<span class="badge" style="background:#fdecea;color:#b3492f;margin-bottom:4px;display:inline-block;">Follow up</span>` : ''}
           <div class="kanban-card-name">${esc(l.name)}</div>
           <div class="kanban-card-meta">${esc(l.area || '')}</div>
