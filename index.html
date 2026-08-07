@@ -203,11 +203,17 @@
   .auth-field input { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: 'Inter', inherit; background: var(--paper); color: var(--ink); }
   .auth-field input:focus { outline: 2px solid var(--brass-light); outline-offset: -1px; border-color: var(--brass); }
   .auth-btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 6px; font-family: 'Inter', sans-serif; }
-  .auth-btn-primary { background: var(--forest); color: #fff; }
-  .auth-btn-primary:hover { background: var(--forest2); }
+  .auth-btn-primary { background: var(--paper); color: var(--forest); border: 1px solid var(--line); font-weight: 600; }
+  .auth-btn-primary:hover { background: var(--card); border-color: var(--forest); }
   .auth-btn-primary:disabled { opacity: .6; cursor: default; }
-  .auth-btn-google { background: #fff; color: var(--ink); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .auth-btn-google:hover { border-color: #bbb; }
+  .auth-btn-google { background: #fff; color: var(--ink); border: 1.5px solid var(--forest); display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 15px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .auth-btn-google:hover { border-color: var(--forest2); box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+  .auth-google-note { text-align: center; font-size: 10.5px; color: var(--ink-soft); margin: 8px 0 14px; font-family: 'Inter', sans-serif; }
+  .auth-field-hint { font-size: 11px; color: var(--ink-soft); margin-top: 4px; display: none; }
+  #onboarding-screen {
+    min-height: 100vh; display: none; align-items: center; justify-content: center; padding: 20px;
+    background: var(--forest);
+  }
   .auth-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; font-size: 10.5px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .06em; font-family: 'Inter', sans-serif; }
   .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
   .auth-switch { text-align: center; font-size: 12px; color: var(--ink-soft); margin-top: 18px; }
@@ -234,17 +240,47 @@
       <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.4-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 19 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34 5.1 29.3 3 24 3 15.6 3 8.4 7.8 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 36.2 26.7 37 24 37c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.4 40.2 16.1 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.2 5.2C40.8 36 44 30.6 44 24c0-1.4-.1-2.7-.4-3.5z"/></svg>
       Continue with Google
     </button>
+    <p class="auth-google-note">Fastest way in — one tap, no password to remember</p>
 
     <div class="auth-divider">or</div>
 
     <div class="auth-field"><label>Email</label><input type="email" id="auth-email" placeholder="you@business.com"></div>
-    <div class="auth-field"><label>Password</label><input type="password" id="auth-password" placeholder="••••••••"></div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input type="password" id="auth-password" placeholder="••••••••">
+      <p class="auth-field-hint" id="auth-password-hint">At least 6 characters</p>
+    </div>
 
     <button class="auth-btn auth-btn-primary" id="auth-submit-btn" onclick="authSubmit()">Log in</button>
 
     <div class="auth-switch" id="auth-switch">
       New here? <a onclick="toggleAuthMode()">Create an account</a>
     </div>
+  </div>
+</div>
+
+<div id="onboarding-screen">
+  <div class="auth-card" style="max-width:420px;">
+    <div class="auth-logo">Local<span>Scout</span></div>
+    <div class="auth-tagline">Two quick questions — 10 seconds, totally optional</div>
+
+    <div class="auth-field">
+      <label>What best describes you?</label>
+      <div class="chip-grid" id="onboard-persona-chips">
+        <div class="chip" data-persona="Freelancer" onclick="selectPersonaChip(this)">Freelancer</div>
+        <div class="chip" data-persona="Digital Agency" onclick="selectPersonaChip(this)">Digital Agency</div>
+        <div class="chip" data-persona="Real Estate Agent" onclick="selectPersonaChip(this)">Real Estate Agent</div>
+        <div class="chip" data-persona="Other" onclick="selectPersonaChip(this)">Other</div>
+      </div>
+    </div>
+
+    <div class="auth-field">
+      <label>Which city do you work in?</label>
+      <input type="text" id="onboard-city" placeholder="e.g. Lucknow">
+    </div>
+
+    <button class="auth-btn" style="background:var(--forest);color:#fff;" onclick="completeOnboarding()">Continue</button>
+    <div class="auth-switch"><a onclick="skipOnboarding()">Skip for now</a></div>
   </div>
 </div>
 
@@ -268,6 +304,8 @@
 <main>
 
   <section id="view-hunt" class="view active">
+    <div id="welcome-banner-slot"></div>
+    <div id="activation-checklist-slot"></div>
     <div id="followup-digest" style="display:none;margin-bottom:16px;"></div>
     <div class="card">
       <div class="card-title">Search an area</div>
@@ -298,6 +336,7 @@
         <button class="btn btn-navy" onclick="aiSearchLeads()">Auto-search leads</button>
         <button class="btn btn-outline" onclick="freeSearchLeads()" style="border-color:#2d7d46;color:#2d7d46;">🆓 Free search (OpenStreetMap)</button>
       </div>
+      <p style="margin-top:8px;"><a href="#" onclick="showExampleResults();return false;" style="font-size:12px;color:var(--ink-soft);text-decoration:underline;">👀 See example results first</a></p>
       <p style="font-size:11px;color:var(--ink-soft);margin-top:6px;">Free search works best for storefronts and offices (cafes, salons, clinics, shops, hotels...). For freelancers (designers, coaches, marketers) use Auto-search or the free links below.</p>
       <p style="font-size:12px;color:var(--brass);margin-top:10px;cursor:pointer;" onclick="toggleAiAdvanced()">Advanced: multiple areas &amp; lead count <span id="ai-advanced-caret">▾</span></p>
       <div id="ai-advanced-options" style="display:none;margin-top:8px;">
@@ -986,6 +1025,7 @@ function sendAiMessageWhatsApp(id) {
   if (!l || !l.phone || !ta) return;
   const url = `https://wa.me/${l.phone}?text=${encodeURIComponent(ta.value)}`;
   window.open(url, '_blank', 'noopener');
+  markChecklistStep('messaged');
 }
 async function deleteLeadRemote(id) {
   try {
@@ -1001,6 +1041,9 @@ async function clearAllLeadsRemote() {
 }
 
 // ── Auth ──────────────────────────────────────────────────────────
+// NOTE: Supabase project must have Authentication → Providers → Email →
+// "Confirm email" switched OFF for signUp() to return a session immediately
+// (skipping the confirmation-email step). This code assumes that setting.
 let authMode = 'login'; // 'login' | 'signup'
 function toggleAuthMode() {
   authMode = authMode === 'login' ? 'signup' : 'login';
@@ -1008,6 +1051,7 @@ function toggleAuthMode() {
   document.getElementById('auth-switch').innerHTML = authMode === 'login'
     ? 'New here? <a onclick="toggleAuthMode()">Create an account</a>'
     : 'Already have an account? <a onclick="toggleAuthMode()">Log in</a>';
+  document.getElementById('auth-password-hint').style.display = authMode === 'signup' ? 'block' : 'none';
   hideAuthMessages();
 }
 function hideAuthMessages() {
@@ -1036,9 +1080,15 @@ async function authSubmit() {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
     } else {
-      const { error } = await sb.auth.signUp({ email, password });
+      const { data, error } = await sb.auth.signUp({ email, password });
       if (error) throw error;
-      showAuthMsg('Account created! Check your email to confirm, then log in.');
+      // With "Confirm email" off, signUp() returns a live session right away
+      // and onAuthStateChange (below) takes the user straight into
+      // onboarding — no "check your email" step. This is only a fallback
+      // for the (unexpected) case where confirmation is still required.
+      if (!data.session) {
+        showAuthMsg('Account created! Check your email to confirm, then log in.');
+      }
     }
   } catch (e) {
     showAuthErr(e.message || 'Something went wrong. Try again.');
@@ -1056,19 +1106,165 @@ async function signInWithGoogle() {
 async function signOut() {
   await sb.auth.signOut();
   document.getElementById('app-root').style.display = 'none';
+  document.getElementById('onboarding-screen').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
+}
+
+// ── Post-signup micro-onboarding ─────────────────────────────────────
+// Gated on a per-user "done" flag, not on "did they just sign up" — so
+// anyone who skipped/closed the tab before finishing still gets asked once,
+// but nobody ever sees it twice. Tries to persist to `profiles` (columns
+// onboarding_done/persona/hunt_city) so it also carries across devices;
+// falls back to localStorage alone if those columns don't exist yet.
+// Migration to add them:
+//   alter table profiles add column if not exists onboarding_done boolean default false;
+//   alter table profiles add column if not exists persona text;
+//   alter table profiles add column if not exists hunt_city text;
+const PERSONA_NICHE_MAP = { 'Real Estate Agent': 'real_estate' };
+let onboardPersona = null;
+
+async function checkOnboardingDone(userId) {
+  if (localStorage.getItem('ls_onboarding_done_' + userId) === '1') return true;
+  try {
+    const { data, error } = await sb.from('profiles').select('onboarding_done').eq('id', userId).single();
+    if (!error && data && data.onboarding_done) {
+      localStorage.setItem('ls_onboarding_done_' + userId, '1');
+      return true;
+    }
+  } catch (e) { /* profiles table may not have this column yet — that's fine */ }
+  return false;
+}
+async function markOnboardingDone(userId, persona, city) {
+  localStorage.setItem('ls_onboarding_done_' + userId, '1');
+  try {
+    await sb.from('profiles').update({ onboarding_done: true, persona: persona || null, hunt_city: city || null }).eq('id', userId);
+  } catch (e) { console.warn('Could not persist onboarding to profiles (columns may be missing) — using localStorage instead', e); }
+}
+function showOnboardingScreen() {
+  onboardPersona = null;
+  document.querySelectorAll('#onboard-persona-chips .chip').forEach(c => c.classList.remove('selected'));
+  const cityInput = document.getElementById('onboard-city');
+  if (cityInput) cityInput.value = '';
+  document.getElementById('onboarding-screen').style.display = 'flex';
+}
+function selectPersonaChip(el) {
+  document.querySelectorAll('#onboard-persona-chips .chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  onboardPersona = el.dataset.persona;
+}
+async function completeOnboarding() {
+  const city = document.getElementById('onboard-city').value.trim();
+  await markOnboardingDone(currentUser.id, onboardPersona, city);
+  await enterApp({ persona: onboardPersona, city });
+}
+async function skipOnboarding() {
+  await markOnboardingDone(currentUser.id, null, null);
+  await enterApp({});
+}
+function applyPersonaAndCityPrefill(persona, city) {
+  if (persona && PERSONA_NICHE_MAP[persona]) {
+    selectedNiches = new Set([PERSONA_NICHE_MAP[persona]]);
+  }
+  initNicheUI();
+  if (city) {
+    const cityInput = document.getElementById('h-city');
+    if (cityInput) { cityInput.value = city; updateAreaSuggestions(city); }
+  }
+}
+
+// ── First-run guidance: welcome banner + activation checklist ───────
+function maybeShowWelcomeBanner() {
+  const slot = document.getElementById('welcome-banner-slot');
+  if (!slot || !currentUser) return;
+  const dismissed = localStorage.getItem('ls_welcome_dismissed_' + currentUser.id) === '1';
+  if (dismissed) { slot.innerHTML = ''; return; }
+  slot.innerHTML = `
+    <div class="card" style="background:var(--brass-soft);border:1px dashed var(--brass-light);padding:14px 16px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+        <p style="font-size:12.5px;color:#8a611f;margin:0;line-height:1.6;"><strong>Find your first lead in 3 steps:</strong> 1) Pick a city 2) Pick a business type 3) Tap Auto-search.</p>
+        <button style="background:none;border:none;cursor:pointer;color:#8a611f;font-size:14px;flex-shrink:0;" onclick="dismissWelcomeBanner()">✕</button>
+      </div>
+    </div>`;
+}
+function dismissWelcomeBanner() {
+  if (currentUser) localStorage.setItem('ls_welcome_dismissed_' + currentUser.id, '1');
+  const slot = document.getElementById('welcome-banner-slot');
+  if (slot) slot.innerHTML = '';
+}
+function getChecklistState() {
+  if (!currentUser) return { searched: false, saved: false, messaged: false };
+  return {
+    searched: localStorage.getItem('ls_step_searched_' + currentUser.id) === '1',
+    saved: localStorage.getItem('ls_step_saved_' + currentUser.id) === '1',
+    messaged: localStorage.getItem('ls_step_messaged_' + currentUser.id) === '1',
+  };
+}
+function markChecklistStep(step) {
+  if (!currentUser) return;
+  localStorage.setItem('ls_step_' + step + '_' + currentUser.id, '1');
+  renderActivationChecklist();
+}
+function dismissChecklist() {
+  if (currentUser) localStorage.setItem('ls_checklist_dismissed_' + currentUser.id, '1');
+  renderActivationChecklist();
+}
+function renderActivationChecklist() {
+  const slot = document.getElementById('activation-checklist-slot');
+  if (!slot || !currentUser) return;
+  const dismissed = localStorage.getItem('ls_checklist_dismissed_' + currentUser.id) === '1';
+  const state = getChecklistState();
+  const allDone = state.searched && state.saved && state.messaged;
+  if (dismissed || allDone) { slot.innerHTML = ''; return; }
+  slot.innerHTML = `
+    <div class="card" style="background:var(--green-soft);border:1px dashed #c3ddc9;padding:14px 16px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <p style="font-size:12.5px;font-weight:700;color:var(--green-text);margin:0;">Get started</p>
+        <span style="cursor:pointer;color:var(--green-text);font-size:14px;" onclick="dismissChecklist()">✕</span>
+      </div>
+      <ul style="list-style:none;padding:0;margin:8px 0 0;font-size:12.5px;color:var(--green-text);line-height:1.9;">
+        <li>${state.searched ? '☑' : '☐'} Run your first search</li>
+        <li>${state.saved ? '☑' : '☐'} Save your first lead</li>
+        <li>${state.messaged ? '☑' : '☐'} Send your first WhatsApp message</li>
+      </ul>
+    </div>`;
+}
+
+// ── Example results (zero-field demo so new users see the format fast) ──
+let isExampleResults = false;
+function showExampleResults() {
+  const exampleNiche = { key: 'real_estate', label: 'Real estate agents' };
+  const exampleData = [
+    { name: 'Sharma Properties', phone: '919812345678', website: '', address: 'Hazratganj, Lucknow', rating: 4.3, ratingCount: 58, hasHours: true, photoCount: 2 },
+    { name: 'Lucknow Realty Hub', phone: '', website: 'https://example.com', address: 'Gomti Nagar, Lucknow', rating: 4.7, ratingCount: 130, hasHours: true, photoCount: 12 },
+    { name: 'Awasthi Real Estate', phone: '919911223344', website: '', address: 'Aliganj, Lucknow', rating: null, ratingCount: null, hasHours: false, photoCount: 0 },
+  ];
+  const card = document.getElementById('ai-search-card');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  isExampleResults = true;
+  renderAiSearchResults(exampleData, exampleNiche, 'Lucknow');
+  isExampleResults = false;
 }
 
 async function onAuthReady(user) {
   currentUser = user;
   document.getElementById('auth-screen').style.display = 'none';
+  const done = await checkOnboardingDone(user.id);
+  if (!done) { showOnboardingScreen(); return; }
+  await enterApp({});
+}
+async function enterApp(prefill) {
+  document.getElementById('onboarding-screen').style.display = 'none';
   document.getElementById('app-root').style.display = 'block';
-  document.getElementById('account-email').textContent = user.email || 'Signed in';
-  document.getElementById('settings-account-email').textContent = user.email || 'Signed in';
+  document.getElementById('account-email').textContent = currentUser.email || 'Signed in';
+  document.getElementById('settings-account-email').textContent = currentUser.email || 'Signed in';
   await refreshPlanBadge();
   initNicheUI();
   updateCityOptions('India');
   await initStorage();
+  if (prefill && (prefill.persona || prefill.city)) applyPersonaAndCityPrefill(prefill.persona, prefill.city);
+  maybeShowWelcomeBanner();
+  renderActivationChecklist();
 }
 
 // Reads the user's row from `profiles` (plan + plan_expiry) and syncs currentPlan.
@@ -1601,6 +1797,7 @@ async function freeSearchLeads() {
   if (failedAreas) showToast(`Could not search ${failedAreas} area${failedAreas !== 1 ? 's' : ''} — showing what we found`);
 
   aiSearchSourceLabel = 'OpenStreetMap (free)';
+  markChecklistStep('searched');
   renderAiSearchResults(merged, niche, singleArea || city);
 }
 
@@ -1666,6 +1863,7 @@ async function aiSearchLeads() {
   }
 
   if (failedAreas) showToast(`Could not search ${failedAreas} area${failedAreas !== 1 ? 's' : ''} — showing what we found`);
+  markChecklistStep('searched');
   renderAiSearchResults(merged, niche, singleArea || city);
 }
 
@@ -1705,8 +1903,13 @@ function renderAiSearchResults(results, niche, fallbackArea) {
         <strong>${gap.pct(gap.lowReviews)}%</strong> have fewer than 10 reviews${gap.avgRating ? ` · average rating <strong>${gap.avgRating}★</strong>` : ''}${gap.noHours ? ` · <strong>${gap.pct(gap.noHours)}%</strong> haven't listed business hours` : ''}
       </p>
     </div>` : '';
-  const viaLabel = aiSearchSourceLabel === 'OpenStreetMap (free)' ? 'via OpenStreetMap — 100% free, no limits' : 'via Google';
+  const viaLabel = isExampleResults ? 'example data' : (aiSearchSourceLabel === 'OpenStreetMap (free)' ? 'via OpenStreetMap — 100% free, no limits' : 'via Google');
+  const exampleBanner = isExampleResults ? `
+    <div style="background:#eef2f7;border:1px dashed #b9c3d1;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#44546b;">
+      This is example data so you can see the result format — it can't be saved. Fill in the fields above and run a real search to get actual leads.
+    </div>` : '';
   resultsEl.innerHTML = `
+    ${exampleBanner}
     ${gapHtml}
     <div style="font-size:13px;color:var(--grey);margin-bottom:10px;">Found <strong>${results.length}</strong> real business${results.length !== 1 ? 'es' : ''} ${viaLabel} — review and save:</div>
     ${results.map((r, i) => `
@@ -1722,9 +1925,11 @@ function renderAiSearchResults(results, niche, fallbackArea) {
           </div>
           <div class="result-meta">${esc(r.address || '')}</div>
         </div>
-        <button class="btn btn-green" onclick="saveAiLead(${i})" id="ai-btn-${i}">+ Save</button>
+        ${isExampleResults
+          ? `<button class="btn btn-outline" disabled style="opacity:.6;cursor:default;">Example</button>`
+          : `<button class="btn btn-green" onclick="saveAiLead(${i})" id="ai-btn-${i}">+ Save</button>`}
       </div>`).join('')}
-    <button class="btn-primary" style="margin-top:12px;width:100%;" onclick="saveAllAiLeads()">Save all ${results.length} leads</button>
+    ${isExampleResults ? '' : `<button class="btn-primary" style="margin-top:12px;width:100%;" onclick="saveAllAiLeads()">Save all ${results.length} leads</button>`}
   `;
 }
 
@@ -1767,6 +1972,7 @@ async function saveAiLead(i) {
   leads.unshift(newLead);
   await insertLeadRemote(newLead);
   await refreshPlanBadge();
+  markChecklistStep('saved');
   const btn = document.getElementById(`ai-btn-${i}`);
   if (btn) { btn.textContent = 'Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
   showToast(`Saved: ${newLead.name}`);
@@ -1797,6 +2003,7 @@ async function saveAllAiLeads() {
     leads.unshift(...newLeads);
     await insertLeadsRemoteBulk(newLeads);
     await refreshPlanBadge();
+    markChecklistStep('saved');
     showToast(`Saved ${newLeads.length} leads${skippedDupes ? `, skipped ${skippedDupes} duplicate${skippedDupes !== 1 ? 's' : ''}` : ''}`);
   } else if (skippedDupes) {
     showToast(`All ${skippedDupes} were already in your leads`);
@@ -2066,6 +2273,7 @@ async function saveParsedLead(i) {
   leads.unshift(newLead);
   await insertLeadRemote(newLead);
   await refreshPlanBadge();
+  markChecklistStep('saved');
   if (btn) { btn.textContent = 'Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
   showToast(`Saved: ${name}`);
 }
@@ -2106,6 +2314,7 @@ async function saveAllParsed(indices) {
     leads.unshift(...newLeads);
     await insertLeadsRemoteBulk(newLeads);
     await refreshPlanBadge();
+    markChecklistStep('saved');
     showToast(`Saved ${newLeads.length} leads${skippedDupes ? `, skipped ${skippedDupes} duplicate${skippedDupes !== 1 ? 's' : ''}` : ''}`);
   } else if (skippedDupes) {
     showToast(`All ${skippedDupes} were already in your leads`);
@@ -2282,7 +2491,7 @@ function renderLeads() {
       <select class="status-sel" onchange="updateStatus('${l.id}',this.value)">
         ${statuses.map(s => `<option value="${s}" ${l.status === s ? 'selected' : ''}>${s}</option>`).join('')}
       </select>
-      ${wa ? `<a class="btn btn-green btn" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+      ${wa ? `<a class="btn btn-green btn" href="${wa}" target="_blank" rel="noopener" onclick="markChecklistStep('messaged')">WhatsApp</a>` : ''}
       ${ig ? `<a class="btn btn-pink btn" href="${ig}" target="_blank" rel="noopener">Instagram</a>` : ''}
       <button class="btn btn-outline" title="More actions" onclick="toggleMoreMenu('${l.id}')">⋮ More</button>
     </div>
