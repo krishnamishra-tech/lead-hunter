@@ -271,7 +271,7 @@
     <div id="followup-digest" style="display:none;margin-bottom:16px;"></div>
     <div class="card">
       <div class="card-title">Search an area</div>
-      <div class="card-sub">Enter city + area, then pick one or more business types — LocalScout pulls real businesses straight from Google in seconds.</div>
+      <div class="card-sub">Enter city + area, then pick one or more business types. Auto-search pulls real businesses straight from Google; Free search pulls real, mapped businesses from OpenStreetMap at zero cost with no limits.</div>
       <div class="grid">
         <div class="field"><label>Country</label>
           <select id="h-country" onchange="updateCityOptions(this.value); document.getElementById('h-city').value=''; document.getElementById('h-area').value=''; updateAreaSuggestions('');">
@@ -296,7 +296,9 @@
       </div>
       <div class="btn-row">
         <button class="btn btn-navy" onclick="aiSearchLeads()">Auto-search leads</button>
+        <button class="btn btn-outline" onclick="freeSearchLeads()" style="border-color:#2d7d46;color:#2d7d46;">🆓 Free search (OpenStreetMap)</button>
       </div>
+      <p style="font-size:11px;color:var(--ink-soft);margin-top:6px;">Free search works best for storefronts and offices (cafes, salons, clinics, shops, hotels...). For freelancers (designers, coaches, marketers) use Auto-search or the free links below.</p>
       <p style="font-size:12px;color:var(--brass);margin-top:10px;cursor:pointer;" onclick="toggleAiAdvanced()">Advanced: multiple areas &amp; lead count <span id="ai-advanced-caret">▾</span></p>
       <div id="ai-advanced-options" style="display:none;margin-top:8px;">
         <div class="field" style="margin-bottom:12px;">
@@ -373,7 +375,7 @@ Gomti Nagar" style="width:100%;height:160px;margin-top:10px;padding:10px;border:
       <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);">
         <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:6px;">Or upload a CSV file</label>
         <input type="file" id="csv-file-input" accept=".csv" onchange="handleCsvUpload(event)" style="font-size:12.5px;">
-        <p style="font-size:11px;color:var(--ink-soft);margin-top:6px;">Expects columns like name/business, phone/mobile, instagram, area/city — column order doesn't matter, header names are matched flexibly.</p>
+        <p style="font-size:11px;color:var(--ink-soft);margin-top:6px;">Expects columns like name/business, phone/mobile, email, website, instagram, area/city — column order doesn't matter, header names are matched flexibly.</p>
       </div>
       <div id="paste-results" style="margin-top:14px;"></div>
       </div>
@@ -599,6 +601,43 @@ const NICHE_LIST = [
 ];
 function nicheInfo(key) { return NICHE_LIST.find(n => n.key === key) || { customer:'customers', item:'work', label: key || 'Business' }; }
 function nicheKeyToLabel(k) { return nicheInfo(k).label; }
+
+// ── OpenStreetMap tag mapping (powers the free, zero-cost auto-search) ──
+// Maps each niche to real OSM tags so Overpass can pull actual mapped
+// businesses with no API key and no billing. Niches with no dependable OSM
+// tag — mostly solo freelancers, who are rarely mapped as a physical place —
+// are left out; those fall back to the free links + paste-import tools.
+const OSM_NICHE_TAGS = {
+  real_estate: ['office=estate_agent'],
+  cafes: ['amenity=cafe'],
+  salons: ['shop=hairdresser', 'shop=beauty'],
+  dentists: ['amenity=dentist'],
+  gyms: ['leisure=fitness_centre'],
+  restaurants: ['amenity=restaurant'],
+  interior_designers: ['shop=interior_decoration'],
+  architects: ['office=architect'],
+  boutiques: ['shop=boutique'],
+  yoga_studios: ['sport=yoga', 'leisure=fitness_centre'],
+  photographers: ['shop=photo'],
+  clinics: ['amenity=clinic', 'amenity=doctors'],
+  pet_services: ['shop=pet', 'shop=pet_grooming'],
+  spas: ['leisure=spa', 'shop=beauty'],
+  clothing_boutiques: ['shop=clothes'],
+  bakeries: ['shop=bakery'],
+  tuition_centers: ['amenity=language_school'],
+  travel_agents: ['shop=travel_agency'],
+  jewellers: ['shop=jewelry'],
+  furniture_stores: ['shop=furniture'],
+  car_dealers: ['shop=car', 'shop=car_repair'],
+  law_firms: ['office=lawyer'],
+  ca_firms: ['office=accountant'],
+  daycare: ['amenity=childcare', 'amenity=kindergarten'],
+  hotels: ['tourism=hotel', 'tourism=guest_house'],
+  wedding: ['shop=photo'],
+  // No dependable OSM tag for these freelancer-style niches:
+  // coaching_centers, event_planners, graphic_designers, digital_marketers, video_editors
+};
+function osmSupportsNiche(key) { return !!(OSM_NICHE_TAGS[key] && OSM_NICHE_TAGS[key].length); }
 
 // ── (message builder removed — WhatsApp/Instagram now open with no pre-filled text) ──
 
@@ -1325,33 +1364,62 @@ function generateLinks() {
   const hCity = city.replace(/[^a-zA-Z]/g, '').toLowerCase();
   const hNiche = phrase.split(' ')[0].replace(/[^a-zA-Z]/g, '').toLowerCase();
   const loc = encodeURIComponent(area || city);
+  const citySlug = (area || city).toLowerCase().replace(/\s+/g, '-');
   const universal = [
     { name: 'Google Maps', color: '#2d7d46', abbr: 'GM', url: `https://www.google.com/maps/search/${q}` },
     { name: 'Google', color: '#2a5db0', abbr: 'G', url: `https://www.google.com/search?q=${q}` },
+    { name: 'Bing Maps', color: '#008373', abbr: 'BM', url: `https://www.bing.com/maps?q=${q}` },
+    { name: 'OpenStreetMap', color: '#7ebc6f', abbr: 'OSM', url: `https://www.openstreetmap.org/search?query=${q}` },
     { name: 'Instagram', color: '#b3306b', abbr: 'IG', url: `https://www.instagram.com/explore/tags/${hNiche}${hCity}/` },
     { name: 'Facebook', color: '#1f5fae', abbr: 'FB', url: `https://www.facebook.com/search/pages/?q=${q}` },
+    { name: 'LinkedIn', color: '#0a66c2', abbr: 'IN', url: `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(phrase + ' ' + location)}` },
   ];
   const localByCountry = {
     'India': [
-      ...(selectedNiches.has('real_estate') ? [{ name: '99acres', color: '#c0392b', abbr: '99', url: `https://www.99acres.com/search/property/buy/${encodeURIComponent((area || city).toLowerCase().replace(/\s+/g, '-'))}?city=${encodeURIComponent(city)}` }] : []),
+      ...(selectedNiches.has('real_estate') ? [{ name: '99acres', color: '#c0392b', abbr: '99', url: `https://www.99acres.com/search/property/buy/${encodeURIComponent(citySlug)}?city=${encodeURIComponent(city)}` }] : []),
       { name: 'JustDial', color: '#3b3b3b', abbr: 'JD', url: `https://www.justdial.com/${encodeURIComponent(city)}/${encodeURIComponent(phrase.replace(/\s+/g, '-'))}` },
+      { name: 'Sulekha', color: '#e07b1a', abbr: 'SU', url: `https://www.sulekha.com/${encodeURIComponent(hNiche)}/${encodeURIComponent(hCity)}` },
+      { name: 'IndiaMART', color: '#0f5ea8', abbr: 'IM', url: `https://dir.indiamart.com/search.mp?ss=${encodeURIComponent(phrase)}&cq=${encodeURIComponent(city)}` },
+      ...(['restaurants', 'cafes', 'bakeries'].includes(niche.key) ? [{ name: 'Zomato', color: '#cb202d', abbr: 'ZM', url: `https://www.zomato.com/${encodeURIComponent(hCity)}/search?q=${q}` }] : []),
     ],
     'United States': [
       { name: 'Yelp', color: '#d32323', abbr: 'Y', url: `https://www.yelp.com/search?find_desc=${encodeURIComponent(phrase)}&find_loc=${loc}` },
+      { name: 'Angi', color: '#5cb85c', abbr: 'AN', url: `https://www.angi.com/companylist/us/search.htm?requestedFilters=${encodeURIComponent(phrase)}&location=${loc}` },
+      { name: 'BBB', color: '#1866c0', abbr: 'BBB', url: `https://www.bbb.org/search?find_text=${encodeURIComponent(phrase)}&find_loc=${loc}` },
     ],
     'United Kingdom': [
       { name: 'Yell', color: '#7a1fa2', abbr: 'Y', url: `https://www.yell.com/ucs/UcsSearchAction.do?keywords=${encodeURIComponent(phrase)}&location=${loc}` },
+      { name: 'Bark', color: '#111827', abbr: 'BK', url: `https://www.bark.com/en/gb/search/?q=${encodeURIComponent(phrase)}&location=${loc}` },
+      { name: 'Trustpilot', color: '#00b67a', abbr: 'TP', url: `https://www.trustpilot.com/search?query=${encodeURIComponent(phrase)}` },
     ],
     'Canada': [
       { name: 'YellowPages.ca', color: '#e2b400', abbr: 'YP', url: `https://www.yellowpages.ca/search/si/1/${encodeURIComponent(phrase)}/${loc}` },
+      { name: 'BBB.org', color: '#1866c0', abbr: 'BBB', url: `https://www.bbb.org/search?find_text=${encodeURIComponent(phrase)}&find_loc=${loc}` },
     ],
     'Australia': [
       { name: 'Yellow Pages AU', color: '#e2b400', abbr: 'YP', url: `https://www.yellowpages.com.au/search/listings?clue=${encodeURIComponent(phrase)}&locationClue=${loc}` },
+      { name: 'Bark AU', color: '#111827', abbr: 'BK', url: `https://www.bark.com/en/au/search/?q=${encodeURIComponent(phrase)}&location=${loc}` },
     ],
-    'United Arab Emirates': [],
-    'Singapore': [],
+    'United Arab Emirates': [
+      { name: 'dubizzle', color: '#e2231a', abbr: 'DZ', url: `https://dubai.dubizzle.com/search/?q=${encodeURIComponent(phrase)}` },
+      { name: 'Yellow Pages UAE', color: '#e2b400', abbr: 'YP', url: `https://www.yellowpages-uae.com/search/${encodeURIComponent(hNiche)}` },
+    ],
+    'Singapore': [
+      { name: 'Yellow Pages SG', color: '#e2b400', abbr: 'YP', url: `https://www.yellowpages.com.sg/search/${encodeURIComponent(phrase)}` },
+      { name: 'StreetDirectory', color: '#2a5db0', abbr: 'SD', url: `https://www.streetdirectory.com/asia_travel/search/?q=${encodeURIComponent(phrase + ' ' + location)}` },
+    ],
   };
-  const sources = [...(localByCountry[country] || []), ...universal];
+  // A few directories only make sense for certain business types.
+  const creativeNiches = ['graphic_designers', 'photographers', 'video_editors', 'interior_designers', 'architects', 'wedding'];
+  const nicheExtras = creativeNiches.includes(niche.key)
+    ? [{ name: 'Behance', color: '#1769ff', abbr: 'BE', url: `https://www.behance.net/search/projects?search=${encodeURIComponent(niche.label + ' ' + location)}` }]
+    : (niche.key === 'hotels'
+      ? [
+          { name: 'TripAdvisor', color: '#34e0a1', abbr: 'TA', url: `https://www.tripadvisor.com/Search?q=${q}` },
+          { name: 'Booking.com', color: '#003580', abbr: 'BK', url: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(location)}` },
+        ]
+      : []);
+  const sources = [...(localByCountry[country] || []), ...nicheExtras, ...universal];
   document.getElementById('links-heading').textContent = `Search links — ${label} in ${location}, ${country}`;
   document.getElementById('links-grid').innerHTML = sources.map(s => `<a class="link-item" href="${s.url}" target="_blank" rel="noopener"><span>${s.name}</span><span class="link-icon" style="background:${s.color};">${s.abbr}</span></a>`).join('');
   document.getElementById('links-card').style.display = 'block';
@@ -1406,6 +1474,136 @@ function toggleManualSection() {
   el.style.display = open ? 'none' : 'block';
   if (caret) caret.textContent = open ? '▾' : '▴';
 }
+// ── Free auto-search (OpenStreetMap — zero cost, no API key, no billing) ──
+// Nominatim (geocoding) and Overpass (place data) are both public, free
+// OpenStreetMap services with no signup needed. We stay polite to them by
+// throttling requests and falling back across a couple of Overpass mirrors.
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://lz4.overpass-api.de/api/interpreter',
+];
+async function geocodeLocation(query) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error('Geocoding failed');
+  const data = await res.json();
+  if (!data.length) throw new Error(`Could not locate "${query}"`);
+  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+}
+function buildOverpassQuery(tagFilters, lat, lon, radiusMeters) {
+  const clauses = tagFilters.map(t => {
+    const [k, v] = t.split('=');
+    return `  node(around:${radiusMeters},${lat},${lon})["${k}"="${v}"];\n  way(around:${radiusMeters},${lat},${lon})["${k}"="${v}"];`;
+  }).join('\n');
+  return `[out:json][timeout:25];\n(\n${clauses}\n);\nout center tags;`;
+}
+async function runOverpassQuery(query) {
+  let lastErr;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await fetch(endpoint, { method: 'POST', body: 'data=' + encodeURIComponent(query) });
+      if (!res.ok) throw new Error(`Overpass responded ${res.status}`);
+      const data = await res.json();
+      return data.elements || [];
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error('All Overpass endpoints failed');
+}
+function osmAddress(tags) {
+  const parts = [tags['addr:housenumber'], tags['addr:street'], tags['addr:suburb'] || tags['addr:neighbourhood'], tags['addr:city']].filter(Boolean);
+  return parts.join(', ');
+}
+function overpassElementToResult(el) {
+  const tags = el.tags || {};
+  if (!tags.name) return null;
+  return {
+    placeId: `osm:${el.type}/${el.id}`,
+    name: tags.name,
+    phone: tags.phone || tags['contact:phone'] || '',
+    website: tags.website || tags['contact:website'] || '',
+    email: tags.email || tags['contact:email'] || '',
+    address: osmAddress(tags),
+    rating: null, ratingCount: null,
+    hasHours: !!tags.opening_hours,
+    photoCount: null,
+  };
+}
+async function freeSearchLeads() {
+  const country = document.getElementById('h-country').value;
+  const city = document.getElementById('h-city').value.trim();
+  const singleArea = document.getElementById('h-area').value.trim();
+  const bulkRaw = document.getElementById('ai-bulk-areas').value.trim();
+  const maxResults = parseInt(document.getElementById('ai-lead-count').value, 10) || 20;
+  const radiusKm = parseInt(document.getElementById('ai-radius-km').value, 10) || 5;
+  const niches = NICHE_LIST.filter(n => selectedNiches.has(n.key));
+  if (!userLocation && !city) { alert('Enter at least a city, or use "Use my current location".'); return; }
+  if (!niches.length) { alert('Select at least one business type.'); return; }
+  const niche = niches[0];
+  if (niches.length > 1) showToast('Free search uses your first selected type for best results');
+
+  if (!osmSupportsNiche(niche.key)) {
+    showToast(`OpenStreetMap doesn't reliably map "${niche.label}" as a business — try the free links & paste-import below instead`);
+    const manualEl = document.getElementById('manual-section');
+    manualEl.style.display = 'block';
+    document.getElementById('manual-section-caret').textContent = '▴';
+    manualEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+  const tagFilters = OSM_NICHE_TAGS[niche.key];
+
+  const areas = userLocation ? [''] : (bulkRaw ? bulkRaw.split('\n').map(a => a.trim()).filter(Boolean) : [singleArea]);
+
+  const card = document.getElementById('ai-search-card');
+  const resultsEl = document.getElementById('ai-search-results');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  const merged = [];
+  const seenKeys = new Set();
+  let failedAreas = 0;
+  let lastError = '';
+
+  for (let idx = 0; idx < areas.length; idx++) {
+    const area = areas[idx];
+    const location = area ? `${area}, ${city}` : city;
+    const searchLabel = userLocation ? `within ${radiusKm}km of your location` : (area || city);
+    resultsEl.innerHTML = `<div class="loading-msg"><span class="spinner"></span>Free-searching ${esc(searchLabel)}${areas.length > 1 ? ` (${idx + 1}/${areas.length})` : ''} via OpenStreetMap...</div>`;
+    try {
+      let lat, lon, radiusMeters;
+      if (userLocation) {
+        lat = userLocation.lat; lon = userLocation.lng; radiusMeters = radiusKm * 1000;
+      } else {
+        const geo = await geocodeLocation(`${location}, ${country}`);
+        lat = geo.lat; lon = geo.lon;
+        radiusMeters = (area ? 3 : 8) * 1000; // tighter radius for a named locality, wider for a whole city
+      }
+      const query = buildOverpassQuery(tagFilters, lat, lon, radiusMeters);
+      const elements = await runOverpassQuery(query);
+      elements.map(overpassElementToResult).filter(Boolean).slice(0, maxResults).forEach(r => {
+        if (seenKeys.has(r.placeId)) return;
+        seenKeys.add(r.placeId);
+        merged.push(r);
+      });
+      // Be polite to the free public Nominatim/Overpass servers between areas.
+      if (idx < areas.length - 1) await new Promise(r => setTimeout(r, 1100));
+    } catch (e) {
+      console.error('Free search error for area', area, e);
+      lastError = e.message || 'Search failed';
+      failedAreas++;
+    }
+  }
+
+  if (failedAreas === areas.length && merged.length === 0) {
+    resultsEl.innerHTML = `<div class="err-box">Free search failed: ${esc(lastError)}. OpenStreetMap coverage varies by area — try a broader city name, or use Auto-search (Google) instead.</div>`;
+    return;
+  }
+  if (failedAreas) showToast(`Could not search ${failedAreas} area${failedAreas !== 1 ? 's' : ''} — showing what we found`);
+
+  aiSearchSourceLabel = 'OpenStreetMap (free)';
+  renderAiSearchResults(merged, niche, singleArea || city);
+}
+
 async function aiSearchLeads() {
   const country = document.getElementById('h-country').value;
   const city = document.getElementById('h-city').value.trim();
@@ -1418,6 +1616,7 @@ async function aiSearchLeads() {
   if (!niches.length) { alert('Select at least one business type.'); return; }
   if (niches.length > 1) showToast('Auto-search uses your first selected type for best results');
   const niche = niches[0];
+  aiSearchSourceLabel = 'Google Search (auto)';
 
   const areas = userLocation ? [''] : (bulkRaw ? bulkRaw.split('\n').map(a => a.trim()).filter(Boolean) : [singleArea]);
 
@@ -1471,6 +1670,7 @@ async function aiSearchLeads() {
 }
 
 let aiSearchResults = [];
+let aiSearchSourceLabel = 'Google Search (auto)'; // set by aiSearchLeads/freeSearchLeads before rendering
 let parsedLeadsCache = []; // enriched rows from Paste/CSV import, indexed to match the review list
 function computeMarketGapSummary(results) {
   const total = results.length;
@@ -1505,9 +1705,10 @@ function renderAiSearchResults(results, niche, fallbackArea) {
         <strong>${gap.pct(gap.lowReviews)}%</strong> have fewer than 10 reviews${gap.avgRating ? ` · average rating <strong>${gap.avgRating}★</strong>` : ''}${gap.noHours ? ` · <strong>${gap.pct(gap.noHours)}%</strong> haven't listed business hours` : ''}
       </p>
     </div>` : '';
+  const viaLabel = aiSearchSourceLabel === 'OpenStreetMap (free)' ? 'via OpenStreetMap — 100% free, no limits' : 'via Google';
   resultsEl.innerHTML = `
     ${gapHtml}
-    <div style="font-size:13px;color:var(--grey);margin-bottom:10px;">Found <strong>${results.length}</strong> real business${results.length !== 1 ? 'es' : ''} via Google — review and save:</div>
+    <div style="font-size:13px;color:var(--grey);margin-bottom:10px;">Found <strong>${results.length}</strong> real business${results.length !== 1 ? 'es' : ''} ${viaLabel} — review and save:</div>
     ${results.map((r, i) => `
       <div class="result-row" id="ai-res-${i}">
         <div class="result-main">
@@ -1543,7 +1744,8 @@ function aiLeadToRecord(r, nicheKey, fallbackArea) {
     ratingCount: r.ratingCount || null,
     hasHours: typeof r.hasHours === 'boolean' ? r.hasHours : null,
     photoCount: typeof r.photoCount === 'number' ? r.photoCount : null,
-    source: 'Google Search (auto)',
+    email: r.email || '',
+    source: aiSearchSourceLabel,
     status: 'New',
     notes: '',
     added: new Date().toLocaleDateString(),
@@ -1605,63 +1807,118 @@ async function saveAllAiLeads() {
 }
 
 // ── Paste & Parse leads ────────────────────────────────────────────
+// Generic phone matcher: works for Indian mobiles (+91 98765 43210) as well
+// as other international formats (+1 415-555-0132, +44 20 7946 0958, etc).
+const PHONE_PATTERN = '(\\+?\\d{1,3}[\\s.\\-]?)?\\(?\\d{2,4}\\)?[\\s.\\-]?\\d{3,4}[\\s.\\-]?\\d{3,4}\\b';
+const EMAIL_PATTERN = '[\\w.+-]+@[\\w-]+\\.[\\w.-]+';
+const WEBSITE_PATTERN = 'https?://[^\\s,)"\']+|(?:www\\.)[a-zA-Z0-9-]+\\.[a-zA-Z]{2,}(?:/[^\\s,)"\']*)?';
+const IG_PATTERN = '@([a-zA-Z0-9._]{1,30})';
+const RATING_LINE_PATTERN = '^\\s*\\d(\\.\\d)?\\s*(★|stars?)?\\s*\\(?\\d*\\)?\\s*$';
+
+function matchesPattern(str, pattern) { return new RegExp(pattern, 'i').test(str); }
+function findAllMatches(str, pattern) { return [...str.matchAll(new RegExp(pattern, 'g'))]; }
+
+// Keeps the existing "91XXXXXXXXXX" convention for Indian mobiles (used
+// elsewhere for WhatsApp links); any other international number is kept as
+// plain digits, dropped if it's too short to plausibly be a phone number.
+function normalizePhoneForSave(raw) {
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  const last10 = digits.slice(-10);
+  if (digits.length <= 12 && /^[6-9]/.test(last10) && last10.length === 10) {
+    return '91' + last10;
+  }
+  return digits.length >= 7 ? digits : '';
+}
+
+function extractContactFields(text) {
+  const phones = findAllMatches(text, PHONE_PATTERN).map(m => normalizePhoneForSave(m[0])).filter(p => p.length >= 7);
+  const emails = findAllMatches(text, EMAIL_PATTERN).map(m => m[0]);
+  const websites = findAllMatches(text, WEBSITE_PATTERN).map(m => m[0]);
+  const igMatches = findAllMatches(text, IG_PATTERN);
+  return {
+    phone: phones[0] || '',
+    email: emails[0] || '',
+    website: websites[0] || '',
+    instagram: igMatches.length ? igMatches[0][1] : '',
+  };
+}
+
 async function parsePastedLeads() {
   const raw = document.getElementById('paste-box').value.trim();
   if (!raw) { alert('Paste some text first.'); return; }
 
-  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-  const phoneRegex = /(\+?91[\s\-]?)?[6-9]\d{9}/g;
-  const igRegex = /@([a-zA-Z0-9._]{1,30})/g;
-
-  // Group lines into blocks separated by blank lines or phone numbers
-  const blocks = [];
-  let current = [];
-  for (const line of lines) {
-    if (line === '' && current.length) { blocks.push(current); current = []; }
-    else current.push(line);
-  }
-  if (current.length) blocks.push(current);
+  const rawLines = raw.split('\n').map(l => l.trim());
+  const lines = rawLines.filter(Boolean);
 
   const parsed = [];
   const seen = new Set();
-
-  for (const block of blocks) {
-    const fullText = block.join(' ');
-    // Extract phones
-    const phones = [...fullText.matchAll(phoneRegex)].map(m => m[0].replace(/[\s\-\+]/g, ''));
-    const phone = phones.length ? (phones[0].startsWith('91') && phones[0].length === 12 ? phones[0] : '91' + phones[0].slice(-10)) : '';
-    // Extract instagram
-    const igMatches = [...fullText.matchAll(igRegex)];
-    const instagram = igMatches.length ? igMatches[0][1] : '';
-    // Name = first line that doesn't look like a phone/address junk
-    const nameLine = block.find(l => !/^[\d\s\+\-\(\)\/,\.]+$/.test(l) && l.length > 2 && !l.startsWith('@'));
-    const name = nameLine ? nameLine.replace(/\s+/g, ' ').substring(0, 60) : '';
-
-    if (!name && !phone && !instagram) continue;
-    const key = phone || instagram || name;
-    if (seen.has(key)) continue;
+  const pushEntry = (name, fields) => {
+    const { phone = '', instagram = '', email = '', website = '' } = fields || {};
+    if (!name && !phone && !instagram && !email) return;
+    const key = phone || email || instagram || name;
+    if (!key || seen.has(key)) return;
     seen.add(key);
-    parsed.push({ name: name || 'Unknown', phone, instagram, key });
+    parsed.push({ name: name || 'Unknown', phone, instagram, email, website, key });
+  };
+
+  // Strategy 1: delimiter-separated single-line rows — e.g. copied from a
+  // table, or a "Name | Phone | Area" style listing (one lead per line).
+  const delimiterLines = lines.filter(l => /[|\t]/.test(l) || (l.match(/,/g) || []).length >= 2);
+  if (delimiterLines.length >= Math.max(2, lines.length * 0.5)) {
+    for (const line of delimiterLines) {
+      const cells = line.split(/\t|\s*\|\s*|\s*,\s*/).map(c => c.trim()).filter(Boolean);
+      const fields = extractContactFields(line);
+      const nameCell = cells.find(c => !matchesPattern(c, PHONE_PATTERN) && !matchesPattern(c, EMAIL_PATTERN) && !matchesPattern(c, '^https?:') && c.length > 1);
+      pushEntry((nameCell || cells[0] || '').substring(0, 60), fields);
+    }
   }
 
-  // Also try line-by-line phone extraction for flat lists (no blank lines)
-  if (parsed.length === 0) {
-    let i = 0;
-    while (i < lines.length) {
-      const phoneMatch = lines[i].match(/(\+?91[\s\-]?)?[6-9]\d{9}/);
-      if (phoneMatch) {
-        const phone = '91' + phoneMatch[0].replace(/[\s\-\+]/g, '').slice(-10);
+  // Strategy 2: block-based grouping. Records are separated either by a
+  // blank line, or by a rating line like "4.5 (120)" — the pattern Google
+  // Maps copy/paste typically inserts right after each business name.
+  if (!parsed.length) {
+    const ratingBlocks = [];
+    let cur1 = [];
+    for (const line of lines) {
+      if (matchesPattern(line, RATING_LINE_PATTERN) && cur1.length) { ratingBlocks.push(cur1); cur1 = []; }
+      else cur1.push(line);
+    }
+    if (cur1.length) ratingBlocks.push(cur1);
+
+    const blankBlocks = [];
+    let cur2 = [];
+    for (const line of rawLines) {
+      if (line === '' && cur2.length) { blankBlocks.push(cur2); cur2 = []; }
+      else if (line !== '') cur2.push(line);
+    }
+    if (cur2.length) blankBlocks.push(cur2);
+
+    const useBlocks = blankBlocks.length > ratingBlocks.length ? blankBlocks : ratingBlocks;
+    for (const block of useBlocks) {
+      const fullText = block.join(' ');
+      const fields = extractContactFields(fullText);
+      const nameLine = block.find(l => !matchesPattern(l, RATING_LINE_PATTERN) && !/^[\d\s\+\-\(\)\/,\.]+$/.test(l) && l.length > 2 && !l.startsWith('@') && !matchesPattern(l, '^https?:'));
+      const name = nameLine ? nameLine.replace(/\s+/g, ' ').substring(0, 60) : '';
+      pushEntry(name, fields);
+    }
+  }
+
+  // Strategy 3: flat-list fallback — a phone number on its own line, with
+  // the business name on the line right before it, no separators at all.
+  if (!parsed.length) {
+    for (let i = 0; i < lines.length; i++) {
+      const fields = extractContactFields(lines[i]);
+      if (fields.phone) {
         const name = i > 0 ? lines[i - 1].substring(0, 60) : 'Unknown';
-        const key = phone || name;
-        if (!seen.has(key)) { seen.add(key); parsed.push({ name, phone, instagram: '', key }); }
+        pushEntry(name, fields);
       }
-      i++;
     }
   }
 
   const resultsEl = document.getElementById('paste-results');
   if (!parsed.length) {
-    resultsEl.innerHTML = `<div class="err-box">Could not find any business names or phone numbers in the pasted text. Make sure you copy the full listing text from Google Maps or JustDial.</div>`;
+    resultsEl.innerHTML = `<div class="err-box">Could not find any business names, phone numbers, or emails in the pasted text. Make sure you copy the full listing text from Google Maps, JustDial, or a directory search.</div>`;
     return;
   }
   renderParsedResults(parsed);
@@ -1672,6 +1929,8 @@ const CSV_NAME_KEYS = ['name', 'business', 'businessname', 'company', 'title'];
 const CSV_PHONE_KEYS = ['phone', 'mobile', 'contact', 'phonenumber', 'number', 'whatsapp'];
 const CSV_INSTAGRAM_KEYS = ['instagram', 'ig', 'instagramhandle', 'handle'];
 const CSV_AREA_KEYS = ['area', 'city', 'location', 'address', 'locality'];
+const CSV_EMAIL_KEYS = ['email', 'emailaddress', 'mail'];
+const CSV_WEBSITE_KEYS = ['website', 'url', 'site', 'web'];
 
 function matchCsvColumn(headers, keys) {
   const normalized = headers.map(h => (h || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
@@ -1698,6 +1957,8 @@ function handleCsvUpload(event) {
       const phoneCol = matchCsvColumn(headers, CSV_PHONE_KEYS);
       const igCol = matchCsvColumn(headers, CSV_INSTAGRAM_KEYS);
       const areaCol = matchCsvColumn(headers, CSV_AREA_KEYS);
+      const emailCol = matchCsvColumn(headers, CSV_EMAIL_KEYS);
+      const websiteCol = matchCsvColumn(headers, CSV_WEBSITE_KEYS);
 
       if (!nameCol && !phoneCol) {
         alert('Could not find a name or phone column in this CSV. Expected headers like "Name", "Phone", "Instagram", "Area".');
@@ -1714,11 +1975,13 @@ function handleCsvUpload(event) {
         const phone = digits ? (digits.length === 12 && digits.startsWith('91') ? digits : '91' + digits.slice(-10)) : '';
         const instagram = (igCol ? (row[igCol] || '') : '').toString().replace('@', '').trim();
         const area = (areaCol ? (row[areaCol] || '') : '').toString().trim();
-        if (!name && !phone && !instagram) return;
-        const key = phone || instagram || name;
+        const email = (emailCol ? (row[emailCol] || '') : '').toString().trim();
+        const website = (websiteCol ? (row[websiteCol] || '') : '').toString().trim();
+        if (!name && !phone && !instagram && !email) return;
+        const key = phone || email || instagram || name;
         if (seen.has(key)) return;
         seen.add(key);
-        parsed.push({ name: name || 'Unknown', phone, instagram, area, key });
+        parsed.push({ name: name || 'Unknown', phone, instagram, email, website, area, key });
       });
 
       if (!parsed.length) {
@@ -1752,20 +2015,24 @@ function renderParsedResults(parsed) {
   // (esc() only escapes HTML, not JS-string quotes) and made bulk "Save all" fall
   // back to the Hunt tab's city/area instead of each row's own parsed area.
   parsedLeadsCache = parsed.map(p => ({
-    name: p.name, phone: p.phone, instagram: p.instagram,
+    name: p.name, phone: p.phone, instagram: p.instagram, email: p.email || '', website: p.website || '',
     area: p.area || area, city,
     nicheKey: niche.key, nicheLabel: niche.label,
   }));
 
+  const withPhone = parsedLeadsCache.filter(p => p.phone).length;
+  const withEmail = parsedLeadsCache.filter(p => p.email).length;
   resultsEl.innerHTML = `
-    <div style="font-size:13px;color:var(--grey);margin-bottom:10px;">Found <strong>${parsed.length}</strong> lead${parsed.length !== 1 ? 's' : ''} — review and save:</div>
+    <div style="font-size:13px;color:var(--grey);margin-bottom:10px;">Found <strong>${parsed.length}</strong> lead${parsed.length !== 1 ? 's' : ''} (${withPhone} with phone${withEmail ? `, ${withEmail} with email` : ''}) — review and save:</div>
     ${parsedLeadsCache.map((p, i) => `
       <div class="result-row" id="pres-${i}" style="flex-wrap:wrap;gap:8px;">
         <div class="result-main" style="flex:1;min-width:200px;">
           <input value="${esc(p.name)}" id="pname-${i}" style="font-weight:600;border:1px solid var(--border);border-radius:6px;padding:4px 8px;width:100%;box-sizing:border-box;background:var(--cream);color:var(--ink);">
           <div class="result-meta" style="margin-top:4px;">
             ${p.phone ? `${p.phone}` : '<span style="color:#c0392b">No phone found</span>'}
+            ${p.email ? ` · ${esc(p.email)}` : ''}
             ${p.instagram ? ` · @${esc(p.instagram)}` : ''}
+            ${p.website ? ` · has website` : ''}
             ${p.area ? ` · ${esc(p.area)}` : ''}
           </div>
         </div>
@@ -1791,8 +2058,9 @@ async function saveParsedLead(i) {
   const name = nameEl ? nameEl.value.trim() : (row.name || 'Unknown');
   const newLead = {
     id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
-    name, phone: row.phone, instagram: row.instagram, area: row.area, niche: row.nicheKey, nicheLabel: row.nicheLabel,
-    hasWebsite: false, source: 'Paste Import', status: 'New', notes: '',
+    name, phone: row.phone, instagram: row.instagram, email: row.email || '', website: row.website || '',
+    area: row.area, niche: row.nicheKey, nicheLabel: row.nicheLabel,
+    hasWebsite: !!row.website, source: 'Paste Import', status: 'New', notes: '',
     added: new Date().toLocaleDateString()
   };
   leads.unshift(newLead);
@@ -1827,8 +2095,9 @@ async function saveAllParsed(indices) {
     }
     newLeads.push({
       id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
-      name, phone: row.phone, instagram: row.instagram, area: row.area, niche: row.nicheKey, nicheLabel: row.nicheLabel,
-      hasWebsite: false, source: 'Paste Import', status: 'New', notes: '',
+      name, phone: row.phone, instagram: row.instagram, email: row.email || '', website: row.website || '',
+      area: row.area, niche: row.nicheKey, nicheLabel: row.nicheLabel,
+      hasWebsite: !!row.website, source: 'Paste Import', status: 'New', notes: '',
       added: new Date().toLocaleDateString()
     });
     if (btn) { btn.textContent = 'Saved'; btn.disabled = true; btn.style.background = '#2d7d46'; }
