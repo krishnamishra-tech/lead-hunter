@@ -101,14 +101,28 @@ function osmAddress(tags) {
   return parts.join(', ');
 }
 
+// OSM contributors tag phone/website under several different keys depending
+// on the editor they used — check every variant actually seen in the wild,
+// not just the "canonical" one, or usable leads get missed for no reason.
+function osmPhone(tags) {
+  return tags.phone || tags['contact:phone'] || tags['phone:mobile'] || tags['contact:mobile'] || tags.mobile || tags['contact:mobile_phone'] || '';
+}
+function osmWebsite(tags) {
+  return tags.website || tags['contact:website'] || tags.url || tags['contact:url'] || tags['website:2'] || '';
+}
+
 function overpassElementToResult(el) {
   const tags = el.tags || {};
-  if (!tags.name) return null;
+  // Some listings are only tagged with a brand/operator name (chain outlets,
+  // franchise stores) rather than their own `name` — fall back rather than
+  // dropping a perfectly usable lead just because of which tag holds the name.
+  const name = tags.name || tags.brand || tags.operator;
+  if (!name) return null;
   return {
     placeId: `osm:${el.type}/${el.id}`,
-    name: tags.name,
-    phone: tags.phone || tags['contact:phone'] || '',
-    website: tags.website || tags['contact:website'] || '',
+    name,
+    phone: osmPhone(tags),
+    website: osmWebsite(tags),
     email: tags.email || tags['contact:email'] || '',
     address: osmAddress(tags),
     rating: null,
@@ -166,13 +180,20 @@ module.exports = async function handler(req, res) {
     const query = buildOverpassQuery(tagFilters, lat, lon, radiusMeters);
     const elements = await runOverpassQuery(query);
     const wantedCount = Math.min(Math.max(parseInt(maxResults, 10) || 20, 1), 100);
-    const results = elements.map(overpassElementToResult).filter(Boolean).slice(0, wantedCount);
+    const named = elements.map(overpassElementToResult).filter(Boolean);
+    // Drop "dead" listings — no phone AND no website means there's no way to
+    // actually contact the business, so it's not a usable lead regardless of
+    // how the name/rating/address look. Count them so the UI can be honest
+    // about why the result count is lower than what OSM actually returned.
+    const usable = named.filter((r) => r.phone || r.website);
+    const droppedCount = named.length - usable.length;
+    const results = usable.slice(0, wantedCount);
 
     await supabaseAdmin
       .from('api_usage')
       .upsert({ user_id: user.id, usage_date: today, osm_searches: currentCount + 1 }, { onConflict: 'user_id,usage_date' });
 
-    res.status(200).json({ results, center: { lat, lon } });
+    res.status(200).json({ results, droppedCount, center: { lat, lon } });
   } catch (err) {
     console.error('free-search error:', err);
     res.status(502).json({ error: err.message || 'Free search failed — please try again' });
