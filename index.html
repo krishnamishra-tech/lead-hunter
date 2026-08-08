@@ -85,6 +85,12 @@
     background: linear-gradient(135deg, #1c2a5e, var(--brass)); border-radius: 12px; padding: 15px;
     margin-top: auto; color: #fff;
   }
+  /* Used only to hide this for Pro users — !important so it wins on desktop
+     where no media query hides the sidebar. Free users get NO inline/class
+     override at all, so the mobile media query below (which sets
+     `.sidebar-upgrade { display: none; }` under max-width) applies normally
+     instead of being fought by a JS-set inline style. */
+  .sidebar-upgrade.is-pro-hidden { display: none !important; }
   .sidebar-upgrade-title { font-size: 12.5px; font-weight: 700; margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
   .sidebar-upgrade-sub { font-size: 11px; color: #d7dcf5; margin-bottom: 11px; line-height: 1.4; }
   .sidebar-upgrade-btn {
@@ -1482,7 +1488,7 @@ async function refreshPlanBadge() {
   const badge = document.getElementById('plan-badge');
   badge.textContent = currentPlan === 'pro' ? 'Pro' : 'Free';
   const sidebarUpgrade = document.getElementById('sidebar-upgrade-widget');
-  if (sidebarUpgrade) sidebarUpgrade.style.display = currentPlan === 'pro' ? 'none' : 'block';
+  if (sidebarUpgrade) sidebarUpgrade.classList.toggle('is-pro-hidden', currentPlan === 'pro');
   const box = document.getElementById('plan-status-box');
   if (!box) return;
 
