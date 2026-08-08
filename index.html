@@ -335,6 +335,7 @@
       <div class="btn-row">
         <button class="btn btn-navy" onclick="aiSearchLeads()">Auto-search leads</button>
         <button class="btn btn-outline" onclick="freeSearchLeads()" style="border-color:#2d7d46;color:#2d7d46;">🆓 Free search (OpenStreetMap)</button>
+        <button class="btn btn-outline" onclick="generateLinks()">🔗 Get search links</button>
       </div>
       <p style="margin-top:8px;"><a href="#" onclick="showExampleResults();return false;" style="font-size:12px;color:var(--ink-soft);text-decoration:underline;">👀 See example results first</a></p>
       <p style="font-size:11px;color:var(--ink-soft);margin-top:6px;">Free search works best for storefronts and offices (cafes, salons, clinics, shops, hotels...). For freelancers (designers, coaches, marketers) use Auto-search or the free links below.</p>
@@ -1618,10 +1619,18 @@ function generateLinks() {
   const sources = [...(localByCountry[country] || []), ...nicheExtras, ...universal];
   document.getElementById('links-heading').textContent = `Search links — ${label} in ${location}, ${country}`;
   document.getElementById('links-grid').innerHTML = sources.map(s => `<a class="link-item" href="${s.url}" target="_blank" rel="noopener"><span>${s.name}</span><span class="link-icon" style="background:${s.color};">${s.abbr}</span></a>`).join('');
+  // Get search links now also lives as a primary button above (outside the
+  // collapsed "manual search" section), so force that parent wrapper open too —
+  // otherwise the results render but stay invisible inside display:none.
+  const manualEl = document.getElementById('manual-section');
+  if (manualEl) manualEl.style.display = 'block';
+  const manualCaret = document.getElementById('manual-section-caret');
+  if (manualCaret) manualCaret.textContent = '▴';
   document.getElementById('links-card').style.display = 'block';
   document.getElementById('paste-card').style.display = 'block';
   document.getElementById('paste-results').innerHTML = '';
   document.getElementById('paste-box').value = '';
+  document.getElementById('links-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ── Auto-search leads (Google Places API, via serverless proxy) ─────
@@ -1706,6 +1715,7 @@ async function freeSearchLeads() {
   const seenKeys = new Set();
   let failedAreas = 0;
   let lastError = '';
+  let totalDropped = 0; // count of "dead" listings (no phone, no website) the backend filtered out
 
   for (let idx = 0; idx < areas.length; idx++) {
     const area = areas[idx];
@@ -1736,6 +1746,10 @@ async function freeSearchLeads() {
         seenKeys.add(r.placeId);
         merged.push(r);
       });
+      // NOTE: assumes /api/free-search returns a `droppedCount` field for
+      // listings it filtered out (no phone and no website). Rename this key
+      // if the backend uses something different.
+      if (typeof data.droppedCount === 'number') totalDropped += data.droppedCount;
       // Be polite to the free public Nominatim/Overpass servers between areas.
       if (idx < areas.length - 1) await new Promise(r => setTimeout(r, 1100));
     } catch (e) {
@@ -1750,6 +1764,7 @@ async function freeSearchLeads() {
     return;
   }
   if (failedAreas) showToast(`Could not search ${failedAreas} area${failedAreas !== 1 ? 's' : ''} — showing what we found`);
+  else if (totalDropped) showToast(`Skipped ${totalDropped} listing${totalDropped !== 1 ? 's' : ''} with no phone or website — not usable as a lead`);
 
   aiSearchSourceLabel = 'OpenStreetMap (free)';
   markChecklistStep('searched');
