@@ -1671,60 +1671,8 @@ function toggleManualSection() {
   if (caret) caret.textContent = open ? '▾' : '▴';
 }
 // ── Free auto-search (OpenStreetMap — zero cost, no API key, no billing) ──
-// Nominatim (geocoding) and Overpass (place data) are both public, free
-// OpenStreetMap services with no signup needed. We stay polite to them by
-// throttling requests and falling back across a couple of Overpass mirrors.
-const OVERPASS_ENDPOINTS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-  'https://lz4.overpass-api.de/api/interpreter',
-];
-async function geocodeLocation(query) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
-  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-  if (!res.ok) throw new Error('Geocoding failed');
-  const data = await res.json();
-  if (!data.length) throw new Error(`Could not locate "${query}"`);
-  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-}
-function buildOverpassQuery(tagFilters, lat, lon, radiusMeters) {
-  const clauses = tagFilters.map(t => {
-    const [k, v] = t.split('=');
-    return `  node(around:${radiusMeters},${lat},${lon})["${k}"="${v}"];\n  way(around:${radiusMeters},${lat},${lon})["${k}"="${v}"];`;
-  }).join('\n');
-  return `[out:json][timeout:25];\n(\n${clauses}\n);\nout center tags;`;
-}
-async function runOverpassQuery(query) {
-  let lastErr;
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const res = await fetch(endpoint, { method: 'POST', body: 'data=' + encodeURIComponent(query) });
-      if (!res.ok) throw new Error(`Overpass responded ${res.status}`);
-      const data = await res.json();
-      return data.elements || [];
-    } catch (e) { lastErr = e; }
-  }
-  throw lastErr || new Error('All Overpass endpoints failed');
-}
-function osmAddress(tags) {
-  const parts = [tags['addr:housenumber'], tags['addr:street'], tags['addr:suburb'] || tags['addr:neighbourhood'], tags['addr:city']].filter(Boolean);
-  return parts.join(', ');
-}
-function overpassElementToResult(el) {
-  const tags = el.tags || {};
-  if (!tags.name) return null;
-  return {
-    placeId: `osm:${el.type}/${el.id}`,
-    name: tags.name,
-    phone: tags.phone || tags['contact:phone'] || '',
-    website: tags.website || tags['contact:website'] || '',
-    email: tags.email || tags['contact:email'] || '',
-    address: osmAddress(tags),
-    rating: null, ratingCount: null,
-    hasHours: !!tags.opening_hours,
-    photoCount: null,
-  };
-}
+// Runs through /api/free-search (server-side proxy) — see that file for why
+// this can't call Nominatim/Overpass directly from the browser.
 async function freeSearchLeads() {
   const country = document.getElementById('h-country').value;
   const city = document.getElementById('h-city').value.trim();
@@ -1746,7 +1694,6 @@ async function freeSearchLeads() {
     manualEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return;
   }
-  const tagFilters = OSM_NICHE_TAGS[niche.key];
 
   const areas = userLocation ? [''] : (bulkRaw ? bulkRaw.split('\n').map(a => a.trim()).filter(Boolean) : [singleArea]);
 
@@ -1766,17 +1713,25 @@ async function freeSearchLeads() {
     const searchLabel = userLocation ? `within ${radiusKm}km of your location` : (area || city);
     resultsEl.innerHTML = `<div class="loading-msg"><span class="spinner"></span>Free-searching ${esc(searchLabel)}${areas.length > 1 ? ` (${idx + 1}/${areas.length})` : ''} via OpenStreetMap...</div>`;
     try {
-      let lat, lon, radiusMeters;
+      const body = {
+        nicheKey: niche.key,
+        maxResults,
+        radiusKm: userLocation ? radiusKm : (area ? 3 : 8),
+      };
       if (userLocation) {
-        lat = userLocation.lat; lon = userLocation.lng; radiusMeters = radiusKm * 1000;
+        body.lat = userLocation.lat;
+        body.lng = userLocation.lng;
       } else {
-        const geo = await geocodeLocation(`${location}, ${country}`);
-        lat = geo.lat; lon = geo.lon;
-        radiusMeters = (area ? 3 : 8) * 1000; // tighter radius for a named locality, wider for a whole city
+        body.location = `${location}, ${country}`;
       }
-      const query = buildOverpassQuery(tagFilters, lat, lon, radiusMeters);
-      const elements = await runOverpassQuery(query);
-      elements.map(overpassElementToResult).filter(Boolean).slice(0, maxResults).forEach(r => {
+      const res = await fetch('/api/free-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Search failed (${res.status})`);
+      (data.results || []).forEach(r => {
         if (seenKeys.has(r.placeId)) return;
         seenKeys.add(r.placeId);
         merged.push(r);
