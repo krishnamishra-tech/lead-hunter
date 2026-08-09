@@ -1,16 +1,20 @@
 // POST /api/verify-payment
 // Verifies the Razorpay payment signature, then upgrades the CALLER's own
-// account (never a client-supplied userId) using the Supabase service-role
-// key. The service-role key must NEVER be sent to the browser — it only
-// lives here.
+// account (never a client-supplied userId) to the tier they paid for, using
+// the Supabase service-role key. The service-role key must NEVER be sent to
+// the browser — it only lives here.
 const crypto = require('crypto');
 const { verifyUser, supabaseAdmin } = require('./_lib/verifyUser');
 
-const PLAN_DURATIONS = {
+const VALID_TIERS = ['starter', 'business'];
+const PERIOD_DURATIONS = {
   monthly: (d) => { d.setMonth(d.getMonth() + 1); return d; },
   yearly: (d) => { d.setFullYear(d.getFullYear() + 1); return d; },
 };
-const PLAN_AMOUNTS_RUPEES = { monthly: 499, yearly: 4999 };
+const PLAN_AMOUNTS_RUPEES = {
+  starter: { monthly: 499, yearly: 4999 },
+  business: { monthly: 999, yearly: 9999 },
+};
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -30,9 +34,13 @@ module.exports = async function handler(req, res) {
       razorpay_payment_id,
       razorpay_signature,
       plan,
+      period,
     } = req.body || {};
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !PLAN_DURATIONS[plan]) {
+    if (
+      !razorpay_order_id || !razorpay_payment_id || !razorpay_signature ||
+      !VALID_TIERS.includes(plan) || !PERIOD_DURATIONS[period]
+    ) {
       res.status(400).json({ error: 'Missing or invalid fields' });
       return;
     }
@@ -50,13 +58,14 @@ module.exports = async function handler(req, res) {
     }
 
     // 2. Compute new plan expiry.
-    const expiry = PLAN_DURATIONS[plan](new Date());
+    const expiry = PERIOD_DURATIONS[period](new Date());
 
-    // 3. Upgrade the AUTHENTICATED CALLER's own profile — user.id comes from
-    //    the verified token, not from anything the client sent.
+    // 3. Upgrade the AUTHENTICATED CALLER's own profile to the tier they
+    //    paid for — user.id comes from the verified token, not from
+    //    anything the client sent.
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .update({ plan: 'pro', plan_expiry: expiry.toISOString(), updated_at: new Date().toISOString() })
+      .update({ plan, plan_expiry: expiry.toISOString(), updated_at: new Date().toISOString() })
       .eq('id', user.id);
     if (profileError) throw profileError;
 
@@ -65,13 +74,13 @@ module.exports = async function handler(req, res) {
       user_id: user.id,
       razorpay_order_id,
       razorpay_payment_id,
-      amount: PLAN_AMOUNTS_RUPEES[plan],
-      plan_purchased: plan,
+      amount: PLAN_AMOUNTS_RUPEES[plan][period],
+      plan_purchased: `${plan}_${period}`,
       status: 'paid',
     });
     if (paymentError) console.error('payments log error:', paymentError);
 
-    res.status(200).json({ success: true, planExpiry: expiry.toISOString() });
+    res.status(200).json({ success: true, plan, planExpiry: expiry.toISOString() });
   } catch (err) {
     console.error('verify-payment error:', err);
     res.status(500).json({ error: 'Verification failed' });
