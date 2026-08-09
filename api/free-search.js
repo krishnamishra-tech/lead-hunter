@@ -28,17 +28,17 @@ const OVERPASS_ENDPOINTS = [
 const OSM_USER_AGENT = 'LocalScout/1.0 (+https://github.com/krishnamishra-tech/lead-hunter)';
 
 const OSM_NICHE_TAGS = {
-  real_estate: ['office=estate_agent'],
+  real_estate: ['office=estate_agent', 'shop=estate_agent'],
   cafes: ['amenity=cafe'],
-  salons: ['shop=hairdresser', 'shop=beauty'],
+  salons: ['shop=hairdresser', 'shop=beauty', 'shop=hairdresser_supply'],
   dentists: ['amenity=dentist'],
-  gyms: ['leisure=fitness_centre'],
+  gyms: ['leisure=fitness_centre', 'leisure=sports_centre'],
   restaurants: ['amenity=restaurant'],
-  interior_designers: ['shop=interior_decoration'],
+  interior_designers: ['shop=interior_decoration', 'office=interior_design', 'craft=interior_decorator'],
   architects: ['office=architect'],
   boutiques: ['shop=boutique'],
   yoga_studios: ['sport=yoga', 'leisure=fitness_centre'],
-  photographers: ['shop=photo'],
+  photographers: ['shop=photo', 'craft=photographer'],
   clinics: ['amenity=clinic', 'amenity=doctors'],
   pet_services: ['shop=pet', 'shop=pet_grooming'],
   spas: ['leisure=spa', 'shop=beauty'],
@@ -53,7 +53,7 @@ const OSM_NICHE_TAGS = {
   ca_firms: ['office=accountant'],
   daycare: ['amenity=childcare', 'amenity=kindergarten'],
   hotels: ['tourism=hotel', 'tourism=guest_house'],
-  wedding: ['shop=photo'],
+  wedding: ['shop=photo', 'craft=photographer'],
 };
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -101,28 +101,15 @@ function osmAddress(tags) {
   return parts.join(', ');
 }
 
-// OSM contributors tag phone/website under several different keys depending
-// on the editor they used — check every variant actually seen in the wild,
-// not just the "canonical" one, or usable leads get missed for no reason.
-function osmPhone(tags) {
-  return tags.phone || tags['contact:phone'] || tags['phone:mobile'] || tags['contact:mobile'] || tags.mobile || tags['contact:mobile_phone'] || '';
-}
-function osmWebsite(tags) {
-  return tags.website || tags['contact:website'] || tags.url || tags['contact:url'] || tags['website:2'] || '';
-}
-
 function overpassElementToResult(el) {
   const tags = el.tags || {};
-  // Some listings are only tagged with a brand/operator name (chain outlets,
-  // franchise stores) rather than their own `name` — fall back rather than
-  // dropping a perfectly usable lead just because of which tag holds the name.
-  const name = tags.name || tags.brand || tags.operator;
+  const name = tags.name || tags.brand;
   if (!name) return null;
   return {
     placeId: `osm:${el.type}/${el.id}`,
     name,
-    phone: osmPhone(tags),
-    website: osmWebsite(tags),
+    phone: tags.phone || tags['contact:phone'] || tags.mobile || tags['contact:mobile'] || '',
+    website: tags.website || tags['contact:website'] || tags['contact:facebook'] || '',
     email: tags.email || tags['contact:email'] || '',
     address: osmAddress(tags),
     rating: null,
@@ -131,6 +118,8 @@ function overpassElementToResult(el) {
     photoCount: null,
   };
 }
+
+const ADMIN_EMAILS = ['krishnamishrayt65@gmail.com'];
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -142,6 +131,21 @@ module.exports = async function handler(req, res) {
   if (!user) {
     res.status(401).json({ error: 'Please sign in to search' });
     return;
+  }
+
+  // OpenStreetMap search is a Starter/Business feature — gate it here too,
+  // not just in the UI, since a UI lock alone can be bypassed by calling
+  // this endpoint directly.
+  const isAdmin = ADMIN_EMAILS.includes((user.email || '').toLowerCase());
+  if (!isAdmin) {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles').select('plan, plan_expiry').eq('id', user.id).maybeSingle();
+    const isPaid = profile && (profile.plan === 'starter' || profile.plan === 'business') &&
+      (!profile.plan_expiry || new Date(profile.plan_expiry) > new Date());
+    if (!isPaid) {
+      res.status(403).json({ error: 'OpenStreetMap search is available on Starter and Business plans — upgrade to unlock' });
+      return;
+    }
   }
 
   try {
@@ -180,20 +184,24 @@ module.exports = async function handler(req, res) {
     const query = buildOverpassQuery(tagFilters, lat, lon, radiusMeters);
     const elements = await runOverpassQuery(query);
     const wantedCount = Math.min(Math.max(parseInt(maxResults, 10) || 20, 1), 100);
-    const named = elements.map(overpassElementToResult).filter(Boolean);
-    // Drop "dead" listings — no phone AND no website means there's no way to
-    // actually contact the business, so it's not a usable lead regardless of
-    // how the name/rating/address look. Count them so the UI can be honest
-    // about why the result count is lower than what OSM actually returned.
-    const usable = named.filter((r) => r.phone || r.website);
-    const droppedCount = named.length - usable.length;
-    const results = usable.slice(0, wantedCount);
+    const allParsed = elements.map(overpassElementToResult).filter(Boolean);
+    // OSM entries with no phone, website, or email at all are "dead" — there's
+    // no way to actually reach the business, so they're not useful leads.
+    // Many are just building outlines someone tagged with a name and nothing
+    // else. Dropping them here is what fixes "finding dead/empty leads".
+    const contactable = allParsed.filter((r) => r.phone || r.website || r.email);
+    const results = contactable.slice(0, wantedCount);
 
     await supabaseAdmin
       .from('api_usage')
       .upsert({ user_id: user.id, usage_date: today, osm_searches: currentCount + 1 }, { onConflict: 'user_id,usage_date' });
 
-    res.status(200).json({ results, droppedCount, center: { lat, lon } });
+    res.status(200).json({
+      results,
+      center: { lat, lon },
+      totalFound: allParsed.length,
+      droppedNoContact: allParsed.length - contactable.length,
+    });
   } catch (err) {
     console.error('free-search error:', err);
     res.status(502).json({ error: err.message || 'Free search failed — please try again' });
