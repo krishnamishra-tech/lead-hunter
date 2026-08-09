@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LocalScout — Find. Message. Close.</title>
 <link rel="manifest" href="/manifest.json">
-<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%2316181c'/%3E%3Ccircle cx='12' cy='12' r='7' fill='none' stroke='white' stroke-width='1.6'/%3E%3Cpolygon points='14.2,9.8 10.2,10.2 9.8,14.2 13.8,13.8' fill='%232f6fed'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#16181c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -163,7 +163,7 @@
     }
     .sidebar nav::-webkit-scrollbar { display: none; }
     .sidebar nav button { flex-shrink: 0; padding: 8px 11px; font-size: 12px; white-space: nowrap; }
-    .sidebar-widget, .sidebar-upgrade, .sidebar-help { display: none; }
+    .sidebar-widget, .sidebar-upgrade, .sidebar-help { display: none !important; }
   }
   @media (max-width: 640px) {
     main { padding: 12px 12px 70px; }
@@ -898,7 +898,7 @@ async function authHeaders() {
 }
 
 const FREE_TIER_MONTHLY_LIMIT = 20;
-const ENFORCE_LEAD_LIMIT = false; // set to true later to bring back the free-tier cap
+const ENFORCE_LEAD_LIMIT = true; // free plan is capped at FREE_TIER_MONTHLY_LIMIT/month; Pro + admin bypass this in canAddLeads()
 let currentUser = null;
 let currentPlan = 'free'; // 'free' | 'pro' — kept in sync with the profiles table (updated automatically after payment)
 
@@ -1490,6 +1490,7 @@ async function enterApp(prefill) {
   await recordReferralIfPending();
   loadTeamMembers();
   renderNotifPanel();
+  history.replaceState({ view: 'hunt' }, '', '#hunt');
 }
 
 // ── Referral system ───────────────────────────────────────────────
@@ -2044,7 +2045,7 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
-function switchTab(view) {
+function switchTab(view, pushHistory) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
@@ -2054,7 +2055,16 @@ function switchTab(view) {
   if (view === 'pipeline') renderPipeline();
   if (view === 'reports') renderReports();
   if (view === 'admin') renderAdminDashboard();
+  if (pushHistory !== false) {
+    history.pushState({ view }, '', '#' + view);
+  }
 }
+// Makes the phone/browser back button move between tabs (Hunt → Leads →
+// Settings etc.) instead of doing nothing or leaving the app entirely.
+window.addEventListener('popstate', (e) => {
+  const view = (e.state && e.state.view) || 'hunt';
+  if (document.getElementById('view-' + view)) switchTab(view, false);
+});
 
 // ── Free search links ──────────────────────────────────────────────
 function generateLinks() {
