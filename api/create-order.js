@@ -1,6 +1,12 @@
 // POST /api/create-order
-// Creates a Razorpay order for the chosen plan. Runs server-side only —
-// this is where RAZORPAY_KEY_SECRET lives, never in the browser.
+// Creates a Razorpay order for the chosen plan tier + billing period. Runs
+// server-side only — this is where RAZORPAY_KEY_SECRET lives, never in the
+// browser.
+//
+// PRICING (source of truth — keep in sync with PLAN_LIMITS/PLAN_LABELS in
+// app.html if those numbers ever change):
+//   Starter:  ₹499/month   or ₹4,999/year  (1,000 leads/month)
+//   Business: ₹999/month   or ₹9,999/year  (2,000 leads/month)
 //
 // SECURITY: the userId is taken from the verified Supabase login token, NOT
 // from the request body. If we trusted a client-supplied userId here, anyone
@@ -10,9 +16,9 @@
 const Razorpay = require('razorpay');
 const { verifyUser } = require('./_lib/verifyUser');
 
-const PLAN_AMOUNTS_PAISE = {
-  monthly: 49900,   // ₹499
-  yearly: 499900,   // ₹4,999
+const PLAN_PRICING = {
+  starter: { monthly: 49900, yearly: 499900 },   // paise: ₹499 / ₹4,999
+  business: { monthly: 99900, yearly: 999900 },  // paise: ₹999 / ₹9,999
 };
 
 module.exports = async function handler(req, res) {
@@ -28,10 +34,11 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { plan } = req.body || {};
-    const amount = PLAN_AMOUNTS_PAISE[plan];
+    const { plan, period } = req.body || {};
+    const tierPricing = PLAN_PRICING[plan];
+    const amount = tierPricing && tierPricing[period];
     if (!amount) {
-      res.status(400).json({ error: 'Invalid plan' });
+      res.status(400).json({ error: 'Invalid plan or billing period' });
       return;
     }
 
@@ -44,7 +51,7 @@ module.exports = async function handler(req, res) {
       amount,
       currency: 'INR',
       receipt: `ls_${user.id.slice(0, 8)}_${Date.now()}`,
-      notes: { userId: user.id, plan, product: 'LocalScout Pro' },
+      notes: { userId: user.id, plan, period, product: 'LocalScout' },
     });
 
     res.status(200).json({
