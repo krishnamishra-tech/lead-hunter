@@ -1247,6 +1247,40 @@ function sendAiMessageWhatsApp(id) {
   window.open(url, '_blank', 'noopener');
   markChecklistStep('messaged');
 }
+
+// ── Demo mini-site generator ──────────────────────────────────────────
+// Builds a shareable link to demo.html with the lead's data base64-encoded
+// straight into the URL — no Supabase write, no server round-trip. demo.html
+// decodes it client-side and renders a themed one-page mockup site, which
+// becomes the pitch: "here's what your business page could look like."
+function generateDemoLink(id) {
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+  const payload = {
+    n: l.name || 'Your Business',
+    c: l.niche || 'other',
+    cl: l.nicheLabel || 'Business',
+    ci: (l.area || '').split(',').pop().trim() || '',
+    ar: l.area || '',
+    p: l.phone || '',
+    r: l.rating || null,
+    rc: l.ratingCount || null,
+  };
+  let encoded;
+  try {
+    encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+  } catch (e) {
+    showToast('Could not build demo link for this lead');
+    return;
+  }
+  const url = `${window.location.origin}/demo.html?d=${encoded}`;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('Demo site link copied — send it to the lead!');
+  }).catch(() => {
+    prompt('Copy this demo link:', url);
+  });
+  window.open(url, '_blank', 'noopener');
+}
 async function deleteLeadRemote(id) {
   try {
     const { error } = await sb.from('leads').delete().eq('id', id);
@@ -3054,6 +3088,7 @@ function renderLeads() {
         <button class="btn btn-outline" onclick="toggleAiPanel('${l.id}')">AI message</button>
         <button class="btn btn-outline" onclick="toggleNotesPanel('${l.id}')">Notes</button>
         <button class="btn btn-outline" onclick="logReply('${l.id}')">Log reply</button>
+        <button class="btn ${!l.hasWebsite ? 'btn-navy' : 'btn-outline'}" onclick="generateDemoLink('${l.id}')" title="Generate a free preview mini-site to pitch them">🎨 Demo site${!l.hasWebsite ? ' (no site yet!)' : ''}</button>
         ${!ig ? `
           <button class="btn btn-outline" onclick="findInstagram('${l.id}')">Find Instagram</button>
           <button class="btn-save" onclick="promptAddInstagram('${l.id}')">+ Add handle</button>
