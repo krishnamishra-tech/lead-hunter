@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Preview</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Poppins', -apple-system, sans-serif; line-height: 1.55; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+  a { text-decoration: none; }
+  section { padding: 64px 0; }
+  h1, h2, h3 { line-height: 1.2; }
+  .btn { display: inline-block; padding: 14px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  @media (max-width: 760px) {
+    .grid-3 { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    section { padding: 44px 0; }
+  }
+  #app { display: none; }
+  #fallback { max-width: 480px; margin: 80px auto; text-align: center; padding: 0 24px; font-family: sans-serif; color: #555; }
+</style>
+</head>
+<body>
+
+<div id="fallback">
+  <h2 style="margin-bottom:12px;">Preview link looks incomplete</h2>
+  <p>This link is missing its business data. Ask whoever sent it to regenerate the preview link.</p>
+</div>
+
+<div id="app"></div>
+
+<script>
+// ── Decode the lead payload from the URL ──────────────────────────────
+// Everything needed to render this page lives in the URL itself (base64 +
+// URI-encoded JSON) — no server, no database call, no API key, works the
+// instant the link is opened.
+function decodePayload() {
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get('d');
+  if (!raw) return null;
+  try {
+    return JSON.parse(decodeURIComponent(atob(raw)));
+  } catch (e) {
+    return null;
+  }
+}
+
+const THEME_MAP = {
+  real_estate: 'real_estate',
+  salons: 'beauty', spas: 'beauty', clothing_boutiques: 'beauty', boutiques: 'beauty', jewellers: 'beauty',
+  dentists: 'health', clinics: 'health', daycare: 'health',
+  interior_designers: 'design', architects: 'design', furniture_stores: 'design',
+};
+function getThemeKey(category) { return THEME_MAP[category] || 'general'; }
+
+const THEMES = {
+  real_estate: {
+    font: "'Playfair Display', Georgia, serif",
+    bodyFont: "'Poppins', sans-serif",
+    bg: '#0f1b2b', bgGrad: 'linear-gradient(135deg,#0f1b2b,#1c3049)',
+    accent: '#c9a24b', accentSoft: '#f6efdd', text: '#0f1b2b', textLight: '#5a6472',
+    tagline: (n, ci) => `Find your place in ${ci || 'the city'}.`,
+    aboutTitle: 'About Us',
+    about: (n, ci, cl) => `${n} helps buyers, sellers, and renters navigate the ${ci || 'local'} property market with honest guidance and a hands-on approach — no pressure, just the right fit for your next move.`,
+    services: ['Buying Assistance', 'Selling & Listing', 'Rental Search', 'Property Consultation'],
+    galleryIcons: ['🏠', '🏢', '🔑', '📐'],
+    ctaTitle: 'Ready to find your next property?',
+  },
+  beauty: {
+    font: "'Playfair Display', Georgia, serif",
+    bodyFont: "'Poppins', sans-serif",
+    bg: '#fdf3f3', bgGrad: 'linear-gradient(135deg,#f7d9d9,#f3c9d6)',
+    accent: '#b3486b', accentSoft: '#fdf0f3', text: '#3a2530', textLight: '#7a5f68',
+    tagline: (n, ci) => `Look and feel your best in ${ci || 'your city'}.`,
+    aboutTitle: 'Our Story',
+    about: (n, ci, cl) => `${n} is a ${(cl || 'beauty').toLowerCase()} studio in ${ci || 'your area'} dedicated to helping every client feel confident and cared for — from a quick touch-up to a full transformation.`,
+    services: ['Hair & Styling', 'Skincare & Facials', 'Spa Treatments', 'Bridal Packages'],
+    galleryIcons: ['💇', '💅', '🧴', '💐'],
+    ctaTitle: 'Book your appointment today',
+  },
+  health: {
+    font: "'Poppins', sans-serif",
+    bodyFont: "'Poppins', sans-serif",
+    bg: '#eef7f7', bgGrad: 'linear-gradient(135deg,#e3f3f3,#d6ecf0)',
+    accent: '#1f7a7a', accentSoft: '#e7f5f5', text: '#123939', textLight: '#4c6b6b',
+    tagline: (n, ci) => `Your health, our priority — right here in ${ci || 'your area'}.`,
+    aboutTitle: 'About Our Practice',
+    about: (n, ci, cl) => `${n} provides attentive, modern care for the ${ci || 'local'} community. Our team takes the time to listen, explain, and treat you like a person — not a number.`,
+    services: ['Consultation', 'Diagnostics', 'Treatment Plans', 'Emergency Care'],
+    galleryIcons: ['🩺', '💊', '🦷', '❤️'],
+    ctaTitle: 'Book a consultation',
+  },
+  design: {
+    font: "'Poppins', sans-serif",
+    bodyFont: "'Poppins', sans-serif",
+    bg: '#faf4ee', bgGrad: 'linear-gradient(135deg,#f0e0d0,#e8cdb8)',
+    accent: '#b5652f', accentSoft: '#f7ece2', text: '#3a2a1c', textLight: '#7a6552',
+    tagline: (n, ci) => `Spaces that inspire, built in ${ci || 'your city'}.`,
+    aboutTitle: 'About Us',
+    about: (n, ci, cl) => `${n} designs spaces that feel as good as they look. Based in ${ci || 'your area'}, we work closely with every client to turn a blank room into somewhere you actually want to be.`,
+    services: ['Residential Design', 'Commercial Design', 'Renovation', 'Design Consultation'],
+    galleryIcons: ['🛋️', '🪟', '🎨', '📐'],
+    ctaTitle: "Let's design your space",
+  },
+  general: {
+    font: "'Poppins', sans-serif",
+    bodyFont: "'Poppins', sans-serif",
+    bg: '#eef1fb', bgGrad: 'linear-gradient(135deg,#dde4f7,#c9d6f2)',
+    accent: '#2f6fed', accentSoft: '#eaf1ff', text: '#161a2e', textLight: '#565c78',
+    tagline: (n, ci) => `Quality service, right here in ${ci || 'your area'}.`,
+    aboutTitle: 'About Us',
+    about: (n, ci, cl) => `${n} is proud to serve the ${ci || 'local'} community with reliable, friendly ${(cl || 'service').toLowerCase()}. We focus on doing right by every customer, every time.`,
+    services: (cl) => [`${cl || 'Core'} Services`, 'Consultation', 'Custom Packages', 'Ongoing Support'],
+    galleryIcons: ['✨', '⭐', '🤝', '📍'],
+    ctaTitle: 'Get in touch today',
+  },
+};
+
+function starRow(rating) {
+  const full = Math.round(rating);
+  return '★★★★★'.slice(0, full) + '☆☆☆☆☆'.slice(0, 5 - full);
+}
+
+function render(payload) {
+  const name = payload.n || 'Your Business';
+  const categoryKey = payload.c || 'other';
+  const categoryLabel = payload.cl || 'Business';
+  const city = payload.ci || '';
+  const area = payload.ar || '';
+  const phone = (payload.p || '').replace(/[^0-9]/g, '');
+  const rating = payload.r;
+  const ratingCount = payload.rc;
+
+  const themeKey = getThemeKey(categoryKey);
+  const t = THEMES[themeKey];
+  const services = typeof t.services === 'function' ? t.services(categoryLabel) : t.services;
+  const waLink = phone ? `https://wa.me/${phone}` : null;
+  const telLink = phone ? `tel:${phone}` : null;
+
+  document.title = name;
+  document.body.style.background = '#fff';
+  document.body.style.color = t.text;
+
+  const galleryHTML = t.galleryIcons.map((icon, i) => `
+    <div style="aspect-ratio:1;border-radius:14px;background:${i % 2 === 0 ? t.bgGrad : t.accentSoft};display:flex;align-items:center;justify-content:center;font-size:38px;">${icon}</div>
+  `).join('');
+
+  const servicesHTML = services.map(s => `
+    <div style="background:#fff;border:1px solid #ececec;border-radius:14px;padding:26px 20px;text-align:center;">
+      <div style="width:44px;height:44px;border-radius:12px;background:${t.accentSoft};display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 14px;color:${t.accent};">●</div>
+      <p style="font-weight:600;font-size:15px;color:${t.text};">${s}</p>
+    </div>
+  `).join('');
+
+  const app = document.getElementById('app');
+  app.style.display = 'block';
+  document.getElementById('fallback').style.display = 'none';
+
+  app.innerHTML = `
+    <nav style="position:sticky;top:0;background:#fff;border-bottom:1px solid #eee;z-index:10;">
+      <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;height:64px;">
+        <span style="font-family:${t.font};font-weight:700;font-size:19px;color:${t.text};">${esc(name)}</span>
+        ${telLink ? `<a href="${telLink}" class="btn" style="background:${t.accent};color:#fff;padding:9px 18px;font-size:13.5px;">Call now</a>` : ''}
+      </div>
+    </nav>
+
+    <div style="background:${t.bgGrad};color:#fff;text-align:center;padding:90px 24px 80px;">
+      <div class="wrap">
+        ${rating ? `<p style="font-size:13px;letter-spacing:.04em;opacity:.85;margin-bottom:14px;">${starRow(rating)} &nbsp; ${rating} out of 5${ratingCount ? ` · ${ratingCount} reviews` : ''}</p>` : ''}
+        <h1 style="font-family:${t.font};font-size:42px;font-weight:700;margin-bottom:16px;">${esc(name)}</h1>
+        <p style="font-size:18px;opacity:.9;max-width:520px;margin:0 auto 32px;">${t.tagline(name, city)}</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn" style="background:#fff;color:${t.text};">Message on WhatsApp</a>` : ''}
+          <a href="#contact" class="btn" style="border:1.5px solid rgba(255,255,255,.6);color:#fff;">Contact Us</a>
+        </div>
+      </div>
+    </div>
+
+    <section>
+      <div class="wrap" style="max-width:680px;text-align:center;">
+        <h2 style="font-family:${t.font};font-size:26px;color:${t.text};margin-bottom:16px;">${t.aboutTitle}</h2>
+        <p style="color:${t.textLight};font-size:15.5px;">${t.about(name, city, categoryLabel)}</p>
+      </div>
+    </section>
+
+    <section style="background:#fafafa;">
+      <div class="wrap">
+        <h2 style="font-family:${t.font};font-size:26px;color:${t.text};text-align:center;margin-bottom:36px;">Our Services</h2>
+        <div class="grid-4">${servicesHTML}</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2 style="font-family:${t.font};font-size:26px;color:${t.text};text-align:center;margin-bottom:36px;">Gallery</h2>
+        <div class="grid-4">${galleryHTML}</div>
+      </div>
+    </section>
+
+    <section id="contact" style="background:${t.bgGrad};color:#fff;text-align:center;">
+      <div class="wrap" style="max-width:520px;">
+        <h2 style="font-family:${t.font};font-size:26px;margin-bottom:14px;">${t.ctaTitle}</h2>
+        <p style="opacity:.85;margin-bottom:28px;">${[area, city].filter(Boolean).join(', ') || "Reach out any time — we'd love to help."}</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn" style="background:#fff;color:${t.text};">WhatsApp Us</a>` : ''}
+          ${telLink ? `<a href="${telLink}" class="btn" style="border:1.5px solid rgba(255,255,255,.6);color:#fff;">Call Us</a>` : ''}
+        </div>
+      </div>
+    </section>
+
+    <footer style="padding:28px 0;text-align:center;font-size:12.5px;color:${t.textLight};">
+      © ${new Date().getFullYear()} ${esc(name)}
+    </footer>
+  `;
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+const payload = decodePayload();
+if (payload) {
+  render(payload);
+}
+</script>
+</body>
+</html>
