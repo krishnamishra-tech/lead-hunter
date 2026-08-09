@@ -2297,6 +2297,13 @@ async function freeSearchLeads() {
 }
 
 async function aiSearchLeads() {
+  if (ENFORCE_LEAD_LIMIT && currentPlan !== 'pro') {
+    const used = await leadsAddedThisMonth();
+    if (used >= FREE_TIER_MONTHLY_LIMIT) {
+      showUpgradeBlock(`You've used all ${FREE_TIER_MONTHLY_LIMIT} free leads this month.`);
+      return;
+    }
+  }
   const country = document.getElementById('h-country').value;
   const city = document.getElementById('h-city').value.trim();
   const singleArea = document.getElementById('h-area').value.trim();
