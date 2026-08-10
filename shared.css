@@ -1,5 +1,4 @@
-
-  :root {
+:root {
     --ink: #16181c; --ink-soft: #6b6f78;
     --paper: #f6f6f7; --card: #ffffff; --line: #e3e4e7;
     --forest: #16181c; --forest2: #33353b;
@@ -60,6 +59,7 @@
   /* Pricing */
   .pricing-wrap { background: var(--card); }
   .pricing-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; max-width: 760px; margin: 0 auto; }
+  .pricing-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 960px; margin: 0 auto; }
   .price-card { border: 1.5px solid var(--line); border-radius: 16px; padding: 32px 28px; background: #fff; }
   .price-card.featured { border-color: var(--brass); position: relative; box-shadow: 0 8px 24px rgba(47,111,237,0.12); }
   .price-card.featured::before { content: 'MOST POPULAR'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--brass); color: #fff; font-size: 10.5px; font-weight: 700; padding: 4px 12px; border-radius: 10px; letter-spacing: 0.5px; }
@@ -88,7 +88,7 @@
 
   @media (max-width: 760px) {
     .hero h1 { font-size: 32px; }
-    .feature-grid, .steps, .pricing-grid { grid-template-columns: 1fr; }
+    .feature-grid, .steps, .pricing-grid, .pricing-grid-3 { grid-template-columns: 1fr; }
     nav .nav-links a:not(.cta) { display: none; }
   }
 
