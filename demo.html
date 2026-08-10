@@ -7,24 +7,36 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Poppins:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Poppins', -apple-system, sans-serif; line-height: 1.55; }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'DM Sans', -apple-system, sans-serif; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
   a { text-decoration: none; }
-  section { padding: 64px 0; }
-  h1, h2, h3 { line-height: 1.2; }
-  .btn { display: inline-block; padding: 14px 28px; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; }
-  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
-  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-  @media (max-width: 760px) {
-    .grid-3 { grid-template-columns: 1fr; }
+  section { padding: 100px 0; }
+  h1, h2, h3 { line-height: 1.15; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 15px 30px; border-radius: 100px;
+    font-weight: 600; font-size: 14.5px; cursor: pointer; border: none; transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .grid-bento { display: grid; grid-template-columns: 1.3fr 1fr 1fr; grid-template-rows: auto auto; gap: 18px; }
+  .fade-up { animation: fadeUp .8s ease both; }
+  .fade-up.d1 { animation-delay: .1s; }
+  .fade-up.d2 { animation-delay: .22s; }
+  .fade-up.d3 { animation-delay: .34s; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 780px) {
     .grid-4 { grid-template-columns: repeat(2, 1fr); }
-    section { padding: 44px 0; }
+    .grid-bento { grid-template-columns: 1fr 1fr; }
+    .grid-bento > *:first-child { grid-column: span 2; }
+    section { padding: 60px 0; }
   }
   #app { display: none; }
-  #fallback { max-width: 480px; margin: 80px auto; text-align: center; padding: 0 24px; font-family: sans-serif; color: #555; }
+  #fallback { max-width: 480px; margin: 100px auto; text-align: center; padding: 0 24px; font-family: sans-serif; color: #666; }
 </style>
 </head>
 <body>
@@ -37,10 +49,6 @@
 <div id="app"></div>
 
 <script>
-// ── Decode the lead payload from the URL ──────────────────────────────
-// Everything needed to render this page lives in the URL itself (base64 +
-// URI-encoded JSON) — no server, no database call, no API key, works the
-// instant the link is opened.
 function decodePayload() {
   const params = new URLSearchParams(window.location.search);
   const raw = params.get('d');
@@ -62,70 +70,103 @@ function getThemeKey(category) { return THEME_MAP[category] || 'general'; }
 
 const THEMES = {
   real_estate: {
-    font: "'Playfair Display', Georgia, serif",
-    bodyFont: "'Poppins', sans-serif",
-    bg: '#0f1b2b', bgGrad: 'linear-gradient(135deg,#0f1b2b,#1c3049)',
-    accent: '#c9a24b', accentSoft: '#f6efdd', text: '#0f1b2b', textLight: '#5a6472',
-    tagline: (n, ci) => `Find your place in ${ci || 'the city'}.`,
-    aboutTitle: 'About Us',
-    about: (n, ci, cl) => `${n} helps buyers, sellers, and renters navigate the ${ci || 'local'} property market with honest guidance and a hands-on approach — no pressure, just the right fit for your next move.`,
-    services: ['Buying Assistance', 'Selling & Listing', 'Rental Search', 'Property Consultation'],
-    galleryIcons: ['🏠', '🏢', '🔑', '📐'],
+    headFont: "'Fraunces', Georgia, serif", bodyFont: "'DM Sans', sans-serif",
+    ink: '#12203a', paper: '#faf8f3', card: '#ffffff', line: '#e8e3d6',
+    dark: '#0d1830', darkAlt: '#1a2c4d', accent: '#b8863f', accentInk: '#3a2c10',
+    pattern: 'radial-gradient(circle at 20% 20%, rgba(184,134,63,.14), transparent 45%), radial-gradient(circle at 85% 75%, rgba(255,255,255,.06), transparent 40%)',
+    tagline: (n, ci) => `A calmer way to find your next property in ${ci || 'the city'}.`,
+    eyebrow: 'REAL ESTATE',
+    aboutTitle: 'About',
+    about: (n, ci) => `${n} helps buyers, sellers, and renters navigate the ${ci || 'local'} market without the usual pressure — honest guidance, straight answers, and a process built around what actually fits your move.`,
+    services: [
+      { t: 'Buying Assistance', d: 'End-to-end support finding and closing on the right property.' },
+      { t: 'Selling & Listing', d: 'Pricing, staging guidance, and marketing that gets real interest.' },
+      { t: 'Rental Search', d: 'Curated options matched to your budget and timeline.' },
+      { t: 'Consultation', d: 'A no-pressure conversation about your options first.' },
+    ],
+    bento: ['🏡', '🏙️', '🔑', '📐'],
     ctaTitle: 'Ready to find your next property?',
   },
   beauty: {
-    font: "'Playfair Display', Georgia, serif",
-    bodyFont: "'Poppins', sans-serif",
-    bg: '#fdf3f3', bgGrad: 'linear-gradient(135deg,#f7d9d9,#f3c9d6)',
-    accent: '#b3486b', accentSoft: '#fdf0f3', text: '#3a2530', textLight: '#7a5f68',
-    tagline: (n, ci) => `Look and feel your best in ${ci || 'your city'}.`,
+    headFont: "'Playfair Display', Georgia, serif", bodyFont: "'DM Sans', sans-serif",
+    ink: '#3a2530', paper: '#fdf6f5', card: '#ffffff', line: '#f0dbe0',
+    dark: '#3d1f2b', darkAlt: '#5c2c3e', accent: '#b3486b', accentInk: '#4a1424',
+    pattern: 'radial-gradient(circle at 15% 25%, rgba(255,255,255,.10), transparent 45%), radial-gradient(circle at 80% 80%, rgba(255,255,255,.08), transparent 40%)',
+    tagline: (n, ci) => `Look and feel your best, right here in ${ci || 'your city'}.`,
+    eyebrow: 'BEAUTY & WELLNESS',
     aboutTitle: 'Our Story',
-    about: (n, ci, cl) => `${n} is a ${(cl || 'beauty').toLowerCase()} studio in ${ci || 'your area'} dedicated to helping every client feel confident and cared for — from a quick touch-up to a full transformation.`,
-    services: ['Hair & Styling', 'Skincare & Facials', 'Spa Treatments', 'Bridal Packages'],
-    galleryIcons: ['💇', '💅', '🧴', '💐'],
+    about: (n, ci, cl) => `${n} is a ${(cl || 'beauty').toLowerCase()} studio in ${ci || 'your area'}, built around one idea: everyone deserves to leave feeling more confident than when they walked in.`,
+    services: [
+      { t: 'Hair & Styling', d: 'Cuts, color, and styling tailored to you.' },
+      { t: 'Skincare & Facials', d: 'Treatments that actually fit your skin.' },
+      { t: 'Spa Treatments', d: 'A proper reset — massage, body treatments, and more.' },
+      { t: 'Bridal Packages', d: 'Full look planning for your big day.' },
+    ],
+    bento: ['💇‍♀️', '💅', '🧴', '💐'],
     ctaTitle: 'Book your appointment today',
   },
   health: {
-    font: "'Poppins', sans-serif",
-    bodyFont: "'Poppins', sans-serif",
-    bg: '#eef7f7', bgGrad: 'linear-gradient(135deg,#e3f3f3,#d6ecf0)',
-    accent: '#1f7a7a', accentSoft: '#e7f5f5', text: '#123939', textLight: '#4c6b6b',
-    tagline: (n, ci) => `Your health, our priority — right here in ${ci || 'your area'}.`,
+    headFont: "'DM Sans', sans-serif", bodyFont: "'DM Sans', sans-serif",
+    ink: '#123939', paper: '#f5faf9', card: '#ffffff', line: '#dcece9',
+    dark: '#0f2e2e', darkAlt: '#164545', accent: '#1f8a7a', accentInk: '#0c2d27',
+    pattern: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), transparent 45%), radial-gradient(circle at 85% 70%, rgba(255,255,255,.06), transparent 40%)',
+    tagline: (n, ci) => `Thoughtful care for ${ci || 'your community'}, close to home.`,
+    eyebrow: 'HEALTHCARE',
     aboutTitle: 'About Our Practice',
-    about: (n, ci, cl) => `${n} provides attentive, modern care for the ${ci || 'local'} community. Our team takes the time to listen, explain, and treat you like a person — not a number.`,
-    services: ['Consultation', 'Diagnostics', 'Treatment Plans', 'Emergency Care'],
-    galleryIcons: ['🩺', '💊', '🦷', '❤️'],
+    about: (n, ci) => `${n} provides attentive, modern care for the ${ci || 'local'} community. Our team takes the time to actually listen, explain what's going on, and treat you like a person — not a number on a chart.`,
+    services: [
+      { t: 'Consultation', d: 'A thorough first conversation about your health.' },
+      { t: 'Diagnostics', d: 'Accurate testing with fast, clear results.' },
+      { t: 'Treatment Plans', d: 'Care built around your specific case.' },
+      { t: 'Emergency Care', d: 'Here when you need us most.' },
+    ],
+    bento: ['🩺', '🦷', '💊', '❤️'],
     ctaTitle: 'Book a consultation',
   },
   design: {
-    font: "'Poppins', sans-serif",
-    bodyFont: "'Poppins', sans-serif",
-    bg: '#faf4ee', bgGrad: 'linear-gradient(135deg,#f0e0d0,#e8cdb8)',
-    accent: '#b5652f', accentSoft: '#f7ece2', text: '#3a2a1c', textLight: '#7a6552',
-    tagline: (n, ci) => `Spaces that inspire, built in ${ci || 'your city'}.`,
+    headFont: "'DM Sans', sans-serif", bodyFont: "'DM Sans', sans-serif",
+    ink: '#3a2a1c', paper: '#faf6f1', card: '#ffffff', line: '#ecdfd0',
+    dark: '#2c1d10', darkAlt: '#432c19', accent: '#c17a3d', accentInk: '#3a2510',
+    pattern: 'radial-gradient(circle at 15% 20%, rgba(255,255,255,.09), transparent 45%), radial-gradient(circle at 85% 75%, rgba(255,255,255,.07), transparent 40%)',
+    tagline: (n, ci) => `Spaces that feel considered, built in ${ci || 'your city'}.`,
+    eyebrow: 'INTERIOR & ARCHITECTURE',
     aboutTitle: 'About Us',
-    about: (n, ci, cl) => `${n} designs spaces that feel as good as they look. Based in ${ci || 'your area'}, we work closely with every client to turn a blank room into somewhere you actually want to be.`,
-    services: ['Residential Design', 'Commercial Design', 'Renovation', 'Design Consultation'],
-    galleryIcons: ['🛋️', '🪟', '🎨', '📐'],
+    about: (n, ci) => `${n} designs spaces that work as hard as they look good. Based in ${ci || 'your area'}, we work closely with every client to turn a blank room into somewhere you actually want to be.`,
+    services: [
+      { t: 'Residential Design', d: 'Homes that reflect how you actually live.' },
+      { t: 'Commercial Design', d: 'Spaces built for how your business runs.' },
+      { t: 'Renovation', d: 'Reworking what you have into what you need.' },
+      { t: 'Consultation', d: 'A first conversation about the possibilities.' },
+    ],
+    bento: ['🛋️', '🪟', '🎨', '📐'],
     ctaTitle: "Let's design your space",
   },
   general: {
-    font: "'Poppins', sans-serif",
-    bodyFont: "'Poppins', sans-serif",
-    bg: '#eef1fb', bgGrad: 'linear-gradient(135deg,#dde4f7,#c9d6f2)',
-    accent: '#2f6fed', accentSoft: '#eaf1ff', text: '#161a2e', textLight: '#565c78',
+    headFont: "'DM Sans', sans-serif", bodyFont: "'DM Sans', sans-serif",
+    ink: '#161a2e', paper: '#f5f7fd', card: '#ffffff', line: '#e2e6f5',
+    dark: '#131a33', darkAlt: '#1c2650', accent: '#2f6fed', accentInk: '#0e1c40',
+    pattern: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), transparent 45%), radial-gradient(circle at 85% 75%, rgba(255,255,255,.06), transparent 40%)',
     tagline: (n, ci) => `Quality service, right here in ${ci || 'your area'}.`,
+    eyebrow: (cl) => (cl || 'LOCAL BUSINESS').toUpperCase(),
     aboutTitle: 'About Us',
-    about: (n, ci, cl) => `${n} is proud to serve the ${ci || 'local'} community with reliable, friendly ${(cl || 'service').toLowerCase()}. We focus on doing right by every customer, every time.`,
-    services: (cl) => [`${cl || 'Core'} Services`, 'Consultation', 'Custom Packages', 'Ongoing Support'],
-    galleryIcons: ['✨', '⭐', '🤝', '📍'],
+    about: (n, ci, cl) => `${n} is proud to serve the ${ci || 'local'} community with reliable, straightforward ${(cl || 'service').toLowerCase()}. We focus on doing right by every customer, every time.`,
+    services: (cl) => [
+      { t: `${cl || 'Core'} Services`, d: 'Our main offering, done right.' },
+      { t: 'Consultation', d: 'A no-obligation first conversation.' },
+      { t: 'Custom Packages', d: 'Built around what you actually need.' },
+      { t: 'Ongoing Support', d: "We're here after the first visit too." },
+    ],
+    bento: ['✨', '⭐', '🤝', '📍'],
     ctaTitle: 'Get in touch today',
   },
 };
 
 function starRow(rating) {
   const full = Math.round(rating);
-  return '★★★★★'.slice(0, full) + '☆☆☆☆☆'.slice(0, 5 - full);
+  return '★'.repeat(full) + '☆'.repeat(5 - full);
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function render(payload) {
@@ -141,21 +182,28 @@ function render(payload) {
   const themeKey = getThemeKey(categoryKey);
   const t = THEMES[themeKey];
   const services = typeof t.services === 'function' ? t.services(categoryLabel) : t.services;
+  const eyebrowText = typeof t.eyebrow === 'function' ? t.eyebrow(categoryLabel) : t.eyebrow;
   const waLink = phone ? `https://wa.me/${phone}` : null;
   const telLink = phone ? `tel:${phone}` : null;
 
   document.title = name;
-  document.body.style.background = '#fff';
-  document.body.style.color = t.text;
+  document.body.style.background = t.paper;
+  document.body.style.color = t.ink;
+  document.body.style.fontFamily = t.bodyFont;
 
-  const galleryHTML = t.galleryIcons.map((icon, i) => `
-    <div style="aspect-ratio:1;border-radius:14px;background:${i % 2 === 0 ? t.bgGrad : t.accentSoft};display:flex;align-items:center;justify-content:center;font-size:38px;">${icon}</div>
-  `).join('');
+  const bentoHTML = t.bento.map((icon, i) => {
+    const isDark = i === 0;
+    return `<div style="border-radius:20px;background:${isDark ? `linear-gradient(150deg, ${t.dark}, ${t.darkAlt})` : t.card};border:${isDark ? 'none' : `1px solid ${t.line}`};box-shadow:${isDark ? `0 20px 40px -12px ${t.dark}55` : '0 1px 2px rgba(0,0,0,.04)'};display:flex;align-items:center;justify-content:center;font-size:${isDark ? '56px' : '40px'};min-height:${isDark ? '220px' : '150px'};grid-row:${isDark ? 'span 2' : 'auto'};position:relative;overflow:hidden;">
+      ${isDark ? `<div style="position:absolute;inset:0;background:${t.pattern};"></div>` : ''}
+      <span style="position:relative;">${icon}</span>
+    </div>`;
+  }).join('');
 
-  const servicesHTML = services.map(s => `
-    <div style="background:#fff;border:1px solid #ececec;border-radius:14px;padding:26px 20px;text-align:center;">
-      <div style="width:44px;height:44px;border-radius:12px;background:${t.accentSoft};display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 14px;color:${t.accent};">●</div>
-      <p style="font-weight:600;font-size:15px;color:${t.text};">${s}</p>
+  const servicesHTML = services.map((s, i) => `
+    <div style="background:${t.card};border:1px solid ${t.line};border-radius:18px;padding:32px 26px;">
+      <div style="font-family:${t.headFont};font-size:13px;color:${t.accent};font-weight:700;margin-bottom:18px;">0${i + 1}</div>
+      <p style="font-weight:700;font-size:16.5px;color:${t.ink};margin-bottom:8px;">${esc(s.t)}</p>
+      <p style="font-size:13.5px;color:${t.ink}99;line-height:1.55;">${esc(s.d)}</p>
     </div>
   `).join('');
 
@@ -164,71 +212,74 @@ function render(payload) {
   document.getElementById('fallback').style.display = 'none';
 
   app.innerHTML = `
-    <nav style="position:sticky;top:0;background:#fff;border-bottom:1px solid #eee;z-index:10;">
-      <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;height:64px;">
-        <span style="font-family:${t.font};font-weight:700;font-size:19px;color:${t.text};">${esc(name)}</span>
-        ${telLink ? `<a href="${telLink}" class="btn" style="background:${t.accent};color:#fff;padding:9px 18px;font-size:13.5px;">Call now</a>` : ''}
+    <nav style="position:sticky;top:0;background:${t.paper}ee;backdrop-filter:blur(10px);border-bottom:1px solid ${t.line};z-index:10;">
+      <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;height:76px;">
+        <span style="font-family:${t.headFont};font-weight:700;font-size:19px;color:${t.ink};">${esc(name)}</span>
+        ${telLink ? `<a href="${telLink}" class="btn" style="background:${t.ink};color:#fff;">Call now</a>` : ''}
       </div>
     </nav>
 
-    <div style="background:${t.bgGrad};color:#fff;text-align:center;padding:90px 24px 80px;">
-      <div class="wrap">
-        ${rating ? `<p style="font-size:13px;letter-spacing:.04em;opacity:.85;margin-bottom:14px;">${starRow(rating)} &nbsp; ${rating} out of 5${ratingCount ? ` · ${ratingCount} reviews` : ''}</p>` : ''}
-        <h1 style="font-family:${t.font};font-size:42px;font-weight:700;margin-bottom:16px;">${esc(name)}</h1>
-        <p style="font-size:18px;opacity:.9;max-width:520px;margin:0 auto 32px;">${t.tagline(name, city)}</p>
-        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-          ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn" style="background:#fff;color:${t.text};">Message on WhatsApp</a>` : ''}
-          <a href="#contact" class="btn" style="border:1.5px solid rgba(255,255,255,.6);color:#fff;">Contact Us</a>
+    <div style="background:linear-gradient(155deg, ${t.dark}, ${t.darkAlt});color:#fff;position:relative;overflow:hidden;">
+      <div style="position:absolute;inset:0;background:${t.pattern};"></div>
+      <div class="wrap" style="position:relative;text-align:center;padding:110px 28px 100px;">
+        <p class="eyebrow fade-up" style="color:${t.accent};margin-bottom:22px;">${esc(eyebrowText)}</p>
+        ${rating ? `
+          <div class="fade-up d1" style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);padding:8px 18px;border-radius:100px;margin-bottom:28px;">
+            <span style="color:${t.accent};font-size:13px;letter-spacing:1px;">${starRow(rating)}</span>
+            <span style="font-size:12.5px;opacity:.85;">${rating} · ${ratingCount ? ratingCount + ' reviews' : 'Rated locally'}</span>
+          </div>` : ''}
+        <h1 class="fade-up d1" style="font-family:${t.headFont};font-size:clamp(36px,6vw,58px);font-weight:700;margin-bottom:20px;letter-spacing:-0.02em;">${esc(name)}</h1>
+        <p class="fade-up d2" style="font-size:18px;opacity:.82;max-width:540px;margin:0 auto 40px;font-weight:300;">${t.tagline(name, city)}</p>
+        <div class="fade-up d3" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn" style="background:${t.accent};color:${t.accentInk};box-shadow:0 12px 24px -8px ${t.accent}80;">Message on WhatsApp</a>` : ''}
+          <a href="#contact" class="btn" style="border:1.5px solid rgba(255,255,255,.35);color:#fff;">See contact details</a>
         </div>
       </div>
     </div>
 
     <section>
-      <div class="wrap" style="max-width:680px;text-align:center;">
-        <h2 style="font-family:${t.font};font-size:26px;color:${t.text};margin-bottom:16px;">${t.aboutTitle}</h2>
-        <p style="color:${t.textLight};font-size:15.5px;">${t.about(name, city, categoryLabel)}</p>
+      <div class="wrap" style="max-width:640px;text-align:center;">
+        <p class="eyebrow" style="color:${t.accent};margin-bottom:14px;">${t.aboutTitle}</p>
+        <p style="color:${t.ink}cc;font-size:17px;font-weight:300;line-height:1.7;">${t.about(name, city, categoryLabel)}</p>
       </div>
     </section>
 
-    <section style="background:#fafafa;">
+    <section style="padding-top:0;">
       <div class="wrap">
-        <h2 style="font-family:${t.font};font-size:26px;color:${t.text};text-align:center;margin-bottom:36px;">Our Services</h2>
+        <p class="eyebrow" style="color:${t.accent};text-align:center;margin-bottom:14px;">What We Offer</p>
+        <h2 style="font-family:${t.headFont};font-size:32px;color:${t.ink};text-align:center;margin-bottom:48px;font-weight:600;">Services</h2>
         <div class="grid-4">${servicesHTML}</div>
       </div>
     </section>
 
-    <section>
+    <section style="padding-top:0;">
       <div class="wrap">
-        <h2 style="font-family:${t.font};font-size:26px;color:${t.text};text-align:center;margin-bottom:36px;">Gallery</h2>
-        <div class="grid-4">${galleryHTML}</div>
+        <p class="eyebrow" style="color:${t.accent};text-align:center;margin-bottom:14px;">A Look Inside</p>
+        <h2 style="font-family:${t.headFont};font-size:32px;color:${t.ink};text-align:center;margin-bottom:48px;font-weight:600;">Gallery</h2>
+        <div class="grid-bento">${bentoHTML}</div>
       </div>
     </section>
 
-    <section id="contact" style="background:${t.bgGrad};color:#fff;text-align:center;">
-      <div class="wrap" style="max-width:520px;">
-        <h2 style="font-family:${t.font};font-size:26px;margin-bottom:14px;">${t.ctaTitle}</h2>
-        <p style="opacity:.85;margin-bottom:28px;">${[area, city].filter(Boolean).join(', ') || "Reach out any time — we'd love to help."}</p>
+    <section id="contact" style="background:linear-gradient(155deg, ${t.dark}, ${t.darkAlt});color:#fff;position:relative;overflow:hidden;">
+      <div style="position:absolute;inset:0;background:${t.pattern};"></div>
+      <div class="wrap" style="position:relative;max-width:560px;text-align:center;">
+        <h2 style="font-family:${t.headFont};font-size:32px;margin-bottom:16px;font-weight:600;">${t.ctaTitle}</h2>
+        <p style="opacity:.75;margin-bottom:34px;font-weight:300;">${[area, city].filter(Boolean).join(', ') || "Reach out any time — we'd love to help."}</p>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-          ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn" style="background:#fff;color:${t.text};">WhatsApp Us</a>` : ''}
-          ${telLink ? `<a href="${telLink}" class="btn" style="border:1.5px solid rgba(255,255,255,.6);color:#fff;">Call Us</a>` : ''}
+          ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn" style="background:${t.accent};color:${t.accentInk};">WhatsApp Us</a>` : ''}
+          ${telLink ? `<a href="${telLink}" class="btn" style="border:1.5px solid rgba(255,255,255,.35);color:#fff;">Call Us</a>` : ''}
         </div>
       </div>
     </section>
 
-    <footer style="padding:28px 0;text-align:center;font-size:12.5px;color:${t.textLight};">
+    <footer style="padding:36px 0;text-align:center;font-size:12.5px;color:${t.ink}88;border-top:1px solid ${t.line};">
       © ${new Date().getFullYear()} ${esc(name)}
     </footer>
   `;
 }
 
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
 const payload = decodePayload();
-if (payload) {
-  render(payload);
-}
+if (payload) render(payload);
 </script>
 </body>
 </html>
