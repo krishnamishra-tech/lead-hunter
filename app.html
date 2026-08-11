@@ -335,8 +335,8 @@
   .auth-field input { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: 'Inter', inherit; background: var(--paper); color: var(--ink); }
   .auth-field input:focus { outline: 2px solid var(--brass-light); outline-offset: -1px; border-color: var(--brass); }
   .auth-btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 6px; font-family: 'Inter', sans-serif; }
-  .auth-btn-primary { background: var(--paper); color: var(--forest); border: 1px solid var(--line); font-weight: 600; }
-  .auth-btn-primary:hover { background: var(--card); border-color: var(--forest); }
+  .auth-btn-primary { background: var(--brass-soft); color: var(--forest); border: 1.5px solid var(--brass-light); font-weight: 700; }
+  .auth-btn-primary:hover { background: #dde9ff; border-color: var(--brass); }
   .auth-btn-primary:disabled { opacity: .6; cursor: default; }
   .auth-btn-google { background: #fff; color: var(--ink); border: 1.5px solid var(--forest); display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 15px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .auth-btn-google:hover { border-color: var(--forest2); box-shadow: 0 2px 6px rgba(0,0,0,.12); }
@@ -497,11 +497,11 @@
       </div>
       <div class="btn-row">
         <button class="btn btn-navy" onclick="aiSearchLeads()">Auto-search leads</button>
-        <button class="btn btn-outline" id="osm-search-btn" onclick="freeSearchLeads()" style="border-color:#2d7d46;color:#2d7d46;">🔒 OpenStreetMap search <span style="font-size:10px;background:#2d7d46;color:#fff;padding:1px 6px;border-radius:8px;margin-left:2px;">PRO</span></button>
+        <button class="btn btn-outline" id="osm-search-btn" onclick="freeSearchLeads()" style="border-color:#2d7d46;color:#2d7d46;">🗺️ OpenStreetMap search <span style="font-size:10px;background:#2d7d46;color:#fff;padding:1px 6px;border-radius:8px;margin-left:2px;">FREE</span></button>
         <button class="btn btn-outline" onclick="generateLinks()">🔗 Get search links</button>
       </div>
       <p style="margin-top:8px;"><a href="#" onclick="showExampleResults();return false;" style="font-size:12px;color:var(--ink-soft);text-decoration:underline;">👀 See example results first</a></p>
-      <p style="font-size:11px;color:var(--ink-soft);margin-top:6px;">OpenStreetMap search needs Starter or Business — great for storefronts and offices (cafes, salons, clinics, shops, hotels...). Free plan includes Auto-search leads plus unlimited manual links &amp; paste-import.</p>
+      <p style="font-size:11px;color:var(--ink-soft);margin-top:6px;">OpenStreetMap search is free for everyone — great for storefronts and offices (cafes, salons, clinics, shops, hotels...). The demo-site generator (on each saved lead) needs Starter or Business.</p>
       <p style="font-size:12px;color:var(--brass);margin-top:10px;cursor:pointer;" onclick="toggleAiAdvanced()">Advanced: multiple areas &amp; lead count <span id="ai-advanced-caret">▾</span></p>
       <div id="ai-advanced-options" style="display:none;margin-top:8px;">
         <div class="field" style="margin-bottom:12px;">
@@ -1201,6 +1201,7 @@ async function generateAiMessage(id, instruction) {
         name: l.name, niche: l.nicheLabel, area: l.area,
         rating: l.rating, ratingCount: l.ratingCount,
         hasWebsite: l.hasWebsite, websiteScore: l.websiteScore,
+        reasonToReply: generateReasonToReply(l), // the specific, true signal to build the opener around
         language, // 'english' | 'hindi' | 'hinglish' — backend should draft the message in this language/style
         instruction: instruction || undefined,
       }),
@@ -1256,6 +1257,10 @@ function sendAiMessageWhatsApp(id) {
 // The long URL is shortened via /api/shorten (server-side, avoids CORS
 // issues with public shorteners) before being shown to the user.
 async function generateDemoLink(id) {
+  if (currentPlan === 'free') {
+    showUpgradeBlock('The demo-site generator needs Starter or Business.');
+    return;
+  }
   const l = leads.find(x => x.id === id);
   if (!l) return;
   const payload = {
@@ -1828,9 +1833,7 @@ async function refreshPlanBadge() {
   badge.textContent = PLAN_LABELS[currentPlan] || 'Free';
   const osmBtn = document.getElementById('osm-search-btn');
   if (osmBtn) {
-    osmBtn.innerHTML = currentPlan !== 'free'
-      ? '🗺️ OpenStreetMap search'
-      : '🔒 OpenStreetMap search <span style="font-size:10px;background:#2d7d46;color:#fff;padding:1px 6px;border-radius:8px;margin-left:2px;">STARTER+</span>';
+    osmBtn.innerHTML = '🗺️ OpenStreetMap search <span style="font-size:10px;background:#2d7d46;color:#fff;padding:1px 6px;border-radius:8px;margin-left:2px;">FREE</span>';
   }
   const sidebarUpgrade = document.getElementById('sidebar-upgrade-widget');
   if (sidebarUpgrade) sidebarUpgrade.style.display = currentPlan === 'free' ? 'block' : 'none';
@@ -1867,7 +1870,7 @@ async function refreshPlanBadge() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
           <div style="border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;">
             <p style="font-weight:700;font-size:13px;margin:0 0 4px;">Starter</p>
-            <p style="font-size:11px;color:var(--ink-soft);margin:0 0 8px;">1,000 leads/mo + OpenStreetMap search</p>
+            <p style="font-size:11px;color:var(--ink-soft);margin:0 0 8px;">1,000 leads/mo + demo-site generator</p>
             <button class="btn btn-navy" style="width:100%;margin-bottom:6px;" onclick="startCheckout('starter','monthly')">₹499/mo</button>
             <button class="btn btn-outline" style="width:100%;" onclick="startCheckout('starter','yearly')">₹4,999/yr</button>
           </div>
@@ -2106,6 +2109,10 @@ function leadHotScore(l) {
   return score;
 }
 function isHotLead(l) { return leadHotScore(l) >= 3; }
+// Same underlying signals as leadHotScore, rescaled to a 0–100 "Opportunity
+// Score" so it reads like a real prioritization metric on the lead card
+// instead of a hidden "Hot" cutoff — max raw score is 10 (3+2+1+2+1+1).
+function opportunityScore(l) { return Math.min(100, Math.round((leadHotScore(l) / 10) * 100)); }
 // Explains leadHotScore in plain language so the badge isn't a black box —
 // same signals, same order, so the number and the reasons always agree.
 function hotReasons(l) {
@@ -2117,6 +2124,31 @@ function hotReasons(l) {
   if (l.hasHours === false) reasons.push('No hours listed on Google (+1)');
   if (typeof l.photoCount === 'number' && l.photoCount < 3) reasons.push('Very few photos (+1)');
   return reasons;
+}
+// ── Reason-to-Reply ───────────────────────────────────────────────────
+// One specific, true line per lead explaining why they're worth messaging
+// right now — built only from signals we actually have (rating, reviews,
+// website status/speed, hours, photo count). Deliberately does NOT invent
+// unverifiable claims like nearby-competitor comparisons, since we don't
+// have real competitor-distance data — a false "your competitor 200m away…"
+// line would be worse than no line at all.
+function generateReasonToReply(l) {
+  if (!l.hasWebsite) {
+    return `${l.name} shows up on Google${l.ratingCount ? ` with ${l.ratingCount} reviews` : ''} but has no website — anyone searching for them online has nowhere real to land.`;
+  }
+  if (typeof l.websiteScore === 'number' && l.websiteScore < 50) {
+    return `${l.name}'s current website scores ${l.websiteScore}/100 on speed — slow enough that it's likely losing visitors before it even loads.`;
+  }
+  if (l.hasHours === false) {
+    return `${l.name}'s Google listing doesn't show business hours — a simple trust signal they're currently missing.`;
+  }
+  if (typeof l.photoCount === 'number' && l.photoCount < 3) {
+    return `${l.name} has very few photos on their Google listing — often an easy, visible win to point out.`;
+  }
+  if (l.rating && l.rating >= 4 && l.ratingCount && l.ratingCount >= 20) {
+    return `${l.name} already has a strong reputation (${l.rating}★, ${l.ratingCount} reviews) — worth a conversation about turning that into more business online.`;
+  }
+  return `${l.name} looks like an established local business — worth asking how they're currently getting found online.`;
 }
 let selectedNiches = new Set(['real_estate']);
 
@@ -2341,10 +2373,6 @@ function toggleManualSection() {
 // Runs through /api/free-search (server-side proxy) — see that file for why
 // this can't call Nominatim/Overpass directly from the browser.
 async function freeSearchLeads() {
-  if (currentPlan === 'free') {
-    showUpgradeBlock('OpenStreetMap search needs the Starter or Business plan.');
-    return;
-  }
   const country = document.getElementById('h-country').value;
   const city = document.getElementById('h-city').value.trim();
   const singleArea = document.getElementById('h-area').value.trim();
@@ -2564,7 +2592,7 @@ function renderAiSearchResults(results, niche, fallbackArea) {
           ${r.address ? `<div class="result-card-loc">📍 ${esc(r.address)}</div>` : ''}
           <div class="result-card-phone">${r.phone ? `📞 ${esc(r.phone)}` : '<span style="color:#c0392b">No phone listed</span>'}</div>
           <div class="result-card-flags">
-            ${!r.website ? '<strong>No website</strong>' : 'Has website'}
+            ${!isRealWebsite(r.website) ? `<strong>No ${r.website ? 'real ' : ''}website</strong>${r.website ? ' <span style="font-size:11px;color:var(--ink-soft);">(social/directory link only)</span>' : ''}` : 'Has website'}
             ${r.rating ? ` · ⭐ ${r.rating}${r.ratingCount ? ' (' + r.ratingCount + ')' : ''}` : ''}
             ${r.hasHours === false ? ` · no hours listed` : ''}
           </div>
@@ -2583,6 +2611,26 @@ function renderAiSearchResults(results, niche, fallbackArea) {
 const THUMB_COLORS = ['#2f6fed', '#7c5cea', '#e0813f', '#1f9d6e', '#c0392b', '#0f9ba8', '#b3306b'];
 
 
+// A Facebook page, Instagram bio link, WhatsApp link, or directory listing
+// sitting in the "website" field is not a real, owned website — treating it
+// as one (which most scrapers do) means outreach gets skipped on leads that
+// look "covered" but actually still need exactly what's being sold.
+const NON_WEBSITE_DOMAINS = [
+  'facebook.com', 'fb.com', 'instagram.com', 'twitter.com', 'x.com', 'linkedin.com', 'youtube.com',
+  'wa.me', 'api.whatsapp.com', 'm.me',
+  'linktr.ee', 'linktree.com', 'bio.link', 'lnk.bio',
+  'justdial.com', 'indiamart.com', 'sulekha.com', 'yellowpages.com',
+  'business.google.com', 'g.page', 'goo.gl', 'maps.google.com',
+];
+function isRealWebsite(url) {
+  if (!url) return false;
+  try {
+    const host = new URL(url.match(/^https?:\/\//) ? url : `https://${url}`).hostname.replace(/^www\./, '').toLowerCase();
+    return !NON_WEBSITE_DOMAINS.some(d => host === d || host.endsWith('.' + d));
+  } catch (e) {
+    return !!url; // unparseable string — don't penalize, just trust presence
+  }
+}
 function aiLeadToRecord(r, nicheKey, fallbackArea) {
   return {
     id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
@@ -2592,7 +2640,8 @@ function aiLeadToRecord(r, nicheKey, fallbackArea) {
     area: r.address || fallbackArea,
     niche: nicheKey,
     nicheLabel: nicheKeyToLabel(nicheKey),
-    hasWebsite: !!r.website,
+    hasWebsite: isRealWebsite(r.website),
+    websiteIsSocialOnly: !!r.website && !isRealWebsite(r.website),
     website: r.website || '',
     rating: r.rating || null,
     ratingCount: r.ratingCount || null,
@@ -3123,6 +3172,7 @@ function renderLeads() {
         <div style="flex:1;min-width:0;">
         <span class="lead-name">${esc(l.name)}</span>
         <span class="badge" style="background:#f0f0f0;color:#555;">${esc(l.nicheLabel || '')}</span>
+        <span class="badge" style="background:${opportunityScore(l) >= 60 ? 'var(--rust-soft)' : '#eef1fb'};color:${opportunityScore(l) >= 60 ? 'var(--rust)' : '#3a4a8a'};" title="Opportunity score — how worth-messaging this lead looks based on website status, rating, and profile completeness.">Opp: ${opportunityScore(l)}</span>
         ${isHotLead(l) ? `<span class="badge" style="background:var(--rust-soft);color:var(--rust);" title="${esc(hotReasons(l).join(' · '))}">Hot</span>` : ''}
         ${needsFollowup(l) ? `<span class="badge" style="background:#fdecea;color:#b3492f;">Follow up</span>` : ''}
         ${scoreBadge}
@@ -3131,8 +3181,9 @@ function renderLeads() {
           ${hasInstagram ? `<span class="meta-item">@${esc(l.instagram)}</span>` : ''}
           ${l.area ? `<span class="meta-item">${esc(l.area)}</span>` : ''}
           ${l.rating ? `<span class="meta-item">★ ${l.rating}${l.ratingCount ? ' (' + l.ratingCount + ')' : ''}</span>` : ''}
-          <span class="meta-trail">${l.hasWebsite ? 'Has website' : 'No website'} · ${esc(l.source || '')} · Added ${l.added}</span>
+          <span class="meta-trail">${l.hasWebsite ? 'Has website' : (l.websiteIsSocialOnly ? 'No real website (social/directory link only)' : 'No website')} · ${esc(l.source || '')} · Added ${l.added}</span>
         </div>
+        <p style="font-size:12px;color:var(--ink-soft);margin-top:4px;font-style:italic;">💡 ${esc(generateReasonToReply(l))}</p>
         </div>
       </div>
       <select class="status-sel" onchange="updateStatus('${l.id}',this.value)">
@@ -3147,7 +3198,7 @@ function renderLeads() {
         <button class="btn btn-outline" onclick="toggleAiPanel('${l.id}')">AI message</button>
         <button class="btn btn-outline" onclick="toggleNotesPanel('${l.id}')">Notes</button>
         <button class="btn btn-outline" onclick="logReply('${l.id}')">Log reply</button>
-        <button class="btn ${!l.hasWebsite ? 'btn-navy' : 'btn-outline'}" onclick="generateDemoLink('${l.id}')" title="Generate a free preview mini-site to pitch them">🎨 Demo site${!l.hasWebsite ? ' (no site yet!)' : ''}</button>
+        <button class="btn ${!l.hasWebsite ? 'btn-navy' : 'btn-outline'}" onclick="generateDemoLink('${l.id}')" title="${currentPlan === 'free' ? 'Needs Starter or Business' : 'Generate a live preview mini-site to pitch them'}">🎨 Demo site${currentPlan === 'free' ? ' 🔒' : (!l.hasWebsite ? ' (no site yet!)' : '')}</button>
         ${!ig ? `
           <button class="btn btn-outline" onclick="findInstagram('${l.id}')">Find Instagram</button>
           <button class="btn-save" onclick="promptAddInstagram('${l.id}')">+ Add handle</button>
