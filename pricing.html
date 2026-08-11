@@ -4,54 +4,119 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pricing — LocalScout</title>
-<meta name="description" content="LocalScout pricing: Free (20 leads/mo), Starter ₹499/mo (1,000 leads + OpenStreetMap search), Business ₹999/mo (2,000 leads + bulk WhatsApp + team seats).">
+<meta name="description" content="LocalScout pricing: Free (20 leads/mo, OpenStreetMap search included), Starter ₹499/mo (1,000 leads + demo-site generator), Business ₹999/mo (2,000 leads + bulk WhatsApp + team seats).">
 <meta property="og:title" content="Pricing — LocalScout">
-<meta property="og:description" content="Free plan included. Starter ₹499/mo unlocks OpenStreetMap search. Business ₹999/mo adds bulk WhatsApp campaigns and team seats.">
+<meta property="og:description" content="Free plan includes OpenStreetMap search. Starter ₹499/mo unlocks the demo-site generator. Business ₹999/mo adds bulk WhatsApp campaigns and team seats.">
 <meta property="og:type" content="website">
 <link rel="canonical" href="https://localscout.online/pricing.html">
-<link rel="stylesheet" href="shared.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #132743; --navy-deep: #0c1a2e;
+    --paper: #FAF6ED; --marigold: #F2A33B; --marigold-deep: #D9871E;
+    --brass: #B8874B; --teal: #3FA796; --clay: #C1502E;
+    --ink: #12233D; --ink-soft: #4A5568; --line: #E4DDCB; --card: #FFFFFF;
+    --display: 'Bricolage Grotesque', sans-serif;
+    --body: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--body); color: var(--ink); background: var(--paper); line-height: 1.5; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+
+  nav { background: var(--navy); padding: 18px 0; }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--paper); display: flex; align-items: center; gap: 8px; }
+  .logo .dot { width: 10px; height: 10px; background: var(--marigold); border-radius: 3px; transform: rotate(45deg); }
+  .nav-links { display: flex; align-items: center; gap: 28px; font-size: 14px; color: #C9D4E3; }
+  .nav-links a:hover { color: var(--paper); }
+  .nav-cta { background: var(--marigold); color: var(--navy-deep); font-weight: 700; padding: 9px 18px; border-radius: 8px; font-size: 13.5px; }
+
+  .page-hero { background: var(--navy); padding: 60px 0 50px; text-align: center; }
+  .page-hero h1 { font-family: var(--display); font-size: 36px; font-weight: 700; color: var(--paper); margin-bottom: 12px; }
+  .page-hero p { color: #B9C4D6; font-size: 15.5px; max-width: 520px; margin: 0 auto; }
+
+  section { padding: 64px 0; }
+  .section-head { text-align: center; max-width: 600px; margin: 0 auto 40px; }
+  .kicker { font-family: var(--mono); font-size: 12px; color: var(--brass); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+  h2 { font-family: var(--display); font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 9px; font-weight: 700; font-size: 14.5px; border: none; }
+  .btn-primary { background: var(--marigold); color: var(--navy-deep); }
+
+  .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; max-width: 940px; margin: 0 auto; }
+  @media (max-width: 780px) { .pricing-grid { grid-template-columns: 1fr; } }
+  .price-card { background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; padding: 30px 26px; position: relative; }
+  .price-card.featured { border-color: var(--marigold); box-shadow: 0 12px 32px rgba(242,163,59,0.14); }
+  .price-card.featured::before { content: 'MOST POPULAR'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--marigold); color: var(--navy-deep); font-size: 10px; font-weight: 700; padding: 4px 12px; border-radius: 10px; letter-spacing: 0.05em; font-family: var(--mono); }
+  .price-card h3 { font-family: var(--display); font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+  .price-card .price { font-family: var(--display); font-size: 34px; font-weight: 700; margin: 12px 0 2px; }
+  .price-card .price span { font-size: 13px; font-weight: 500; color: var(--ink-soft); }
+  .price-card .price-sub { font-size: 12px; color: var(--ink-soft); margin-bottom: 20px; }
+  .price-card ul { list-style: none; margin: 0 0 22px; }
+  .price-card li { font-size: 13.5px; padding: 6px 0; display: flex; gap: 8px; align-items: flex-start; }
+  .price-card li::before { content: '✓'; color: var(--teal); font-weight: 700; flex-shrink: 0; }
+  .price-card li.muted { color: #A6ADB8; }
+  .price-card li.muted::before { content: '—'; color: #C7CCD4; }
+  .price-card .btn { width: 100%; justify-content: center; background: var(--navy); color: var(--paper); }
+  .price-card.featured .btn { background: var(--marigold); color: var(--navy-deep); }
+
+  .faq-item { border-bottom: 1px solid var(--line); padding: 18px 0; }
+  .faq-item summary { font-size: 15px; font-weight: 700; cursor: pointer; list-style: none; }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after { content: '+'; float: right; font-weight: 400; color: var(--ink-soft); }
+  .faq-item[open] summary::after { content: '−'; }
+  .faq-item p { font-size: 14px; color: var(--ink-soft); margin: 10px 0 0; line-height: 1.6; }
+
+  .final-cta { text-align: center; padding: 80px 0; background: var(--navy); }
+  .final-cta h2 { color: var(--paper); }
+  .final-cta p { color: #B9C4D6; margin-bottom: 24px; font-size: 15px; }
+  footer { background: var(--navy-deep); padding: 28px 0; text-align: center; font-size: 12.5px; color: #6B7C94; }
+</style>
 </head>
 <body>
 
 <nav>
-  <div class="wrap">
-    <div class="brand">Local<span>Scout</span></div>
+  <div class="wrap nav-inner">
+    <div class="logo"><span class="dot"></span>LocalScout</div>
     <div class="nav-links">
       <a href="features.html">Features</a>
       <a href="pricing.html">Pricing</a>
       <a href="blog.html">Blog</a>
-      <a href="app.html" class="cta">Log in / Sign up</a>
+      <a href="app.html" class="nav-cta">Log in / Sign up</a>
     </div>
   </div>
 </nav>
 
-<div class="hero" style="padding:60px 0 40px;">
-  <div class="wrap">
-    <h1 style="font-size:36px;">Simple, honest pricing</h1>
-    <p class="sub">Start free. Upgrade only when you need more monthly leads or the extra data source — no surprise charges, cancel anytime.</p>
-  </div>
+<div class="page-hero">
+  <h1>Simple, honest pricing</h1>
+  <p>Start free. Upgrade only when you need more monthly leads or the demo-site generator — no surprise charges, cancel anytime.</p>
 </div>
 
-<section class="pricing-wrap" style="padding-top:0;">
+<section>
   <div class="wrap">
-    <div class="pricing-grid-3">
+    <div class="pricing-grid">
       <div class="price-card">
         <h3>Free</h3>
         <div class="price">₹0</div>
         <div class="price-sub">20 leads/month</div>
         <ul>
           <li>Google-powered Auto-search</li>
+          <li>OpenStreetMap search</li>
           <li>Unlimited manual search links</li>
           <li>Paste &amp; CSV import</li>
-          <li>Demo-site generator</li>
           <li>WhatsApp outreach (one at a time)</li>
           <li>Pipeline tracking &amp; notes</li>
           <li>CSV export</li>
-          <li class="muted">OpenStreetMap search</li>
+          <li class="muted">Demo-site generator</li>
           <li class="muted">Bulk WhatsApp campaigns</li>
           <li class="muted">Team seats</li>
         </ul>
-        <a href="app.html" class="btn btn-outline">Start free</a>
+        <a href="app.html" class="btn">Start free</a>
       </div>
       <div class="price-card featured">
         <h3>Starter</h3>
@@ -60,11 +125,11 @@
         <ul>
           <li>Everything in Free</li>
           <li>1,000 leads/month</li>
-          <li>OpenStreetMap search unlocked</li>
+          <li>Demo-site generator unlocked</li>
           <li class="muted">Bulk WhatsApp campaigns</li>
           <li class="muted">Team seats</li>
         </ul>
-        <a href="app.html" class="btn btn-primary">Start Starter</a>
+        <a href="app.html" class="btn">Start Starter</a>
       </div>
       <div class="price-card">
         <h3>Business</h3>
@@ -77,7 +142,7 @@
           <li>2 team seats</li>
           <li>Priority support</li>
         </ul>
-        <a href="app.html" class="btn btn-outline">Start Business</a>
+        <a href="app.html" class="btn">Start Business</a>
       </div>
     </div>
     <p style="text-align:center;font-size:13px;color:var(--ink-soft);margin-top:28px;">Refer a friend who upgrades and get a free month, automatically — see "Invite &amp; earn" in Settings after signing up.</p>
@@ -85,8 +150,9 @@
 </section>
 
 <section>
-  <div class="wrap" style="max-width:720px;">
+  <div class="wrap" style="max-width:700px;">
     <div class="section-head">
+      <div class="kicker">Questions</div>
       <h2>Frequently asked</h2>
     </div>
     <details class="faq-item" open>
@@ -94,12 +160,16 @@
       <p>No. The Free plan works immediately after signup — no card required.</p>
     </details>
     <details class="faq-item">
-      <summary>What exactly is OpenStreetMap search?</summary>
-      <p>It's a second, independent source of business data — useful for storefronts and offices like cafes, salons, clinics, and shops. It's included on Starter and Business, not on Free, because it pulls from a more resource-intensive data source than the free Auto-search.</p>
+      <summary>Is OpenStreetMap search really free?</summary>
+      <p>Yes — it's included on every plan, including Free. It's a second, independent source of business data useful for storefronts and offices like cafes, salons, clinics, and shops.</p>
+    </details>
+    <details class="faq-item">
+      <summary>What do I get by upgrading to Starter?</summary>
+      <p>More monthly leads (1,000 vs. 20) and the instant demo-site generator — the feature that turns a lead into a live preview site to pitch them, in one click.</p>
     </details>
     <details class="faq-item">
       <summary>What's the difference between Starter and Business?</summary>
-      <p>Starter gets you more leads/month and OpenStreetMap search. Business adds bulk WhatsApp campaigns (message multiple leads in one flow) and 2 team seats for agencies working together.</p>
+      <p>Starter gets you more leads/month and the demo generator. Business adds bulk WhatsApp campaigns (message multiple leads in one flow) and 2 team seats for agencies working together.</p>
     </details>
     <details class="faq-item">
       <summary>Can I cancel anytime?</summary>
@@ -116,11 +186,7 @@
   </div>
 </div>
 
-<footer>
-  <div class="wrap">
-    © 2026 LocalScout. Built for web design agencies and freelancers finding their next client.
-  </div>
-</footer>
+<footer>© 2026 LocalScout. Built for web design agencies and freelancers finding their next client.</footer>
 
 </body>
 </html>
