@@ -4,101 +4,330 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LocalScout — Find businesses with no website. Pitch them a demo.</title>
-<meta name="description" content="LocalScout finds local businesses with no website (or a weak one), builds an instant demo site to pitch them, and gets you talking to them on WhatsApp — built for web design agencies and freelancers in India.">
+<meta name="description" content="LocalScout finds local businesses with no real website, builds an instant demo site to pitch them, and gets you talking to them on WhatsApp — built for web design agencies and freelancers in India.">
 <meta property="og:title" content="LocalScout — Find businesses with no website. Pitch them a demo.">
 <meta property="og:description" content="Find the businesses that actually need a website, show them a live preview in one click, and message them on WhatsApp — before your competitor does.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://localscout.online/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="LocalScout — Find businesses with no website. Pitch them a demo.">
-<meta name="twitter:description" content="Find the businesses that actually need a website, show them a live preview in one click, and message them on WhatsApp.">
 <link rel="canonical" href="https://localscout.online/">
-<link rel="stylesheet" href="shared.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
-  .wedge-band { background: var(--forest); color: #fff; padding: 14px 0; text-align: center; font-size: 13.5px; }
-  .wedge-band strong { color: var(--brass-light); }
-  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 820px; margin: 0 auto; }
-  .compare-card { border-radius: 14px; padding: 26px; }
-  .compare-card.bad { background: #fdf1ef; border: 1px solid #f0d3cb; }
-  .compare-card.good { background: var(--brass-soft); border: 1px solid #c7d9fb; }
-  .compare-card p.label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
-  .compare-card.bad p.label { color: #b3492f; }
-  .compare-card.good p.label { color: var(--brass); }
-  .compare-card p.line { font-size: 14.5px; line-height: 1.6; margin-bottom: 8px; }
-  .icp-note { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 26px; max-width: 640px; margin: 40px auto 0; font-size: 13.5px; color: var(--ink-soft); text-align: center; }
-  @media (max-width: 760px) { .compare-grid { grid-template-columns: 1fr; } }
+  :root {
+    --navy: #132743; --navy-deep: #0c1a2e;
+    --paper: #FAF6ED; --marigold: #F2A33B; --marigold-deep: #D9871E;
+    --brass: #B8874B; --teal: #3FA796; --clay: #C1502E;
+    --ink: #12233D; --ink-soft: #4A5568; --line: #E4DDCB; --card: #FFFFFF;
+    --display: 'Bricolage Grotesque', sans-serif;
+    --body: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--body); color: var(--ink); background: var(--paper); line-height: 1.5; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; }
+
+  nav { background: var(--navy); padding: 18px 0; }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--paper); display: flex; align-items: center; gap: 8px; }
+  .logo .dot { width: 10px; height: 10px; background: var(--marigold); border-radius: 3px; transform: rotate(45deg); }
+  .nav-links { display: flex; align-items: center; gap: 28px; font-size: 14px; color: #C9D4E3; }
+  .nav-links a:hover { color: var(--paper); }
+  .nav-cta { background: var(--marigold); color: var(--navy-deep); font-weight: 700; padding: 9px 18px; border-radius: 8px; font-size: 13.5px; }
+
+  .hero-section { background: var(--navy); background-image: radial-gradient(circle at 15% 20%, rgba(242,163,59,0.08), transparent 45%); padding: 72px 0 0; overflow: hidden; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: center; padding-bottom: 56px; }
+  @media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; } }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; background: rgba(242,163,59,0.12); border: 1px solid rgba(242,163,59,0.35); color: var(--marigold); font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 100px; margin-bottom: 22px; letter-spacing: 0.02em; }
+  h1.hero-title { font-family: var(--display); font-weight: 700; font-size: 46px; line-height: 1.08; color: var(--paper); letter-spacing: -0.01em; margin-bottom: 20px; }
+  h1.hero-title .accent { color: var(--marigold); }
+  h1.hero-title .accent2 { color: var(--teal); }
+  .hero-sub { font-size: 16.5px; color: #B9C4D6; line-height: 1.65; max-width: 460px; margin-bottom: 30px; }
+  .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 9px; font-weight: 700; font-size: 14.5px; border: none; transition: transform 0.15s ease; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--marigold); color: var(--navy-deep); }
+  .btn-outline { background: transparent; border: 1.5px solid rgba(250,246,237,0.3); color: var(--paper); }
+  .hero-note { font-size: 12.5px; color: #8494AC; }
+
+  .shutter-scene { position: relative; background: linear-gradient(180deg, #1B3455 0%, #0F2038 100%); border-radius: 18px; padding: 28px; border: 1px solid rgba(250,246,237,0.08); overflow: hidden; aspect-ratio: 4/3.1; }
+  .storefront { position: relative; width: 100%; height: 100%; border-radius: 10px; overflow: hidden; background: var(--navy-deep); }
+  .sign-behind { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(160deg, #16324f, #0d2338); padding: 20px; }
+  .sign-glow { width: 82%; background: var(--card); border-radius: 10px; padding: 16px 18px; box-shadow: 0 0 40px rgba(242,163,59,0.25); }
+  .sign-glow .biz-name { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink); margin-bottom: 4px; }
+  .sign-glow .biz-tag { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 10px; }
+  .sign-glow .biz-bar { height: 7px; border-radius: 4px; background: var(--line); margin-bottom: 6px; }
+  .sign-glow .biz-bar.short { width: 60%; }
+  .sign-glow .biz-cta { margin-top: 10px; display: inline-block; background: var(--teal); color: #fff; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; }
+  .made-badge { position: absolute; bottom: 14px; right: 14px; background: var(--marigold); color: var(--navy-deep); font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 4px 9px; border-radius: 6px; opacity: 0; animation: badgeIn 0.4s ease forwards 2.6s; }
+  @keyframes badgeIn { to { opacity: 1; } }
+  .shutter { position: absolute; left: 0; right: 0; top: 0; height: 100%; background: repeating-linear-gradient(180deg, #2C3E58 0px, #2C3E58 8px, #253750 8px, #253750 16px); border-bottom: 4px solid var(--clay); animation: shutterUp 1.1s cubic-bezier(0.65,0,0.35,1) forwards 1.1s; transform-origin: top; }
+  .shutter::after { content: 'NO WEBSITE YET'; position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: #F0A98C; }
+  @keyframes shutterUp { 0% { transform: scaleY(1); } 100% { transform: scaleY(0); } }
+  .scene-caption { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 12px; color: #8494AC; }
+  .scene-caption .pulse { display: inline-flex; align-items: center; gap: 6px; }
+  .scene-caption .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); animation: pulse 1.6s ease infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+  .trust-bar { background: var(--navy-deep); border-top: 1px solid rgba(250,246,237,0.06); padding: 16px 0; }
+  .trust-inner { display: flex; justify-content: center; gap: 34px; flex-wrap: wrap; font-size: 12.5px; color: #91A0B8; }
+  .trust-inner span { display: flex; align-items: center; gap: 7px; }
+
+  section { padding: 72px 0; }
+  .section-head { text-align: center; max-width: 620px; margin: 0 auto 44px; }
+  .kicker { font-family: var(--mono); font-size: 12px; color: var(--brass); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+  h2 { font-family: var(--display); font-size: 30px; font-weight: 700; color: var(--ink); line-height: 1.2; margin-bottom: 12px; }
+  .section-head p { color: var(--ink-soft); font-size: 15px; }
+
+  .demo-widget { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 28px; max-width: 720px; margin: 0 auto; }
+  .demo-inputs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .demo-inputs select { flex: 1; min-width: 160px; padding: 11px 14px; border-radius: 9px; border: 1.5px solid var(--line); font-family: var(--body); font-size: 14px; background: var(--paper); color: var(--ink); }
+  .demo-btn { background: var(--navy); color: var(--paper); font-weight: 700; padding: 11px 22px; border-radius: 9px; font-size: 14px; }
+  .demo-result { border: 1.5px dashed var(--line); border-radius: 12px; padding: 18px; display: none; }
+  .demo-result.show { display: block; animation: fadeUp 0.4s ease; }
+  @keyframes fadeUp { from { opacity:0; transform: translateY(8px);} to {opacity:1; transform:none;} }
+  .lead-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); gap: 14px; }
+  .lead-row:last-child { border: none; }
+  .lead-name { font-weight: 600; font-size: 14.5px; }
+  .lead-meta { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+  .score-badge { font-family: var(--mono); font-weight: 600; font-size: 12.5px; padding: 5px 10px; border-radius: 7px; white-space: nowrap; }
+  .score-hot { background: rgba(193,80,46,0.12); color: var(--clay); }
+  .score-warm { background: rgba(242,163,59,0.15); color: var(--marigold-deep); }
+  .reason-line { font-size: 12px; color: var(--teal); margin-top: 4px; display: flex; gap: 5px; align-items: flex-start; }
+
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 780px; margin: 0 auto; }
+  @media (max-width: 700px) { .compare-grid { grid-template-columns: 1fr; } }
+  .compare-card { border-radius: 14px; padding: 22px 24px; border: 1px solid var(--line); }
+  .compare-card.bad { background: #FBF1EC; border-color: #EAD1C4; }
+  .compare-card.good { background: #EFF7F5; border-color: #C7E4DD; }
+  .compare-label { font-family: var(--mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .compare-card.bad .compare-label { color: var(--clay); }
+  .compare-card.good .compare-label { color: var(--teal); }
+  .compare-card p.line { font-size: 14px; line-height: 1.6; margin-bottom: 10px; }
+  .compare-card .verdict { font-size: 12.5px; font-weight: 600; }
+  .compare-card.bad .verdict { color: var(--clay); }
+  .compare-card.good .verdict { color: var(--teal); }
+
+  .roi-section { background: var(--navy); }
+  .roi-section .kicker { color: var(--marigold); }
+  .roi-section h2 { color: var(--paper); }
+  .roi-section .section-head p { color: #B9C4D6; }
+  .roi-card { background: var(--card); border-radius: 18px; padding: 32px; max-width: 640px; margin: 0 auto; }
+  .roi-row { margin-bottom: 26px; }
+  .roi-row label { display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 600; margin-bottom: 10px; }
+  .roi-row label span.val { font-family: var(--mono); color: var(--brass); }
+  .roi-row input[type=range] { width: 100%; accent-color: var(--marigold); height: 6px; }
+  .roi-output { background: var(--paper); border: 1.5px dashed var(--line); border-radius: 12px; padding: 20px; text-align: center; margin-top: 8px; }
+  .roi-output .big-num { font-family: var(--mono); font-size: 34px; font-weight: 600; color: var(--teal); }
+  .roi-output .roi-label { font-size: 12.5px; color: var(--ink-soft); margin-top: 6px; }
+  .roi-sub { display: flex; justify-content: space-around; margin-top: 16px; font-size: 12px; color: var(--ink-soft); }
+  .roi-sub b { display: block; font-family: var(--mono); font-size: 15px; color: var(--ink); }
+
+  .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  @media (max-width: 780px) { .feature-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { .feature-grid { grid-template-columns: 1fr; } }
+  .feature-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+  .feature-card .icon { width: 40px; height: 40px; border-radius: 10px; background: #FFF3E0; display: flex; align-items: center; justify-content: center; font-size: 19px; margin-bottom: 14px; }
+  .feature-card h3 { font-family: var(--display); font-size: 16px; font-weight: 700; margin: 0 0 8px; }
+  .feature-card p { font-size: 13.5px; color: var(--ink-soft); margin: 0; line-height: 1.55; }
+  .badge-tag { display: inline-block; font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 8px; margin-left: 6px; vertical-align: middle; letter-spacing: .03em; }
+  .badge-free { background: var(--teal); color: #fff; }
+  .badge-paid { background: var(--marigold); color: var(--navy-deep); }
+
+  .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; max-width: 940px; margin: 0 auto; }
+  @media (max-width: 780px) { .pricing-grid { grid-template-columns: 1fr; } }
+  .price-card { background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; padding: 30px 26px; position: relative; }
+  .price-card.featured { border-color: var(--marigold); box-shadow: 0 12px 32px rgba(242,163,59,0.14); }
+  .price-card.featured::before { content: 'MOST POPULAR'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--marigold); color: var(--navy-deep); font-size: 10px; font-weight: 700; padding: 4px 12px; border-radius: 10px; letter-spacing: 0.05em; font-family: var(--mono); }
+  .price-card h3 { font-family: var(--display); font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+  .price-card .price { font-family: var(--display); font-size: 34px; font-weight: 700; margin: 12px 0 2px; }
+  .price-card .price span { font-size: 13px; font-weight: 500; color: var(--ink-soft); }
+  .price-card .price-sub { font-size: 12px; color: var(--ink-soft); margin-bottom: 20px; }
+  .price-card ul { list-style: none; margin: 0 0 22px; }
+  .price-card li { font-size: 13.5px; padding: 6px 0; display: flex; gap: 8px; align-items: flex-start; }
+  .price-card li::before { content: '✓'; color: var(--teal); font-weight: 700; flex-shrink: 0; }
+  .price-card li.muted { color: #A6ADB8; }
+  .price-card li.muted::before { content: '—'; color: #C7CCD4; }
+  .price-card .btn { width: 100%; justify-content: center; background: var(--navy); color: var(--paper); }
+  .price-card.featured .btn { background: var(--marigold); color: var(--navy-deep); }
+
+  .founder-proof { background: var(--card); }
+  .proof-card { max-width: 640px; margin: 0 auto; text-align: center; border: 1px solid var(--line); border-radius: 14px; padding: 32px 28px; background: var(--paper); }
+  .proof-label { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--brass); margin-bottom: 14px; }
+  .proof-line { font-size: 15px; line-height: 1.7; color: var(--ink-soft); margin-bottom: 14px; }
+  .proof-signoff { font-size: 13.5px; font-weight: 600; color: var(--ink); margin-top: 18px; }
+
+  .icp-note { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 26px; max-width: 640px; margin: 0 auto; font-size: 13.5px; color: var(--ink-soft); text-align: center; }
+
+  .final-cta { text-align: center; padding: 84px 0; background: var(--navy); }
+  .final-cta h2 { color: var(--paper); }
+  .final-cta p { color: #B9C4D6; margin-bottom: 26px; font-size: 15px; }
+
+  footer { background: var(--navy-deep); padding: 28px 0; text-align: center; font-size: 12.5px; color: #6B7C94; }
 </style>
 </head>
 <body>
 
 <nav>
-  <div class="wrap">
-    <div class="brand">Local<span>Scout</span></div>
+  <div class="wrap nav-inner">
+    <div class="logo"><span class="dot"></span>LocalScout</div>
     <div class="nav-links">
       <a href="features.html">Features</a>
+      <a href="#demo">Try it</a>
+      <a href="#roi">Calculator</a>
       <a href="pricing.html">Pricing</a>
-      <a href="blog.html">Blog</a>
-      <a href="app.html" class="cta">Log in / Sign up</a>
+      <a href="app.html" class="nav-cta">Log in / Sign up</a>
     </div>
   </div>
 </nav>
 
-<div class="wedge-band">
-  Built for web design agencies &amp; freelancers who sell websites — not a generic lead scraper.
-</div>
-
-<div class="hero">
-  <div class="wrap">
-    <h1>Find businesses with <span class="accent">no website.</span><br>Show them one before you even talk.</h1>
-    <p class="sub">LocalScout finds local businesses that have no website (or a weak one), auto-generates a live demo of what theirs could look like, and gets you messaging them on WhatsApp — in minutes.</p>
-    <div class="hero-ctas">
-      <a href="app.html" class="btn btn-primary">Start free — no card needed</a>
-      <a href="#how-it-works" class="btn btn-outline">See how it works</a>
-    </div>
-    <p class="hero-note">Free plan includes real Google-powered search, unlimited manual links, and paste-import.</p>
-  </div>
-</div>
-
-<div class="trust-bar">
-  <div class="wrap">
-    <span>🎯 Filters for no-website leads</span>
-    <span>🎨 Instant demo-site generator</span>
-    <span>💬 One-tap WhatsApp outreach</span>
-    <span>📋 Built-in pipeline tracker</span>
-  </div>
-</div>
-
-<section>
-  <div class="wrap">
-    <div class="section-head">
-      <h2>Every lead tool finds businesses. Almost none prove you looked.</h2>
-      <p>A generic list of local businesses gets ignored — everyone's inbox has ten of those. Showing up with something built specifically for them is what actually gets a reply.</p>
-    </div>
-    <div class="compare-grid">
-      <div class="compare-card bad">
-        <p class="label">What most outreach looks like</p>
-        <p class="line">"Hi, I noticed your business doesn't have a website, would you be interested in one?"</p>
-        <p class="line" style="color:#b3492f;font-weight:600;">Seen 50 times before. Ignored.</p>
+<section class="hero-section">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">● Built for agencies who sell websites</div>
+      <h1 class="hero-title">Find the shop with<br>no <span class="accent">signboard.</span><br>Hang one <span class="accent2">yourself.</span></h1>
+      <p class="hero-sub">LocalScout finds local businesses running without a real website, builds them a live demo in one click, and gets your first message on WhatsApp before your competitor even notices the gap.</p>
+      <div class="hero-ctas">
+        <a href="app.html" class="btn btn-primary">Start free — no card needed →</a>
+        <a href="#demo" class="btn btn-outline">Watch the shutter open ↓</a>
       </div>
-      <div class="compare-card good">
-        <p class="label">What LocalScout lets you send instead</p>
-        <p class="line">"I put together a quick preview of what a site for [Business Name] could look like — take a look: [live link]"</p>
-        <p class="line" style="color:var(--brass);font-weight:600;">Proves you actually looked. Gets opened.</p>
+      <p class="hero-note">Free plan: 20 real leads/month, unlimited manual links, OpenStreetMap search included.</p>
+    </div>
+    <div class="shutter-scene">
+      <div class="storefront">
+        <div class="sign-behind">
+          <div class="sign-glow">
+            <div class="biz-name">Shree Ganesh Interiors</div>
+            <div class="biz-tag">Kanpur · Interior Design · 4.6★ (112)</div>
+            <div class="biz-bar"></div>
+            <div class="biz-bar short"></div>
+            <span class="biz-cta">View our work →</span>
+          </div>
+        </div>
+        <div class="shutter"></div>
+        <div class="made-badge">DEMO BUILT IN 4s</div>
+      </div>
+      <div class="scene-caption">
+        <span class="pulse"><span class="pulse-dot"></span> generating from Google Places data</span>
+        <span>localscout.online/demo</span>
       </div>
     </div>
   </div>
 </section>
 
-<section id="how-it-works" style="background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line);">
+<div class="trust-bar">
+  <div class="wrap trust-inner">
+    <span>🎯 Gap-scored leads</span>
+    <span>🪧 Instant demo generator</span>
+    <span>💬 One-tap WhatsApp</span>
+    <span>📋 Built-in pipeline</span>
+  </div>
+</div>
+
+<section id="demo">
   <div class="wrap">
     <div class="section-head">
-      <h2>From zero to a sent pitch in 4 steps</h2>
+      <div class="kicker">Try it — no signup</div>
+      <h2>See a real gap-scored lead, right now</h2>
+      <p>Pick a city and business type. This is the exact scoring logic agencies use inside the tool.</p>
     </div>
-    <div class="steps">
-      <div class="step"><div class="num">1</div><h3>Search a city</h3><p>Pick a city and a business type — LocalScout pulls real, mapped businesses.</p></div>
-      <div class="step"><div class="num">2</div><h3>Spot the gap</h3><p>Leads are flagged by "no website," weak reviews, or missing hours — the ones worth pitching.</p></div>
-      <div class="step"><div class="num">3</div><h3>Generate a demo</h3><p>One click builds a live, themed preview site using their real name, city, and rating.</p></div>
-      <div class="step"><div class="num">4</div><h3>Send it on WhatsApp</h3><p>A ready-to-send message with the link — no copywriting needed.</p></div>
+    <div class="demo-widget">
+      <div class="demo-inputs">
+        <select id="demoCity">
+          <option>Lucknow</option>
+          <option>Kanpur</option>
+          <option>Jaipur</option>
+        </select>
+        <select id="demoNiche">
+          <option>Interior designers</option>
+          <option>Salons</option>
+          <option>Real estate agents</option>
+          <option>Gyms</option>
+        </select>
+        <button class="demo-btn" onclick="runDemo()">Find a lead →</button>
+      </div>
+      <div class="demo-result" id="demoResult">
+        <div class="lead-row">
+          <div>
+            <div class="lead-name">Shree Ganesh Interiors</div>
+            <div class="lead-meta">Kanpur · 4.6★ (112 reviews) · Instagram link only, no real website</div>
+            <div class="reason-line">💡 High rating + zero web presence — primed to reply</div>
+          </div>
+          <div class="score-badge score-hot">Opp: 84</div>
+        </div>
+        <div class="lead-row">
+          <div>
+            <div class="lead-name">Modern Space Designs</div>
+            <div class="lead-meta">Kanpur · 4.2★ (58 reviews) · No website found</div>
+            <div class="reason-line">💡 Recently listed — still building first impression</div>
+          </div>
+          <div class="score-badge score-warm">Opp: 61</div>
+        </div>
+        <p style="text-align:center;font-size:12px;color:var(--ink-soft);margin-top:14px;">This is a fixed example — <a href="app.html" style="color:var(--brass);font-weight:600;">sign up free</a> to run a real search for any city.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Why it gets replies</div>
+      <h2>Every lead tool finds businesses. Almost none prove you looked.</h2>
+    </div>
+    <div class="compare-grid">
+      <div class="compare-card bad">
+        <div class="compare-label">What most outreach looks like</div>
+        <p class="line">"Hi, I noticed your business doesn't have a website, would you be interested in one?"</p>
+        <p class="verdict">Seen 50 times before. Ignored.</p>
+      </div>
+      <div class="compare-card good">
+        <div class="compare-label">What LocalScout lets you send</div>
+        <p class="line">"I put together a quick preview of what a site for Shree Ganesh Interiors could look like — take a look: [live link]"</p>
+        <p class="verdict">Proves you actually looked. Gets opened.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="roi" class="roi-section">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Do the math</div>
+      <h2>What's this actually worth to you?</h2>
+      <p>Move the sliders to match your own numbers.</p>
+    </div>
+    <div class="roi-card">
+      <div class="roi-row">
+        <label>Leads you message per month <span class="val" id="leadsVal">40</span></label>
+        <input type="range" id="leadsSlider" min="10" max="150" value="40" step="5" oninput="calcROI()">
+      </div>
+      <div class="roi-row">
+        <label>Your typical close rate <span class="val" id="closeVal">5%</span></label>
+        <input type="range" id="closeSlider" min="1" max="20" value="5" step="1" oninput="calcROI()">
+      </div>
+      <div class="roi-row">
+        <label>Average project value (₹) <span class="val" id="projVal">₹15,000</span></label>
+        <input type="range" id="projSlider" min="5000" max="80000" value="15000" step="1000" oninput="calcROI()">
+      </div>
+      <div class="roi-output">
+        <div class="big-num" id="roiResult">₹30,000</div>
+        <div class="roi-label">estimated monthly revenue from LocalScout leads</div>
+        <div class="roi-sub">
+          <div><b id="roiDeals">2.0</b>deals/mo</div>
+          <div><b>₹499</b>Starter plan</div>
+          <div><b id="roiMultiple">60×</b>return</div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -106,88 +335,133 @@
 <section id="features">
   <div class="wrap">
     <div class="section-head">
-      <h2>Everything you need to find and pitch your next client</h2>
+      <div class="kicker">Everything included</div>
+      <h2>Built to find, score, and pitch — not just list</h2>
     </div>
     <div class="feature-grid">
       <div class="feature-card">
         <div class="icon">🎯</div>
-        <h3>Gap-scored leads</h3>
-        <p>Every result is checked for a missing or weak website, thin reviews, or missing hours — sort by opportunity, not just proximity.</p>
+        <h3>Gap-scored leads <span class="badge-tag badge-free">FREE</span></h3>
+        <p>Every result is checked for a missing or weak website, thin reviews, or missing hours — know who actually needs you.</p>
       </div>
       <div class="feature-card">
-        <div class="icon">🎨</div>
-        <h3>Instant demo-site generator</h3>
-        <p>Turn any lead into a live, themed one-page preview site in one click — real name, real city, real rating. No design work, no waiting.</p>
+        <div class="icon">📊</div>
+        <h3>Opportunity Score <span class="badge-tag badge-free">FREE</span></h3>
+        <p>A transparent 0–100 score built from real signals, right on the lead card — no black box.</p>
       </div>
       <div class="feature-card">
-        <div class="icon">🔎</div>
-        <h3>Auto-search leads</h3>
-        <p>Enter a city and a business type — get a list of real businesses with phone numbers, ratings, and website status.</p>
+        <div class="icon">💡</div>
+        <h3>Reason-to-Reply <span class="badge-tag badge-free">FREE</span></h3>
+        <p>One specific, true line per lead explaining why they're worth messaging right now.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">✅</div>
+        <h3>Real website verification <span class="badge-tag badge-free">FREE</span></h3>
+        <p>A Facebook page or directory listing doesn't count as a website — we check for real ones.</p>
       </div>
       <div class="feature-card">
         <div class="icon">🗺️</div>
-        <h3>OpenStreetMap search <span class="badge-pro">STARTER+</span></h3>
-        <p>A second, independent data source for storefronts and offices — cafes, salons, clinics, shops, and more.</p>
+        <h3>OpenStreetMap search <span class="badge-tag badge-free">FREE</span></h3>
+        <p>A second, independent data source for storefronts and offices — free for everyone.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🔗</div>
+        <h3>One-click search links <span class="badge-tag badge-free">FREE</span></h3>
+        <p>Ready-to-use links across Google, JustDial, Yelp, Instagram, and more — for any country.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🪧</div>
+        <h3>Instant demo generator <span class="badge-tag badge-paid">STARTER+</span></h3>
+        <p>Turn any lead into a live, themed preview site in one click — the single best way to earn a reply.</p>
       </div>
       <div class="feature-card">
         <div class="icon">💬</div>
-        <h3>WhatsApp outreach</h3>
-        <p>Message leads directly from their card, with the demo link already in the draft — no switching apps.</p>
+        <h3>WhatsApp outreach <span class="badge-tag badge-free">FREE</span></h3>
+        <p>Message leads directly from their card — draft, edit, and send in seconds.</p>
       </div>
       <div class="feature-card">
-        <div class="icon">📈</div>
-        <h3>Pipeline tracking</h3>
-        <p>Every lead moves through New → Messaged → Follow-up → Replied → Closed, so nothing slips through.</p>
+        <div class="icon">📣</div>
+        <h3>Bulk WhatsApp campaigns <span class="badge-tag badge-paid">BUSINESS</span></h3>
+        <p>Step through sending a personalized message to a whole list, one click per message.</p>
       </div>
     </div>
+    <p style="text-align:center;margin-top:32px;"><a href="features.html" style="color:var(--brass);font-weight:600;font-size:13.5px;">See the full feature list →</a></p>
   </div>
 </section>
 
-<section id="pricing" class="pricing-wrap">
+<section id="pricing">
   <div class="wrap">
     <div class="section-head">
-      <h2>Simple pricing</h2>
-      <p>Start free. Upgrade when you need more volume and the extra data source.</p>
+      <div class="kicker">Simple pricing</div>
+      <h2>Start free. Upgrade for more volume.</h2>
     </div>
-    <div class="pricing-grid-3">
+    <div class="pricing-grid">
       <div class="price-card">
         <h3>Free</h3>
         <div class="price">₹0</div>
         <div class="price-sub">20 leads/month</div>
         <ul>
           <li>Google-powered Auto-search</li>
+          <li>OpenStreetMap search</li>
           <li>Unlimited manual search links</li>
-          <li>Demo-site generator</li>
           <li>WhatsApp outreach</li>
           <li>Pipeline tracking</li>
+          <li class="muted">Demo-site generator</li>
         </ul>
-        <a href="app.html" class="btn btn-outline">Start free</a>
+        <a href="app.html" class="btn">Start free</a>
       </div>
       <div class="price-card featured">
         <h3>Starter</h3>
         <div class="price">₹499<span>/mo</span></div>
-        <div class="price-sub">1,000 leads/month</div>
+        <div class="price-sub">1,000 leads/month · or ₹4,999/yr</div>
         <ul>
           <li>Everything in Free</li>
-          <li>OpenStreetMap search unlocked</li>
+          <li>Demo-site generator unlocked</li>
+          <li class="muted">Bulk WhatsApp campaigns</li>
         </ul>
-        <a href="app.html" class="btn btn-primary">Start Starter</a>
+        <a href="app.html" class="btn">Start Starter</a>
       </div>
       <div class="price-card">
         <h3>Business</h3>
         <div class="price">₹999<span>/mo</span></div>
-        <div class="price-sub">2,000 leads/month</div>
+        <div class="price-sub">2,000 leads/month · or ₹9,999/yr</div>
         <ul>
           <li>Everything in Starter</li>
           <li>Bulk WhatsApp campaigns</li>
           <li>2 team seats</li>
         </ul>
-        <a href="app.html" class="btn btn-outline">Start Business</a>
+        <a href="app.html" class="btn">Start Business</a>
       </div>
     </div>
     <p style="text-align:center;font-size:13px;color:var(--ink-soft);margin-top:24px;"><a href="pricing.html" style="color:var(--brass);font-weight:600;">See full plan comparison →</a></p>
   </div>
 </section>
+
+<section class="founder-proof">
+  <div class="wrap">
+    <div class="proof-card">
+      <p class="proof-label">Why we built this</p>
+      <p class="proof-line">We run a web design agency ourselves. Before LocalScout, our outreach looked like everyone else's — "Hi, I noticed your business doesn't have a website" — and got ignored like everyone else's.</p>
+      <p class="proof-line">We built LocalScout to fix that for our own pipeline first. Every feature on this page — the gap-scoring, the instant demo generator, the WhatsApp-first workflow — is something we needed before we sold it to anyone else.</p>
+      <p class="proof-signoff">— Krishna, founder of LocalScout</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     REAL CUSTOMER TESTIMONIAL — swap in once a genuine quote exists.
+     Left commented out on purpose: rendering it live with unfilled
+     [Name]/[City]/[quote] placeholders would look broken to visitors.
+
+<section class="customer-proof">
+  <div class="wrap">
+    <div class="testimonial-card">
+      <p class="quote">"[Real quote from an actual LocalScout user]"</p>
+      <p class="attribution">— [Name], [Role/Business], [City]</p>
+    </div>
+  </div>
+</section>
+     ============================================================ -->
 
 <section>
   <div class="wrap">
@@ -205,11 +479,30 @@
   </div>
 </div>
 
-<footer>
-  <div class="wrap">
-    © 2026 LocalScout. Built for web design agencies and freelancers finding their next client.
-  </div>
-</footer>
+<footer>© 2026 LocalScout. Built for web design agencies and freelancers finding their next client.</footer>
+
+<script>
+  function runDemo() {
+    document.getElementById('demoResult').classList.add('show');
+  }
+  function calcROI() {
+    const leads = +document.getElementById('leadsSlider').value;
+    const closeRate = +document.getElementById('closeSlider').value;
+    const projVal = +document.getElementById('projSlider').value;
+
+    document.getElementById('leadsVal').textContent = leads;
+    document.getElementById('closeVal').textContent = closeRate + '%';
+    document.getElementById('projVal').textContent = '₹' + projVal.toLocaleString('en-IN');
+
+    const deals = Math.max(0, (leads * closeRate / 100));
+    const revenue = Math.round(deals * projVal);
+    document.getElementById('roiResult').textContent = '₹' + revenue.toLocaleString('en-IN');
+    document.getElementById('roiDeals').textContent = deals.toFixed(1);
+    const multiple = revenue > 0 ? Math.round(revenue / 499) : 0;
+    document.getElementById('roiMultiple').textContent = multiple + '×';
+  }
+  calcROI();
+</script>
 
 </body>
 </html>
