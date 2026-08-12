@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website ROI Calculator — LocalScout</title>
+<meta name="description" content="Show a prospect exactly what a new website could be worth to their business — a shareable ROI calculator for web design agencies to send during a pitch.">
+<link rel="canonical" href="https://localscout.online/tools/roi-calculator.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tools-shared.css">
+<style>
+  .roi-row { margin-bottom: 24px; }
+  .roi-row label { display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 700; margin-bottom: 10px; }
+  .roi-row label span.val { font-family: var(--mono); color: var(--brass); }
+  .roi-row input[type=range] { width: 100%; accent-color: var(--marigold); height: 6px; }
+  .roi-output { background: var(--paper); border: 1.5px dashed var(--line); border-radius: 12px; padding: 22px; text-align: center; margin-top: 6px; }
+  .roi-output .big-num { font-family: var(--display); font-size: 36px; font-weight: 700; color: var(--teal); }
+  .roi-output .roi-label { font-size: 12.5px; color: var(--ink-soft); margin-top: 6px; }
+  .roi-sub { display: flex; justify-content: space-around; margin-top: 18px; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; gap: 10px; }
+  .roi-sub b { display: block; font-family: var(--mono); font-size: 16px; color: var(--ink); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <div class="logo"><span class="dot"></span>LocalScout</div>
+    <div class="nav-links">
+      <a href="index.html">All tools</a>
+      <a href="../features.html">Features</a>
+      <a href="../pricing.html">Pricing</a>
+      <a href="../app.html" class="nav-cta">Log in / Sign up</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="kicker">Free Tool</div>
+  <h1>Website ROI Calculator</h1>
+  <p>Show a prospect exactly what a new website could be worth — move the sliders to match their business, then share the link.</p>
+</div>
+
+<main>
+  <div class="wrap">
+    <div class="tool-card">
+      <div class="roi-row">
+        <label>New customers a website could bring per month <span class="val" id="custVal">8</span></label>
+        <input type="range" id="custSlider" min="1" max="60" value="8" step="1" oninput="calc()">
+      </div>
+      <div class="roi-row">
+        <label>Average value of one customer (₹) <span class="val" id="valVal">₹3,000</span></label>
+        <input type="range" id="valSlider" min="500" max="100000" value="3000" step="500" oninput="calc()">
+      </div>
+      <div class="roi-row">
+        <label>Website cost, one-time (₹) <span class="val" id="costVal">₹25,000</span></label>
+        <input type="range" id="costSlider" min="5000" max="150000" value="25000" step="1000" oninput="calc()">
+      </div>
+
+      <div class="roi-output">
+        <div class="big-num" id="roiMonthly">₹24,000</div>
+        <div class="roi-label">estimated extra revenue per month</div>
+        <div class="roi-sub">
+          <div><b id="roiYearly">₹2,88,000</b>per year</div>
+          <div><b id="paybackDays">31 days</b>to pay back the site</div>
+        </div>
+      </div>
+
+      <div class="btn-row" style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="flex:1;" onclick="copyLink()">Copy shareable link</button>
+      </div>
+      <p style="font-size:11.5px;color:var(--ink-soft);text-align:center;margin-top:10px;">The link keeps whatever numbers you've set — perfect to send straight to a prospect.</p>
+
+      <div class="cta-banner">
+        <p><strong>Built this for a lead you found manually?</strong><br>LocalScout finds these leads for you, scored by opportunity, ready to pitch.</p>
+        <a href="../app.html" class="btn btn-marigold btn-sm">Try LocalScout free →</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>© 2026 LocalScout. Free tools for web design agencies and freelancers.</footer>
+
+<script>
+function calc() {
+  const cust = +document.getElementById('custSlider').value;
+  const val = +document.getElementById('valSlider').value;
+  const cost = +document.getElementById('costSlider').value;
+
+  document.getElementById('custVal').textContent = cust;
+  document.getElementById('valVal').textContent = '₹' + val.toLocaleString('en-IN');
+  document.getElementById('costVal').textContent = '₹' + cost.toLocaleString('en-IN');
+
+  const monthly = cust * val;
+  const yearly = monthly * 12;
+  const paybackDays = monthly > 0 ? Math.max(1, Math.round((cost / monthly) * 30)) : 0;
+
+  document.getElementById('roiMonthly').textContent = '₹' + monthly.toLocaleString('en-IN');
+  document.getElementById('roiYearly').textContent = '₹' + yearly.toLocaleString('en-IN');
+  document.getElementById('paybackDays').textContent = paybackDays + ' days';
+}
+
+function copyLink() {
+  const cust = document.getElementById('custSlider').value;
+  const val = document.getElementById('valSlider').value;
+  const cost = document.getElementById('costSlider').value;
+  const url = `${window.location.origin}${window.location.pathname}?cust=${cust}&val=${val}&cost=${cost}`;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = event.target;
+    const old = btn.textContent;
+    btn.textContent = 'Link copied!';
+    setTimeout(() => btn.textContent = old, 1500);
+  }).catch(() => prompt('Copy this link:', url));
+}
+
+// Pre-fill from shared link, if present
+(function initFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('cust')) document.getElementById('custSlider').value = params.get('cust');
+  if (params.has('val')) document.getElementById('valSlider').value = params.get('val');
+  if (params.has('cost')) document.getElementById('costSlider').value = params.get('cost');
+  calc();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhatsApp Pitch Writer — LocalScout</title>
+<meta name="description" content="Generate 3 ready-to-send WhatsApp pitch messages for any local business lead — pick the gap signal and tone, get copy-ready openers instantly.">
+<link rel="canonical" href="https://localscout.online/tools/pitch-writer.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tools-shared.css">
+<style>
+  .msg-card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+  .msg-card .msg-tag { font-family: var(--mono); font-size: 10.5px; color: var(--brass); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; display: block; }
+  .msg-card p.text { font-size: 14px; line-height: 1.6; margin-bottom: 12px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <div class="logo"><span class="dot"></span>LocalScout</div>
+    <div class="nav-links">
+      <a href="index.html">All tools</a>
+      <a href="../features.html">Features</a>
+      <a href="../pricing.html">Pricing</a>
+      <a href="../app.html" class="nav-cta">Log in / Sign up</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="kicker">Free Tool</div>
+  <h1>WhatsApp Pitch Writer</h1>
+  <p>Fill in the lead's details, pick the gap and tone — get 3 ready-to-send opener messages, no copywriting needed.</p>
+</div>
+
+<main>
+  <div class="wrap">
+    <div class="tool-card">
+      <div class="field-row">
+        <div class="field">
+          <label>Business name</label>
+          <input type="text" id="bizName" placeholder="e.g. Sharma Real Estate">
+        </div>
+        <div class="field">
+          <label>City</label>
+          <input type="text" id="bizCity" placeholder="e.g. Lucknow">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>What's the gap?</label>
+        <select id="gapSignal">
+          <option value="no_website">No website at all</option>
+          <option value="weak_website">Has a website, but it looks outdated</option>
+          <option value="no_reviews_online">Barely shows up in search</option>
+          <option value="no_hours">Doesn't list business hours anywhere</option>
+          <option value="few_photos">Almost no photos on their Google listing</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Tone</label>
+        <select id="tone">
+          <option value="friendly">Friendly &amp; casual</option>
+          <option value="professional">Professional</option>
+          <option value="direct">Short &amp; direct</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" onclick="generate()">Generate 3 messages</button>
+
+      <div class="result-box" id="resultBox"></div>
+
+      <div class="cta-banner">
+        <p><strong>Finding these leads is the other half of the job.</strong><br>LocalScout finds businesses with exactly these gaps, scored and ready to message.</p>
+        <a href="../app.html" class="btn btn-marigold btn-sm">Try LocalScout free →</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>© 2026 LocalScout. Free tools for web design agencies and freelancers.</footer>
+
+<script>
+const GAP_TEXT = {
+  no_website: "doesn't have a website",
+  weak_website: "has a website that looks like it hasn't been updated in a while",
+  no_reviews_online: "isn't really showing up when people search online",
+  no_hours: "doesn't list business hours anywhere online",
+  few_photos: "has almost no photos on its Google listing",
+};
+
+const TEMPLATES = {
+  friendly: (name, city, gap) => [
+    `Hey! I came across ${name}${city ? ' in ' + city : ''} and noticed it ${gap} — is that something you've been meaning to sort out?`,
+    `Quick question — does ${name} have someone handling the website, or is that on the to-do list? I noticed it ${gap}.`,
+    `Loved what I saw about ${name}${city ? ' in ' + city : ''}! One thing that stood out though — it ${gap}. Happy to help if that'd be useful.`,
+  ],
+  professional: (name, city, gap) => [
+    `Hello, I recently came across ${name}${city ? ' in ' + city : ''} and noticed it ${gap}. I wanted to reach out to see if this is something you've considered addressing.`,
+    `I wanted to ask — is your website currently being handled in-house at ${name}, or is that something you'd be open to discussing? I noticed it ${gap}.`,
+    `${name} clearly has a strong local reputation${city ? ' in ' + city : ''}. One area I noticed for improvement: it ${gap}. I'd welcome the chance to discuss how we might help.`,
+  ],
+  direct: (name, city, gap) => [
+    `${name} ${gap}. Want me to fix that?`,
+    `Are you handling ${name}'s website yourself? Noticed it ${gap}.`,
+    `${name} looks solid${city ? ' in ' + city : ''}, but it ${gap}. Let's fix that.`,
+  ],
+};
+
+function generate() {
+  const name = document.getElementById('bizName').value.trim() || 'your business';
+  const city = document.getElementById('bizCity').value.trim();
+  const gapKey = document.getElementById('gapSignal').value;
+  const tone = document.getElementById('tone').value;
+  const gap = GAP_TEXT[gapKey];
+
+  const messages = TEMPLATES[tone](name, city, gap);
+  const box = document.getElementById('resultBox');
+  box.innerHTML = messages.map((m, i) => `
+    <div class="msg-card">
+      <span class="msg-tag">Variant ${i + 1}</span>
+      <p class="text">${esc(m)}</p>
+      <button class="btn btn-outline btn-sm" onclick="copyMsg(${i})">Copy</button>
+    </div>
+  `).join('');
+  box.dataset.messages = JSON.stringify(messages);
+  box.classList.add('show');
+}
+
+function copyMsg(i) {
+  const box = document.getElementById('resultBox');
+  const messages = JSON.parse(box.dataset.messages || '[]');
+  navigator.clipboard.writeText(messages[i]).then(() => {
+    const btns = box.querySelectorAll('button');
+    if (btns[i]) { const old = btns[i].textContent; btns[i].textContent = 'Copied!'; setTimeout(() => btns[i].textContent = old, 1500); }
+  });
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Niche Gap Finder — LocalScout</title>
+<meta name="description" content="See which business niche has the biggest 'no website' gap in your city this week — sortable example data, plus a downloadable shareable banner.">
+<link rel="canonical" href="https://localscout.online/tools/niche-finder.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tools-shared.css">
+<style>
+  .filters { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .filters select { padding: 9px 12px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--paper); font-size: 13.5px; }
+  .sort-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .sort-btn { background: var(--card); border: 1.5px solid var(--line); border-radius: 8px; padding: 7px 13px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .sort-btn.active { background: var(--navy); color: var(--paper); border-color: var(--navy); }
+  .niche-row { display: grid; grid-template-columns: 1.6fr 0.9fr 0.7fr 0.7fr; gap: 10px; align-items: center; padding: 13px 14px; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 8px; background: var(--card); }
+  .niche-row.top { border-color: var(--marigold); background: #FFF8ED; }
+  @media (max-width: 620px) { .niche-row { grid-template-columns: 1fr; gap: 4px; } }
+  .niche-name { font-weight: 700; font-size: 14px; }
+  .top-badge { display: inline-block; background: var(--marigold); color: var(--navy-deep); font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 7px; margin-left: 8px; font-family: var(--mono); }
+  .stat { font-size: 12.5px; color: var(--ink-soft); }
+  .stat b { color: var(--ink); font-family: var(--mono); }
+  #bannerCanvas { display: none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <div class="logo"><span class="dot"></span>LocalScout</div>
+    <div class="nav-links">
+      <a href="index.html">All tools</a>
+      <a href="../features.html">Features</a>
+      <a href="../pricing.html">Pricing</a>
+      <a href="../app.html" class="nav-cta">Log in / Sign up</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="kicker">Free Tool</div>
+  <h1>Niche Gap Finder</h1>
+  <p>See which business type has the biggest "no website" gap in a city — sort by gap %, rating, or lead volume.</p>
+</div>
+
+<main>
+  <div class="wrap">
+    <div class="tool-card" style="max-width:820px;">
+      <span class="example-tag">EXAMPLE DATA — illustrative, not live</span>
+      <div class="filters">
+        <select id="citySelect" onchange="render()">
+          <option>Lucknow</option><option>Kanpur</option><option>Jaipur</option><option>Indore</option>
+          <option>Bhopal</option><option>Nagpur</option><option>Surat</option><option>Coimbatore</option>
+        </select>
+      </div>
+      <div class="sort-row">
+        <button class="sort-btn active" data-sort="gap" onclick="setSort('gap')">Sort: Gap %</button>
+        <button class="sort-btn" data-sort="rating" onclick="setSort('rating')">Sort: Rating</button>
+        <button class="sort-btn" data-sort="volume" onclick="setSort('volume')">Sort: Volume</button>
+      </div>
+      <div id="rowsContainer"></div>
+
+      <button class="btn btn-outline" style="width:100%;margin-top:16px;" onclick="downloadBanner()">📥 Download shareable banner (PNG)</button>
+      <p style="font-size:11.5px;color:var(--ink-soft);text-align:center;margin-top:8px;">Post it as "This week's best niche in [city]" — tag your own numbers once you've run a real search in the app.</p>
+
+      <div class="cta-banner">
+        <p><strong>Want real numbers for your city?</strong><br>Run an actual search inside LocalScout — this page is just a preview of the format.</p>
+        <a href="../app.html" class="btn btn-marigold btn-sm">Try LocalScout free →</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<canvas id="bannerCanvas" width="1080" height="1080"></canvas>
+
+<footer>© 2026 LocalScout. Free tools for web design agencies and freelancers.</footer>
+
+<script>
+// Illustrative example dataset only — clearly labeled above. Real per-city
+// numbers come from running an actual search inside the LocalScout app.
+const NICHES = ['Real estate agents', 'Salons', 'Interior designers', 'Gyms', 'Cafes', 'Restaurants', 'Clinics', 'Photographers'];
+const CITIES = ['Lucknow', 'Kanpur', 'Jaipur', 'Indore', 'Bhopal', 'Nagpur', 'Surat', 'Coimbatore'];
+
+function seedFor(city, niche) {
+  let h = 0;
+  const str = city + niche;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 9973;
+  return h;
+}
+function buildData(city) {
+  return NICHES.map(niche => {
+    const h = seedFor(city, niche);
+    const gap = 35 + (h % 55); // 35–89%
+    const rating = (3.6 + (h % 13) / 10).toFixed(1); // 3.6–4.8
+    const volume = 40 + (h % 260); // 40–300 leads
+    return { niche, gap, rating: +rating, volume };
+  });
+}
+
+let currentSort = 'gap';
+function setSort(key) {
+  currentSort = key;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === key));
+  render();
+}
+
+function render() {
+  const city = document.getElementById('citySelect').value;
+  let data = buildData(city);
+  data.sort((a, b) => b[currentSort] - a[currentSort]);
+  const topNiche = data[0].niche;
+
+  document.getElementById('rowsContainer').innerHTML = data.map(d => `
+    <div class="niche-row ${d.niche === topNiche ? 'top' : ''}">
+      <div class="niche-name">${d.niche}${d.niche === topNiche ? '<span class="top-badge">TOP PICK</span>' : ''}</div>
+      <div class="stat">Gap: <b>${d.gap}%</b></div>
+      <div class="stat">Avg rating: <b>${d.rating}★</b></div>
+      <div class="stat">Leads: <b>${d.volume}</b></div>
+    </div>
+  `).join('');
+}
+
+function downloadBanner() {
+  const city = document.getElementById('citySelect').value;
+  const data = buildData(city).sort((a, b) => b.gap - a.gap);
+  const top = data[0];
+
+  const canvas = document.getElementById('bannerCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Background
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#132743');
+  grad.addColorStop(1, '#0c1a2e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#F2A33B';
+  ctx.font = '600 32px sans-serif';
+  ctx.fillText('THIS WEEK\'S BEST NICHE', 70, 130);
+
+  ctx.fillStyle = '#FAF6ED';
+  ctx.font = '700 64px sans-serif';
+  wrapText(ctx, top.niche, 70, 230, 940, 68);
+
+  ctx.font = '500 34px sans-serif';
+  ctx.fillStyle = '#B9C4D6';
+  ctx.fillText(`in ${city}`, 70, 340);
+
+  ctx.strokeStyle = 'rgba(250,246,237,0.15)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(70, 420); ctx.lineTo(1010, 420); ctx.stroke();
+
+  const stats = [
+    [`${top.gap}%`, 'have no real website'],
+    [`${top.rating}★`, 'average rating'],
+    [`${top.volume}`, 'businesses found'],
+  ];
+  stats.forEach((s, i) => {
+    const x = 70 + i * 330;
+    ctx.fillStyle = '#F2A33B';
+    ctx.font = '700 56px sans-serif';
+    ctx.fillText(s[0], x, 540);
+    ctx.fillStyle = '#B9C4D6';
+    ctx.font = '400 22px sans-serif';
+    ctx.fillText(s[1], x, 580);
+  });
+
+  ctx.fillStyle = '#3FA796';
+  ctx.font = '700 30px sans-serif';
+  ctx.fillText('localscout.online', 70, 990);
+  ctx.fillStyle = '#6B7C94';
+  ctx.font = '400 20px sans-serif';
+  ctx.fillText('Find businesses that need you.', 70, 1030);
+
+  canvas.toBlob(blob => {
+    const link = document.createElement('a');
+    link.download = `localscout-${top.niche.toLowerCase().replace(/\s+/g, '-')}-${city.toLowerCase()}.png`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+  });
+}
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '', lines = [];
+  words.forEach(w => {
+    const test = line + w + ' ';
+    if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w + ' '; }
+    else line = test;
+  });
+  lines.push(line);
+  lines.forEach((l, i) => ctx.fillText(l.trim(), x, y + i * lineHeight));
+}
+
+render();
+</script>
+
+</body>
+</html>
