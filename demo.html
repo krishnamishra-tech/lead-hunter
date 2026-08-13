@@ -7,36 +7,38 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Poppins:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Poppins:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body { font-family: 'DM Sans', -apple-system, sans-serif; line-height: 1.6; -webkit-font-smoothing: antialiased; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 32px; }
   a { text-decoration: none; }
-  section { padding: 100px 0; }
+  section { padding: 96px 0; }
   h1, h2, h3 { line-height: 1.15; }
-  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
   .btn {
-    display: inline-flex; align-items: center; gap: 8px; padding: 15px 30px; border-radius: 100px;
-    font-weight: 600; font-size: 14.5px; cursor: pointer; border: none; transition: transform .15s ease, box-shadow .15s ease;
+    display: inline-flex; align-items: center; gap: 8px; padding: 16px 32px; border-radius: 100px;
+    font-weight: 700; font-size: 14.5px; cursor: pointer; border: none; transition: transform .15s ease, box-shadow .15s ease;
   }
   .btn:hover { transform: translateY(-1px); }
-  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-  .grid-bento { display: grid; grid-template-columns: 1.3fr 1fr 1fr; grid-template-rows: auto auto; gap: 18px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
   .fade-up { animation: fadeUp .8s ease both; }
-  .fade-up.d1 { animation-delay: .1s; }
-  .fade-up.d2 { animation-delay: .22s; }
-  .fade-up.d3 { animation-delay: .34s; }
+  .fade-up.d1 { animation-delay: .1s; } .fade-up.d2 { animation-delay: .22s; } .fade-up.d3 { animation-delay: .34s; }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-  @media (max-width: 780px) {
+  .icon-svg { width: 22px; height: 22px; }
+  @media (max-width: 900px) {
     .grid-4 { grid-template-columns: repeat(2, 1fr); }
-    .grid-bento { grid-template-columns: 1fr 1fr; }
-    .grid-bento > *:first-child { grid-column: span 2; }
-    section { padding: 60px 0; }
+    .grid-3 { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; gap: 32px; }
+    section { padding: 56px 0; }
+    .wrap { padding: 0 22px; }
   }
   #app { display: none; }
   #fallback { max-width: 480px; margin: 100px auto; text-align: center; padding: 0 24px; font-family: sans-serif; color: #666; }
+  .placeholder-note { font-size: 11px; opacity: .65; font-style: italic; }
 </style>
 </head>
 <body>
@@ -53,113 +55,32 @@ function decodePayload() {
   const params = new URLSearchParams(window.location.search);
   const raw = params.get('d');
   if (!raw) return null;
-  try {
-    return JSON.parse(decodeURIComponent(atob(raw)));
-  } catch (e) {
-    return null;
-  }
+  try { return JSON.parse(decodeURIComponent(atob(raw))); } catch (e) { return null; }
 }
 
+// ── Category → theme mapping ──────────────────────────────────────────
 const THEME_MAP = {
   real_estate: 'real_estate',
   salons: 'beauty', spas: 'beauty', clothing_boutiques: 'beauty', boutiques: 'beauty', jewellers: 'beauty',
   dentists: 'health', clinics: 'health', daycare: 'health',
   interior_designers: 'design', architects: 'design', furniture_stores: 'design',
+  gyms: 'fitness',
+  cafes: 'cafe', restaurants: 'cafe', bakeries: 'cafe',
 };
 function getThemeKey(category) { return THEME_MAP[category] || 'general'; }
 
-const THEMES = {
-  real_estate: {
-    headFont: "'Fraunces', Georgia, serif", bodyFont: "'DM Sans', sans-serif",
-    ink: '#12203a', paper: '#faf8f3', card: '#ffffff', line: '#e8e3d6',
-    dark: '#0d1830', darkAlt: '#1a2c4d', accent: '#b8863f', accentInk: '#3a2c10',
-    pattern: 'radial-gradient(circle at 20% 20%, rgba(184,134,63,.14), transparent 45%), radial-gradient(circle at 85% 75%, rgba(255,255,255,.06), transparent 40%)',
-    tagline: (n, ci) => `A calmer way to find your next property in ${ci || 'the city'}.`,
-    eyebrow: 'REAL ESTATE',
-    aboutTitle: 'About',
-    about: (n, ci) => `${n} helps buyers, sellers, and renters navigate the ${ci || 'local'} market without the usual pressure — honest guidance, straight answers, and a process built around what actually fits your move.`,
-    services: [
-      { t: 'Buying Assistance', d: 'End-to-end support finding and closing on the right property.' },
-      { t: 'Selling & Listing', d: 'Pricing, staging guidance, and marketing that gets real interest.' },
-      { t: 'Rental Search', d: 'Curated options matched to your budget and timeline.' },
-      { t: 'Consultation', d: 'A no-pressure conversation about your options first.' },
-    ],
-    bento: ['🏡', '🏙️', '🔑', '📐'],
-    ctaTitle: 'Ready to find your next property?',
-  },
-  beauty: {
-    headFont: "'Playfair Display', Georgia, serif", bodyFont: "'DM Sans', sans-serif",
-    ink: '#3a2530', paper: '#fdf6f5', card: '#ffffff', line: '#f0dbe0',
-    dark: '#3d1f2b', darkAlt: '#5c2c3e', accent: '#b3486b', accentInk: '#4a1424',
-    pattern: 'radial-gradient(circle at 15% 25%, rgba(255,255,255,.10), transparent 45%), radial-gradient(circle at 80% 80%, rgba(255,255,255,.08), transparent 40%)',
-    tagline: (n, ci) => `Look and feel your best, right here in ${ci || 'your city'}.`,
-    eyebrow: 'BEAUTY & WELLNESS',
-    aboutTitle: 'Our Story',
-    about: (n, ci, cl) => `${n} is a ${(cl || 'beauty').toLowerCase()} studio in ${ci || 'your area'}, built around one idea: everyone deserves to leave feeling more confident than when they walked in.`,
-    services: [
-      { t: 'Hair & Styling', d: 'Cuts, color, and styling tailored to you.' },
-      { t: 'Skincare & Facials', d: 'Treatments that actually fit your skin.' },
-      { t: 'Spa Treatments', d: 'A proper reset — massage, body treatments, and more.' },
-      { t: 'Bridal Packages', d: 'Full look planning for your big day.' },
-    ],
-    bento: ['💇‍♀️', '💅', '🧴', '💐'],
-    ctaTitle: 'Book your appointment today',
-  },
-  health: {
-    headFont: "'DM Sans', sans-serif", bodyFont: "'DM Sans', sans-serif",
-    ink: '#123939', paper: '#f5faf9', card: '#ffffff', line: '#dcece9',
-    dark: '#0f2e2e', darkAlt: '#164545', accent: '#1f8a7a', accentInk: '#0c2d27',
-    pattern: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), transparent 45%), radial-gradient(circle at 85% 70%, rgba(255,255,255,.06), transparent 40%)',
-    tagline: (n, ci) => `Thoughtful care for ${ci || 'your community'}, close to home.`,
-    eyebrow: 'HEALTHCARE',
-    aboutTitle: 'About Our Practice',
-    about: (n, ci) => `${n} provides attentive, modern care for the ${ci || 'local'} community. Our team takes the time to actually listen, explain what's going on, and treat you like a person — not a number on a chart.`,
-    services: [
-      { t: 'Consultation', d: 'A thorough first conversation about your health.' },
-      { t: 'Diagnostics', d: 'Accurate testing with fast, clear results.' },
-      { t: 'Treatment Plans', d: 'Care built around your specific case.' },
-      { t: 'Emergency Care', d: 'Here when you need us most.' },
-    ],
-    bento: ['🩺', '🦷', '💊', '❤️'],
-    ctaTitle: 'Book a consultation',
-  },
-  design: {
-    headFont: "'DM Sans', sans-serif", bodyFont: "'DM Sans', sans-serif",
-    ink: '#3a2a1c', paper: '#faf6f1', card: '#ffffff', line: '#ecdfd0',
-    dark: '#2c1d10', darkAlt: '#432c19', accent: '#c17a3d', accentInk: '#3a2510',
-    pattern: 'radial-gradient(circle at 15% 20%, rgba(255,255,255,.09), transparent 45%), radial-gradient(circle at 85% 75%, rgba(255,255,255,.07), transparent 40%)',
-    tagline: (n, ci) => `Spaces that feel considered, built in ${ci || 'your city'}.`,
-    eyebrow: 'INTERIOR & ARCHITECTURE',
-    aboutTitle: 'About Us',
-    about: (n, ci) => `${n} designs spaces that work as hard as they look good. Based in ${ci || 'your area'}, we work closely with every client to turn a blank room into somewhere you actually want to be.`,
-    services: [
-      { t: 'Residential Design', d: 'Homes that reflect how you actually live.' },
-      { t: 'Commercial Design', d: 'Spaces built for how your business runs.' },
-      { t: 'Renovation', d: 'Reworking what you have into what you need.' },
-      { t: 'Consultation', d: 'A first conversation about the possibilities.' },
-    ],
-    bento: ['🛋️', '🪟', '🎨', '📐'],
-    ctaTitle: "Let's design your space",
-  },
-  general: {
-    headFont: "'DM Sans', sans-serif", bodyFont: "'DM Sans', sans-serif",
-    ink: '#161a2e', paper: '#f5f7fd', card: '#ffffff', line: '#e2e6f5',
-    dark: '#131a33', darkAlt: '#1c2650', accent: '#2f6fed', accentInk: '#0e1c40',
-    pattern: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), transparent 45%), radial-gradient(circle at 85% 75%, rgba(255,255,255,.06), transparent 40%)',
-    tagline: (n, ci) => `Quality service, right here in ${ci || 'your area'}.`,
-    eyebrow: (cl) => (cl || 'LOCAL BUSINESS').toUpperCase(),
-    aboutTitle: 'About Us',
-    about: (n, ci, cl) => `${n} is proud to serve the ${ci || 'local'} community with reliable, straightforward ${(cl || 'service').toLowerCase()}. We focus on doing right by every customer, every time.`,
-    services: (cl) => [
-      { t: `${cl || 'Core'} Services`, d: 'Our main offering, done right.' },
-      { t: 'Consultation', d: 'A no-obligation first conversation.' },
-      { t: 'Custom Packages', d: 'Built around what you actually need.' },
-      { t: 'Ongoing Support', d: "We're here after the first visit too." },
-    ],
-    bento: ['✨', '⭐', '🤝', '📍'],
-    ctaTitle: 'Get in touch today',
-  },
-};
+// ── Small reusable line-art icon set (no emoji — keeps things premium) ──
+const ICON_PATHS = [
+  '<circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2 2 5-5" stroke-linecap="round" stroke-linejoin="round"/>', // check-circle
+  '<path d="M12 3l2.6 5.9L21 9.6l-4.5 4.2L17.6 21 12 17.6 6.4 21l1.1-7.2L3 9.6l6.4-.7L12 3z" stroke-linejoin="round"/>', // star
+  '<path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6l7-3z" stroke-linejoin="round"/>', // shield
+  '<path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" stroke-linejoin="round"/>', // bolt
+  '<path d="M12 20s-7-4.4-7-10a4.5 4.5 0 0 1 7-3.7A4.5 4.5 0 0 1 19 10c0 5.6-7 10-7 10z" stroke-linejoin="round"/>', // heart
+  '<rect x="5" y="5" width="14" height="14" rx="3" transform="rotate(45 12 12)"/>', // diamond
+];
+function icon(i, color, size) {
+  return `<svg class="icon-svg" style="width:${size||22}px;height:${size||22}px;" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.6">${ICON_PATHS[i % ICON_PATHS.length]}</svg>`;
+}
 
 function starRow(rating) {
   const full = Math.round(rating);
@@ -168,6 +89,182 @@ function starRow(rating) {
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+
+// ── Theme configs ──────────────────────────────────────────────────────
+// Palettes and copy voice follow standard industry conventions (navy/gold
+// for real estate, dark/lime for fitness, cream/green for cafes, etc.) —
+// each theme is a distinct system, not one template with colors swapped.
+const THEMES = {
+  real_estate: {
+    headFont: "'Fraunces', Georgia, serif", weight: 700,
+    ink: '#12203a', paper: '#faf8f3', card: '#ffffff', line: '#e8e3d6',
+    dark: '#0d1830', darkAlt: '#1a2c4d', accent: '#b8863f', accentInk: '#3a2c10', accentSoft: '#f3e9d3',
+    tagline: (n, ci) => `A calmer way to find your next property in ${ci || 'the city'}.`,
+    eyebrow: 'REAL ESTATE', offerTag: 'FREE CONSULTATION', offerLine: 'Book a no-pressure chat this week',
+    trustBullets: ['Local market experts', 'Verified listings', 'End-to-end support', 'No pushy sales'],
+    aboutTitle: 'About Us',
+    about: (n, ci) => `${n} helps buyers, sellers, and renters navigate the ${ci || 'local'} market without the usual pressure — honest guidance, straight answers, and a process built around what actually fits your move.`,
+    aboutChecklist: ['Verified property listings', 'Transparent pricing', 'Dedicated support', 'Fast paperwork turnaround'],
+    services: [
+      { t: 'Buying Assistance', d: 'End-to-end support finding and closing on the right property.' },
+      { t: 'Selling & Listing', d: 'Pricing, staging guidance, and marketing that gets real interest.' },
+      { t: 'Rental Search', d: 'Curated options matched to your budget and timeline.' },
+      { t: 'Consultation', d: 'A no-pressure conversation about your options first.' },
+    ],
+    stats: [['Local', 'Market focus'], ['Verified', 'Every listing'], ['Fast', 'Response time'], ['Trusted', 'By the community']],
+    pricing: [
+      { tier: 'Consultation', price: 'Free', unit: '', items: ['Property assessment', 'Market overview', 'No obligation'] },
+      { tier: 'Full Service', price: 'Custom', unit: 'quote', items: ['Buying/selling support', 'Negotiation', 'Paperwork handled'], popular: true },
+      { tier: 'Premium', price: 'Custom', unit: 'quote', items: ['Priority listings', 'Dedicated agent', 'Concierge support'] },
+    ],
+    ctaTitle: 'Ready to find your next property?',
+  },
+  beauty: {
+    headFont: "'Playfair Display', Georgia, serif", weight: 700,
+    ink: '#3a2530', paper: '#fdf6f5', card: '#ffffff', line: '#f0dbe0',
+    dark: '#3d1f2b', darkAlt: '#5c2c3e', accent: '#b3486b', accentInk: '#4a1424', accentSoft: '#f7e6ea',
+    tagline: (n, ci) => `Look and feel your best, right here in ${ci || 'your city'}.`,
+    eyebrow: 'BEAUTY & WELLNESS', offerTag: 'NEW CLIENT OFFER', offerLine: '15% off your first visit',
+    trustBullets: ['Certified stylists', 'Premium products', 'Relaxing space', 'Easy booking'],
+    aboutTitle: 'Our Story',
+    about: (n, ci, cl) => `${n} is a ${(cl || 'beauty').toLowerCase()} studio in ${ci || 'your area'}, built around one idea: everyone deserves to leave feeling more confident than when they walked in.`,
+    aboutChecklist: ['Certified stylists & therapists', 'Premium, cruelty-free products', 'Relaxing, clean space', 'Easy online booking'],
+    services: [
+      { t: 'Hair & Styling', d: 'Cuts, color, and styling tailored to you.' },
+      { t: 'Skincare & Facials', d: 'Treatments that actually fit your skin.' },
+      { t: 'Spa Treatments', d: 'A proper reset — massage, body treatments, and more.' },
+      { t: 'Bridal Packages', d: 'Full look planning for your big day.' },
+    ],
+    stats: [['Skilled', 'Certified team'], ['Premium', 'Products used'], ['Relaxing', 'Studio space'], ['Loved', 'By regulars']],
+    pricing: [
+      { tier: 'Essentials', price: '₹499', unit: 'onwards', items: ['Haircut & style', 'Basic facial', 'Quick touch-ups'] },
+      { tier: 'Signature', price: '₹1,499', unit: 'onwards', items: ['Full color service', 'Spa facial', 'Styling included'], popular: true },
+      { tier: 'Bridal', price: 'Custom', unit: 'package', items: ['Full bridal look', 'Trial session', 'Day-of team'] },
+    ],
+    ctaTitle: 'Book your appointment today',
+  },
+  health: {
+    headFont: "'Poppins', sans-serif", weight: 700,
+    ink: '#123939', paper: '#f5faf9', card: '#ffffff', line: '#dcece9',
+    dark: '#0f2e2e', darkAlt: '#164545', accent: '#1f8a7a', accentInk: '#0c2d27', accentSoft: '#e3f2ef',
+    tagline: (n, ci) => `Thoughtful care for ${ci || 'your community'}, close to home.`,
+    eyebrow: 'HEALTHCARE', offerTag: 'NEW PATIENTS', offerLine: 'Free first consultation this month',
+    trustBullets: ['Experienced doctors', 'Modern equipment', 'Same-day slots', 'Insurance friendly'],
+    aboutTitle: 'About Our Practice',
+    about: (n, ci) => `${n} provides attentive, modern care for the ${ci || 'local'} community. Our team takes the time to actually listen, explain what's going on, and treat you like a person — not a number on a chart.`,
+    aboutChecklist: ['Experienced, licensed practitioners', 'Modern diagnostic equipment', 'Same-day appointments available', 'Clear, honest explanations'],
+    services: [
+      { t: 'Consultation', d: 'A thorough first conversation about your health.' },
+      { t: 'Diagnostics', d: 'Accurate testing with fast, clear results.' },
+      { t: 'Treatment Plans', d: 'Care built around your specific case.' },
+      { t: 'Emergency Care', d: 'Here when you need us most.' },
+    ],
+    stats: [['Experienced', 'Care team'], ['Modern', 'Equipment'], ['Same-day', 'Availability'], ['Trusted', 'Locally']],
+    pricing: [
+      { tier: 'Consultation', price: '₹300', unit: 'onwards', items: ['General checkup', 'Health advice', 'Referral if needed'] },
+      { tier: 'Diagnostics', price: '₹800', unit: 'onwards', items: ['Standard tests', 'Fast results', 'Doctor review'], popular: true },
+      { tier: 'Full Care', price: 'Custom', unit: 'plan', items: ['Ongoing treatment', 'Regular follow-up', 'Priority booking'] },
+    ],
+    ctaTitle: 'Book a consultation',
+  },
+  design: {
+    headFont: "'Poppins', sans-serif", weight: 700,
+    ink: '#3a2a1c', paper: '#faf6f1', card: '#ffffff', line: '#ecdfd0',
+    dark: '#2c1d10', darkAlt: '#432c19', accent: '#c17a3d', accentInk: '#3a2510', accentSoft: '#f5e6d5',
+    tagline: (n, ci) => `Spaces that feel considered, built in ${ci || 'your city'}.`,
+    eyebrow: 'INTERIOR & ARCHITECTURE', offerTag: 'FREE SITE VISIT', offerLine: 'First consultation, no charge',
+    trustBullets: ['In-house designers', 'Turnkey execution', 'On-time delivery', 'Transparent quotes'],
+    aboutTitle: 'About Us',
+    about: (n, ci) => `${n} designs spaces that work as hard as they look good. Based in ${ci || 'your area'}, we work closely with every client to turn a blank room into somewhere you actually want to be.`,
+    aboutChecklist: ['In-house design team', 'Turnkey project execution', 'Transparent, itemized quotes', 'On-time project delivery'],
+    services: [
+      { t: 'Residential Design', d: 'Homes that reflect how you actually live.' },
+      { t: 'Commercial Design', d: 'Spaces built for how your business runs.' },
+      { t: 'Renovation', d: 'Reworking what you have into what you need.' },
+      { t: 'Consultation', d: 'A first conversation about the possibilities.' },
+    ],
+    stats: [['In-house', 'Design team'], ['Turnkey', 'Execution'], ['On-time', 'Delivery'], ['Transparent', 'Quotes']],
+    pricing: [
+      { tier: 'Consultation', price: 'Free', unit: '', items: ['Site visit', 'Concept discussion', 'No obligation'] },
+      { tier: 'Design Package', price: 'Custom', unit: 'quote', items: ['Full space plan', '3D visualization', 'Material selection'], popular: true },
+      { tier: 'Turnkey', price: 'Custom', unit: 'quote', items: ['Design + execution', 'Project management', 'Handover ready'] },
+    ],
+    ctaTitle: "Let's design your space",
+  },
+  fitness: {
+    headFont: "'Manrope', sans-serif", weight: 800,
+    ink: '#f4f6f4', paper: '#f6f7f5', card: '#181c19', line: '#2a3129',
+    dark: '#0c0f0d', darkAlt: '#1a201b', accent: '#c8ea3e', accentInk: '#12180f', accentSoft: '#22281f',
+    isDarkTheme: true,
+    tagline: (n, ci) => `Build your strength. Transform your life — in ${ci || 'your city'}.`,
+    eyebrow: 'FITNESS', offerTag: 'NEW MEMBER OFFER', offerLine: 'Get 20% off all membership plans',
+    trustBullets: ['Modern equipment', 'Certified trainers', 'Personal coaching', 'Flexible timings'],
+    aboutTitle: 'More Than Just A Gym',
+    about: (n, ci) => `Whether you just want to work out or you're building a stronger, healthier you — ${n} in ${ci || 'your area'} has the equipment, coaching, and community to back you the whole way.`,
+    aboutChecklist: ['State-of-the-art equipment', 'Clean, spacious facility', 'Nutrition guidance', 'Supportive community'],
+    services: [
+      { t: 'Muscle Building', d: 'Build strength and increase muscle mass with expert guidance.' },
+      { t: 'Fat Loss', d: 'High-intensity workouts designed to burn fat and tone your body.' },
+      { t: 'Strength Training', d: 'Increase power, endurance, and overall functional strength.' },
+      { t: 'Group Classes', d: 'Fun, motivating group sessions for all fitness levels.' },
+    ],
+    stats: [['Modern', 'Equipment'], ['Certified', 'Trainers'], ['Flexible', 'Timings'], ['Active', 'Community']],
+    pricing: [
+      { tier: 'Basic', price: '₹999', unit: '/month', items: ['Gym access', 'Basic equipment', 'Locker facility'] },
+      { tier: 'Standard', price: '₹1,499', unit: '/month', items: ['Gym access', 'All equipment', 'Group classes', '2 PT sessions/mo'], popular: true },
+      { tier: 'Premium', price: '₹2,199', unit: '/month', items: ['All Standard benefits', 'Personal training', 'Nutrition guidance'] },
+    ],
+    ctaTitle: "Don't wait. Start today.",
+  },
+  cafe: {
+    headFont: "'Fraunces', Georgia, serif", weight: 600,
+    ink: '#2b2015', paper: '#faf6ee', card: '#ffffff', line: '#e6dcc8',
+    dark: '#1e2e21', darkAlt: '#2a3f2d', accent: '#c98a3e', accentInk: '#3a2510', accentSoft: '#f3e7d3',
+    tagline: (n, ci) => `Where every visit feels like ${ci ? 'a piece of ' + ci : 'home'}.`,
+    eyebrow: 'CAFE & FOOD', offerTag: 'JOIN OUR REWARDS', offerLine: 'Earn points on every order',
+    trustBullets: ['Fresh daily', 'Cozy ambience', 'Skilled baristas & chefs', 'Community events'],
+    aboutTitle: 'More Than Just A Cafe',
+    about: (n, ci) => `At ${n}, we believe good food brings people together. We source quality ingredients, prepare everything with care, and create a space in ${ci || 'the neighborhood'} where memories are made.`,
+    aboutChecklist: ['Fresh, quality ingredients', 'Skilled baristas & kitchen team', 'Cozy, welcoming ambience', 'Community events & specials'],
+    services: [
+      { t: 'Coffee & Beverages', d: 'Handcrafted drinks made fresh, every single cup.' },
+      { t: 'All-Day Menu', d: 'Breakfast through dinner, made with care.' },
+      { t: 'Desserts & Bakes', d: 'In-house baked treats, best with a warm drink.' },
+      { t: 'Events & Catering', d: 'Live music nights, workshops, and private catering.' },
+    ],
+    stats: [['Fresh', 'Daily'], ['Cozy', 'Ambience'], ['Skilled', 'Team'], ['Loved', 'Locally']],
+    pricing: [
+      { tier: 'Coffee & Bites', price: '₹150', unit: 'onwards', items: ['Handcrafted coffee', 'Light snacks', 'Dine-in or takeaway'] },
+      { tier: 'Full Meal', price: '₹350', unit: 'onwards', items: ['Full menu access', 'Dessert included', 'Group-friendly'], popular: true },
+      { tier: 'Private Event', price: 'Custom', unit: 'quote', items: ['Space booking', 'Custom catering', 'Dedicated staff'] },
+    ],
+    ctaTitle: 'Come in for a cup today',
+  },
+  general: {
+    headFont: "'Poppins', sans-serif", weight: 700,
+    ink: '#161a2e', paper: '#f5f7fd', card: '#ffffff', line: '#e2e6f5',
+    dark: '#131a33', darkAlt: '#1c2650', accent: '#2f6fed', accentInk: '#0e1c40', accentSoft: '#e6edfd',
+    tagline: (n, ci) => `Quality service, right here in ${ci || 'your area'}.`,
+    eyebrow: (cl) => (cl || 'LOCAL BUSINESS').toUpperCase(), offerTag: 'NEW CUSTOMER OFFER', offerLine: 'Ask us about current promotions',
+    trustBullets: ['Trusted locally', 'Reliable service', 'Fair pricing', 'Easy to reach'],
+    aboutTitle: 'About Us',
+    about: (n, ci, cl) => `${n} is proud to serve the ${ci || 'local'} community with reliable, straightforward ${(cl || 'service').toLowerCase()}. We focus on doing right by every customer, every time.`,
+    aboutChecklist: ['Reliable, on-time service', 'Fair, transparent pricing', 'Easy to reach and book', 'Trusted by the community'],
+    services: (cl) => [
+      { t: `${cl || 'Core'} Services`, d: 'Our main offering, done right.' },
+      { t: 'Consultation', d: 'A no-obligation first conversation.' },
+      { t: 'Custom Packages', d: 'Built around what you actually need.' },
+      { t: 'Ongoing Support', d: "We're here after the first visit too." },
+    ],
+    stats: [['Reliable', 'Service'], ['Fair', 'Pricing'], ['Local', 'Focus'], ['Trusted', 'By customers']],
+    pricing: [
+      { tier: 'Starter', price: 'Custom', unit: 'quote', items: ['Core service', 'Standard support'] },
+      { tier: 'Standard', price: 'Custom', unit: 'quote', items: ['Full service', 'Priority support', 'Follow-up included'], popular: true },
+      { tier: 'Premium', price: 'Custom', unit: 'quote', items: ['Everything in Standard', 'Dedicated contact', 'Custom terms'] },
+    ],
+    ctaTitle: 'Get in touch today',
+  },
+};
 
 function render(payload) {
   const name = payload.n || 'Your Business';
@@ -185,95 +282,173 @@ function render(payload) {
   const eyebrowText = typeof t.eyebrow === 'function' ? t.eyebrow(categoryLabel) : t.eyebrow;
   const waLink = phone ? `https://wa.me/${phone}` : null;
   const telLink = phone ? `tel:${phone}` : null;
+  const heroTextColor = t.isDarkTheme ? t.ink : '#fff';
+  const bodyBg = t.isDarkTheme ? t.dark : t.paper;
+  const bodyInk = t.isDarkTheme ? t.ink : t.ink;
 
   document.title = name;
-  document.body.style.background = t.paper;
-  document.body.style.color = t.ink;
-  document.body.style.fontFamily = t.bodyFont;
+  document.body.style.background = bodyBg;
+  document.body.style.color = bodyInk;
 
-  const bentoHTML = t.bento.map((icon, i) => {
-    const isDark = i === 0;
-    return `<div style="border-radius:20px;background:${isDark ? `linear-gradient(150deg, ${t.dark}, ${t.darkAlt})` : t.card};border:${isDark ? 'none' : `1px solid ${t.line}`};box-shadow:${isDark ? `0 20px 40px -12px ${t.dark}55` : '0 1px 2px rgba(0,0,0,.04)'};display:flex;align-items:center;justify-content:center;font-size:${isDark ? '56px' : '40px'};min-height:${isDark ? '220px' : '150px'};grid-row:${isDark ? 'span 2' : 'auto'};position:relative;overflow:hidden;">
-      ${isDark ? `<div style="position:absolute;inset:0;background:${t.pattern};"></div>` : ''}
-      <span style="position:relative;">${icon}</span>
-    </div>`;
-  }).join('');
+  const navBg = t.isDarkTheme ? t.dark : t.paper;
+  const cardBg = t.card;
+
+  const trustHTML = t.trustBullets.map((b, i) => `
+    <div style="display:flex;align-items:center;gap:8px;">
+      ${icon(i, t.accent, 17)}
+      <span style="font-size:12.5px;color:${t.isDarkTheme ? '#c7ceca' : t.ink + 'bb'};">${esc(b)}</span>
+    </div>`).join('');
+
+  const statsHTML = t.stats.map((s, i) => `
+    <div style="text-align:center;">
+      <div style="font-family:${t.headFont};font-size:26px;font-weight:${t.weight};color:${t.accent};margin-bottom:4px;">${esc(s[0])}</div>
+      <div style="font-size:12px;color:${t.isDarkTheme ? '#9aa39c' : t.ink + '99'};">${esc(s[1])}</div>
+    </div>`).join('');
 
   const servicesHTML = services.map((s, i) => `
-    <div style="background:${t.card};border:1px solid ${t.line};border-radius:18px;padding:32px 26px;">
-      <div style="font-family:${t.headFont};font-size:13px;color:${t.accent};font-weight:700;margin-bottom:18px;">0${i + 1}</div>
-      <p style="font-weight:700;font-size:16.5px;color:${t.ink};margin-bottom:8px;">${esc(s.t)}</p>
-      <p style="font-size:13.5px;color:${t.ink}99;line-height:1.55;">${esc(s.d)}</p>
-    </div>
-  `).join('');
+    <div style="background:${cardBg};border:1px solid ${t.line};border-radius:16px;padding:28px 24px;">
+      <div style="width:44px;height:44px;border-radius:12px;background:${t.accentSoft};display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+        ${icon(i, t.accent, 20)}
+      </div>
+      <p style="font-weight:700;font-size:15.5px;margin-bottom:6px;">${esc(s.t)}</p>
+      <p style="font-size:13px;color:${t.isDarkTheme ? '#a6ada6' : t.ink + '99'};line-height:1.55;">${esc(s.d)}</p>
+    </div>`).join('');
+
+  const checklistHTML = t.aboutChecklist.map((c, i) => `
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
+      ${icon(0, t.accent, 18)}
+      <span style="font-size:13.5px;">${esc(c)}</span>
+    </div>`).join('');
+
+  const pricingHTML = t.pricing.map(p => `
+    <div style="background:${cardBg};border:${p.popular ? `1.5px solid ${t.accent}` : `1px solid ${t.line}`};border-radius:16px;padding:30px 26px;position:relative;">
+      ${p.popular ? `<div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:${t.accent};color:${t.accentInk};font-size:10px;font-weight:800;padding:4px 12px;border-radius:20px;letter-spacing:.05em;">MOST POPULAR</div>` : ''}
+      <p style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:${t.isDarkTheme ? '#9aa39c' : t.ink + '99'};margin-bottom:10px;">${esc(p.tier)}</p>
+      <p style="font-family:${t.headFont};font-size:28px;font-weight:${t.weight};margin-bottom:4px;">${esc(p.price)}<span style="font-size:13px;font-weight:400;opacity:.7;"> ${esc(p.unit)}</span></p>
+      <div style="height:1px;background:${t.line};margin:16px 0;"></div>
+      ${p.items.map(it => `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:13px;">${icon(0, t.accent, 15)}<span>${esc(it)}</span></div>`).join('')}
+      <p class="placeholder-note" style="margin-top:12px;color:${t.isDarkTheme ? '#8f978f' : t.ink + '88'};">Sample pricing — customize to match your real rates</p>
+    </div>`).join('');
 
   const app = document.getElementById('app');
   app.style.display = 'block';
   document.getElementById('fallback').style.display = 'none';
 
   app.innerHTML = `
-    <nav style="position:sticky;top:0;background:${t.paper}ee;backdrop-filter:blur(10px);border-bottom:1px solid ${t.line};z-index:10;">
-      <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;height:76px;">
-        <span style="font-family:${t.headFont};font-weight:700;font-size:19px;color:${t.ink};">${esc(name)}</span>
-        ${telLink ? `<a href="${telLink}" class="btn" style="background:${t.ink};color:#fff;">Call now</a>` : ''}
+    <nav style="position:sticky;top:0;background:${navBg}ee;backdrop-filter:blur(10px);border-bottom:1px solid ${t.line};z-index:10;">
+      <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;height:80px;">
+        <span style="font-family:${t.headFont};font-weight:${t.weight};font-size:19px;">${esc(name)}</span>
+        ${telLink ? `<a href="${telLink}" class="btn" style="background:${t.accent};color:${t.accentInk};">Call Now</a>` : ''}
       </div>
     </nav>
 
-    <div style="background:linear-gradient(155deg, ${t.dark}, ${t.darkAlt});color:#fff;position:relative;overflow:hidden;">
-      <div style="position:absolute;inset:0;background:${t.pattern};"></div>
-      <div class="wrap" style="position:relative;text-align:center;padding:110px 28px 100px;">
-        <p class="eyebrow fade-up" style="color:${t.accent};margin-bottom:22px;">${esc(eyebrowText)}</p>
-        ${rating ? `
-          <div class="fade-up d1" style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);padding:8px 18px;border-radius:100px;margin-bottom:28px;">
-            <span style="color:${t.accent};font-size:13px;letter-spacing:1px;">${starRow(rating)}</span>
-            <span style="font-size:12.5px;opacity:.85;">${rating} · ${ratingCount ? ratingCount + ' reviews' : 'Rated locally'}</span>
-          </div>` : ''}
-        <h1 class="fade-up d1" style="font-family:${t.headFont};font-size:clamp(36px,6vw,58px);font-weight:700;margin-bottom:20px;letter-spacing:-0.02em;">${esc(name)}</h1>
-        <p class="fade-up d2" style="font-size:18px;opacity:.82;max-width:540px;margin:0 auto 40px;font-weight:300;">${t.tagline(name, city)}</p>
-        <div class="fade-up d3" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-          ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn" style="background:${t.accent};color:${t.accentInk};box-shadow:0 12px 24px -8px ${t.accent}80;">Message on WhatsApp</a>` : ''}
-          <a href="#contact" class="btn" style="border:1.5px solid rgba(255,255,255,.35);color:#fff;">See contact details</a>
+    <div style="background:${t.isDarkTheme ? `linear-gradient(155deg, ${t.dark}, ${t.darkAlt})` : `linear-gradient(155deg, ${t.dark}, ${t.darkAlt})`};color:#fff;position:relative;overflow:hidden;">
+      <div class="wrap grid-2" style="padding:88px 32px 96px;">
+        <div>
+          <p class="eyebrow fade-up" style="color:${t.accent};margin-bottom:20px;">${esc(eyebrowText)}</p>
+          <h1 class="fade-up d1" style="font-family:${t.headFont};font-size:clamp(34px,5.2vw,50px);font-weight:${t.weight};margin-bottom:18px;letter-spacing:-0.01em;">${esc(name)}</h1>
+          <p class="fade-up d2" style="font-size:16.5px;opacity:.82;max-width:460px;margin-bottom:28px;font-weight:300;">${t.tagline(name, city)}</p>
+          <div class="fade-up d3" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px;">
+            ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn" style="background:${t.accent};color:${t.accentInk};box-shadow:0 14px 28px -10px ${t.accent}90;">Message on WhatsApp</a>` : ''}
+            <a href="#contact" class="btn" style="border:1.5px solid rgba(255,255,255,.3);color:#fff;">See Details</a>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:420px;">${trustHTML}</div>
+        </div>
+        <div style="position:relative;">
+          <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:36px;min-height:280px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;">
+            ${rating ? `<p style="color:${t.accent};font-size:13px;letter-spacing:1.5px;margin-bottom:10px;">${starRow(rating)}</p><p style="font-size:13px;opacity:.75;margin-bottom:20px;">${rating} · ${ratingCount ? ratingCount + ' reviews' : 'Rated locally'}</p>` : ''}
+            <div style="width:64px;height:64px;border-radius:16px;background:${t.accent}22;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">${icon(1, t.accent, 30)}</div>
+            <p style="font-size:13px;opacity:.7;max-width:260px;">A preview built from your real business details — customize freely.</p>
+          </div>
+          <div style="position:absolute;bottom:-24px;right:-14px;background:${t.card};color:${t.ink};border-radius:14px;padding:18px 20px;box-shadow:0 20px 40px -10px rgba(0,0,0,.35);max-width:210px;">
+            <p style="font-size:10px;font-weight:800;letter-spacing:.06em;color:${t.accent};margin-bottom:6px;">${esc(t.offerTag)}</p>
+            <p style="font-size:13px;font-weight:600;">${esc(t.offerLine)}</p>
+          </div>
         </div>
       </div>
     </div>
 
+    <section style="background:${cardBg};padding:56px 0;">
+      <div class="wrap grid-4">${statsHTML}</div>
+    </section>
+
     <section>
-      <div class="wrap" style="max-width:640px;text-align:center;">
-        <p class="eyebrow" style="color:${t.accent};margin-bottom:14px;">${t.aboutTitle}</p>
-        <p style="color:${t.ink}cc;font-size:17px;font-weight:300;line-height:1.7;">${t.about(name, city, categoryLabel)}</p>
-      </div>
-    </section>
-
-    <section style="padding-top:0;">
-      <div class="wrap">
-        <p class="eyebrow" style="color:${t.accent};text-align:center;margin-bottom:14px;">What We Offer</p>
-        <h2 style="font-family:${t.headFont};font-size:32px;color:${t.ink};text-align:center;margin-bottom:48px;font-weight:600;">Services</h2>
-        <div class="grid-4">${servicesHTML}</div>
-      </div>
-    </section>
-
-    <section style="padding-top:0;">
-      <div class="wrap">
-        <p class="eyebrow" style="color:${t.accent};text-align:center;margin-bottom:14px;">A Look Inside</p>
-        <h2 style="font-family:${t.headFont};font-size:32px;color:${t.ink};text-align:center;margin-bottom:48px;font-weight:600;">Gallery</h2>
-        <div class="grid-bento">${bentoHTML}</div>
-      </div>
-    </section>
-
-    <section id="contact" style="background:linear-gradient(155deg, ${t.dark}, ${t.darkAlt});color:#fff;position:relative;overflow:hidden;">
-      <div style="position:absolute;inset:0;background:${t.pattern};"></div>
-      <div class="wrap" style="position:relative;max-width:560px;text-align:center;">
-        <h2 style="font-family:${t.headFont};font-size:32px;margin-bottom:16px;font-weight:600;">${t.ctaTitle}</h2>
-        <p style="opacity:.75;margin-bottom:34px;font-weight:300;">${[area, city].filter(Boolean).join(', ') || "Reach out any time — we'd love to help."}</p>
-        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-          ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn" style="background:${t.accent};color:${t.accentInk};">WhatsApp Us</a>` : ''}
-          ${telLink ? `<a href="${telLink}" class="btn" style="border:1.5px solid rgba(255,255,255,.35);color:#fff;">Call Us</a>` : ''}
+      <div class="wrap grid-2">
+        <div>
+          <p class="eyebrow" style="color:${t.accent};margin-bottom:14px;">${esc(t.aboutTitle)}</p>
+          <h2 style="font-family:${t.headFont};font-size:28px;font-weight:${t.weight};margin-bottom:18px;">${esc(name)}</h2>
+          <p style="font-size:15px;opacity:.85;line-height:1.7;margin-bottom:22px;">${t.about(name, city, categoryLabel)}</p>
+          ${checklistHTML}
+        </div>
+        <div style="background:${t.isDarkTheme ? t.darkAlt : t.accentSoft};border-radius:20px;min-height:280px;display:flex;align-items:center;justify-content:center;position:relative;">
+          <div style="width:74px;height:74px;border-radius:20px;background:${t.card};display:flex;align-items:center;justify-content:center;">${icon(2, t.accent, 34)}</div>
         </div>
       </div>
     </section>
 
-    <footer style="padding:36px 0;text-align:center;font-size:12.5px;color:${t.ink}88;border-top:1px solid ${t.line};">
-      © ${new Date().getFullYear()} ${esc(name)}
+    <section style="background:${t.isDarkTheme ? t.darkAlt : t.accentSoft};">
+      <div class="wrap">
+        <p class="eyebrow" style="color:${t.accent};text-align:center;margin-bottom:14px;">What We Offer</p>
+        <h2 style="font-family:${t.headFont};font-size:30px;font-weight:${t.weight};text-align:center;margin-bottom:48px;">Our Services</h2>
+        <div class="grid-4">${servicesHTML}</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap" style="max-width:680px;text-align:center;">
+        <p class="eyebrow" style="color:${t.accent};margin-bottom:14px;">In Their Words</p>
+        <div style="background:${cardBg};border:1px solid ${t.line};border-radius:20px;padding:44px 36px;">
+          <p style="font-family:${t.headFont};font-size:19px;line-height:1.6;font-style:italic;margin-bottom:18px;">"Add a real customer quote here once you have one — a genuine review always outperforms a placeholder."</p>
+          <p class="placeholder-note">— placeholder testimonial slot, replace before publishing</p>
+        </div>
+      </div>
+    </section>
+
+    <section style="background:${t.isDarkTheme ? t.darkAlt : t.accentSoft};">
+      <div class="wrap">
+        <p class="eyebrow" style="color:${t.accent};text-align:center;margin-bottom:14px;">Simple. Flexible.</p>
+        <h2 style="font-family:${t.headFont};font-size:30px;font-weight:${t.weight};text-align:center;margin-bottom:48px;">Packages</h2>
+        <div class="grid-3">${pricingHTML}</div>
+      </div>
+    </section>
+
+    <section id="contact" style="background:linear-gradient(155deg, ${t.dark}, ${t.darkAlt});color:#fff;">
+      <div class="wrap" style="max-width:560px;text-align:center;">
+        <h2 style="font-family:${t.headFont};font-size:30px;font-weight:${t.weight};margin-bottom:16px;">${esc(t.ctaTitle)}</h2>
+        <p style="opacity:.75;margin-bottom:32px;font-weight:300;">${[area, city].filter(Boolean).join(', ') || "Reach out any time — we'd love to help."}</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn" style="background:${t.accent};color:${t.accentInk};">WhatsApp Us</a>` : ''}
+          ${telLink ? `<a href="${telLink}" class="btn" style="border:1.5px solid rgba(255,255,255,.3);color:#fff;">Call Us</a>` : ''}
+        </div>
+      </div>
+    </section>
+
+    <footer style="background:${t.dark};color:#fff;padding:56px 0 28px;">
+      <div class="wrap" style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:36px;margin-bottom:36px;">
+        <div>
+          <p style="font-family:${t.headFont};font-weight:${t.weight};font-size:18px;margin-bottom:10px;">${esc(name)}</p>
+          <p style="font-size:12.5px;opacity:.6;max-width:280px;line-height:1.6;">${esc(categoryLabel)} serving ${esc([area, city].filter(Boolean).join(', ') || 'the local community')}.</p>
+          <div style="display:flex;gap:10px;margin-top:16px;">
+            ${[0,1,2].map(i => `<div style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;">${icon(i, '#fff', 15)}</div>`).join('')}
+          </div>
+        </div>
+        <div>
+          <p style="font-size:12px;font-weight:700;letter-spacing:.04em;opacity:.5;margin-bottom:14px;">CONTACT</p>
+          ${phone ? `<p style="font-size:13px;opacity:.75;margin-bottom:8px;">${esc(payload.p)}</p>` : ''}
+          <p style="font-size:13px;opacity:.75;">${esc([area, city].filter(Boolean).join(', ') || 'Location on request')}</p>
+        </div>
+        <div>
+          <p style="font-size:12px;font-weight:700;letter-spacing:.04em;opacity:.5;margin-bottom:14px;">NEWSLETTER</p>
+          <p style="font-size:12.5px;opacity:.65;margin-bottom:12px;">Stay updated on offers &amp; news.</p>
+          <div style="display:flex;background:rgba(255,255,255,.08);border-radius:9px;overflow:hidden;">
+            <input placeholder="Your email" style="flex:1;background:transparent;border:none;padding:10px 12px;color:#fff;font-size:12.5px;outline:none;">
+            <div style="background:${t.accent};color:${t.accentInk};display:flex;align-items:center;padding:0 14px;">${icon(3, t.accentInk, 15)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="wrap" style="border-top:1px solid rgba(255,255,255,.08);padding-top:20px;font-size:11.5px;opacity:.45;text-align:center;">
+        © ${new Date().getFullYear()} ${esc(name)} — preview site generated by LocalScout
+      </div>
     </footer>
   `;
 }
