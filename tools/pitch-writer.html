@@ -50,13 +50,27 @@
       </div>
 
       <div class="field">
+        <label>Business type / Niche</label>
+        <select id="bizNiche">
+          <option value="Interior design">Interior design</option>
+          <option value="Salon & spa">Salon &amp; spa</option>
+          <option value="Real estate">Real estate</option>
+          <option value="Gym & fitness">Gym &amp; fitness</option>
+          <option value="Restaurant">Restaurant</option>
+          <option value="Boutique & clothing">Boutique &amp; clothing</option>
+          <option value="Coaching & tuition">Coaching &amp; tuition</option>
+          <option value="Clinic & healthcare">Clinic &amp; healthcare</option>
+        </select>
+      </div>
+
+      <div class="field">
         <label>What's the gap?</label>
         <select id="gapSignal">
           <option value="no_website">No website at all</option>
-          <option value="weak_website">Has a website, but it looks outdated</option>
-          <option value="no_reviews_online">Barely shows up in search</option>
-          <option value="no_hours">Doesn't list business hours anywhere</option>
-          <option value="few_photos">Almost no photos on their Google listing</option>
+          <option value="social_only">Facebook/Instagram page only</option>
+          <option value="slow_website">Website loads very slowly</option>
+          <option value="not_mobile_friendly">Website not mobile-friendly</option>
+          <option value="no_contact_form">No contact/booking form on site</option>
         </select>
       </div>
 
@@ -86,44 +100,52 @@
 <script>
 const GAP_TEXT = {
   no_website: "doesn't have a website",
-  weak_website: "has a website that looks like it hasn't been updated in a while",
-  no_reviews_online: "isn't really showing up when people search online",
-  no_hours: "doesn't list business hours anywhere online",
-  few_photos: "has almost no photos on its Google listing",
+  social_only: "only has a Facebook/Instagram page, not a full website",
+  slow_website: "has a website, but it's quite slow to load",
+  not_mobile_friendly: "has a website that isn't easy to use on mobile",
+  no_contact_form: "doesn't have an easy way to contact or book online",
 };
 
+// Structure matches the LocalScout pitch spec: one personalized opener
+// (with a demo-link placeholder to swap in), then two short follow-ups —
+// a gentle nudge, then a final message that closes the loop either way.
 const TEMPLATES = {
-  friendly: (name, city, gap) => [
-    `Hey! I came across ${name}${city ? ' in ' + city : ''} and noticed it ${gap} — is that something you've been meaning to sort out?`,
-    `Quick question — does ${name} have someone handling the website, or is that on the to-do list? I noticed it ${gap}.`,
-    `Loved what I saw about ${name}${city ? ' in ' + city : ''}! One thing that stood out though — it ${gap}. Happy to help if that'd be useful.`,
+  friendly: (name, city, gap, niche) => [
+    `Hi! I checked and noticed ${name}${city ? ' in ' + city : ''} ${gap}. Businesses like yours are missing out on people searching online. I put together a quick preview of what a site could look like for ${name} — would love to show you: [demo link]. I'm a ${niche.toLowerCase()} specialist based ${city ? 'in ' + city : 'locally'}. Happy to chat whenever works for you!`,
+    `Hey! Just following up on my message about a website preview for ${name}. Did you get a chance to see it? Happy to answer any questions or tweak the design — no pressure at all!`,
+    `Last one from me — I'll keep the demo live for ${name} for a few more days if you'd like to take a look. Wishing you a great week either way!`,
   ],
-  professional: (name, city, gap) => [
-    `Hello, I recently came across ${name}${city ? ' in ' + city : ''} and noticed it ${gap}. I wanted to reach out to see if this is something you've considered addressing.`,
-    `I wanted to ask — is your website currently being handled in-house at ${name}, or is that something you'd be open to discussing? I noticed it ${gap}.`,
-    `${name} clearly has a strong local reputation${city ? ' in ' + city : ''}. One area I noticed for improvement: it ${gap}. I'd welcome the chance to discuss how we might help.`,
+  professional: (name, city, gap, niche) => [
+    `Hello, I recently came across ${name}${city ? ' in ' + city : ''} and noticed it ${gap}. I put together a quick preview of what a website could look like for ${name}: [demo link]. I specialize in ${niche.toLowerCase()} and would welcome the opportunity to discuss this further at your convenience.`,
+    `Following up on my earlier message regarding a website preview for ${name}. I'd be glad to walk you through it or answer any questions — please let me know if now is a good time.`,
+    `I'll close the loop here — the preview for ${name} will remain available for a few more days if you'd like to review it. Wishing you continued success either way.`,
   ],
-  direct: (name, city, gap) => [
-    `${name} ${gap}. Want me to fix that?`,
-    `Are you handling ${name}'s website yourself? Noticed it ${gap}.`,
-    `${name} looks solid${city ? ' in ' + city : ''}, but it ${gap}. Let's fix that.`,
+  direct: (name, city, gap, niche) => [
+    `${name} ${gap}. I built a quick preview of what a site could look like: [demo link]. Want to talk?`,
+    `Following up — did you see the preview for ${name}? Let me know either way.`,
+    `Last check-in on this. Preview's still up for ${name} if you want it: [demo link].`,
   ],
 };
 
 function generate() {
   const name = document.getElementById('bizName').value.trim() || 'your business';
   const city = document.getElementById('bizCity').value.trim();
+  const niche = document.getElementById('bizNiche').value;
   const gapKey = document.getElementById('gapSignal').value;
   const tone = document.getElementById('tone').value;
   const gap = GAP_TEXT[gapKey];
 
-  const messages = TEMPLATES[tone](name, city, gap);
+  const messages = TEMPLATES[tone](name, city, gap, niche);
+  const labels = ['First message', 'Follow-up 1 (send after 2 days)', 'Follow-up 2 (final)'];
   const box = document.getElementById('resultBox');
   box.innerHTML = messages.map((m, i) => `
     <div class="msg-card">
-      <span class="msg-tag">Variant ${i + 1}</span>
+      <span class="msg-tag">${labels[i]}</span>
       <p class="text">${esc(m)}</p>
-      <button class="btn btn-outline btn-sm" onclick="copyMsg(${i})">Copy</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="copyMsg(${i})">Copy</button>
+        ${i === 0 ? `<a class="btn btn-outline btn-sm" href="https://wa.me/?text=${encodeURIComponent(m)}" target="_blank" rel="noopener">Open in WhatsApp</a>` : ''}
+      </div>
     </div>
   `).join('');
   box.dataset.messages = JSON.stringify(messages);
@@ -134,8 +156,8 @@ function copyMsg(i) {
   const box = document.getElementById('resultBox');
   const messages = JSON.parse(box.dataset.messages || '[]');
   navigator.clipboard.writeText(messages[i]).then(() => {
-    const btns = box.querySelectorAll('button');
-    if (btns[i]) { const old = btns[i].textContent; btns[i].textContent = 'Copied!'; setTimeout(() => btns[i].textContent = old, 1500); }
+    const btns = box.querySelectorAll('.msg-card')[i].querySelectorAll('button');
+    if (btns[0]) { const old = btns[0].textContent; btns[0].textContent = 'Copied!'; setTimeout(() => btns[0].textContent = old, 1500); }
   });
 }
 function esc(s) {
