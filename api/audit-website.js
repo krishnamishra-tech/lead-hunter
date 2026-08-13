@@ -1,31 +1,35 @@
-// POST /api/audit-website  { url: string }  →  { score, grade, checks: [...], summary }
+// POST /api/audit-website  { url: string }  →  { score, grade, gradeNote, checks: [...], summary }
 //
 // Runs REAL checks against the given URL — no third-party paid APIs (no
 // Lighthouse/PageSpeed key needed), just a server-side fetch + basic HTML
 // parsing. This is deliberately lighter than a full Lighthouse audit, but
 // everything it reports is actually true of the site, not simulated.
 //
-// Checks performed:
-//  1. Reachable at all (biggest single factor — "no real website" cases)
-//  2. HTTPS (secure connection)
-//  3. Mobile viewport meta tag present
-//  4. Page <title> and meta description present (basic SEO hygiene)
-//  5. Contact info findable (phone/email pattern, or a contact/WhatsApp link)
-//  6. Response time (rough speed proxy — not as precise as Lighthouse, but real)
-//  7. Page isn't a "coming soon" / near-empty placeholder
+// 8-point checklist (weights match the LocalScout tool spec):
+//  1. Real website exists / reachable ................. 20
+//  2. HTTPS / SSL ....................................... 15
+//  3. Mobile-friendly (viewport tag) .................... 15
+//  4. Page load speed (rough proxy, not full Lighthouse) 15
+//  5. Contact info visible .............................. 10
+//  6. Meta description present .......................... 10
+//  7. LocalBusiness / Google Business schema present .... 10
+//  8. Booking/enquiry form present ....................... 5
+//                                                  Total: 100
 //
-// Scoring weights are intentionally front-loaded on "no website" and
-// "no HTTPS", since those are the two gaps that make the strongest,
-// least-arguable pitch — everything else is a smaller nudge.
+// Opportunity Score = 100 − Website Health Score (i.e. this score,
+// inverted) — a business that fails everything is the *highest* priority
+// pitch, not the lowest. The UI computes that inversion; this endpoint
+// reports the straightforward health score plus a pass/fail per check.
 
 const CHECKS = {
-  reachable: { weight: 40, label: 'Website is reachable' },
-  https: { weight: 15, label: 'Uses HTTPS (secure connection)' },
-  mobileViewport: { weight: 15, label: 'Mobile-friendly viewport tag' },
-  seoBasics: { weight: 10, label: 'Has a page title & meta description' },
-  contactFindable: { weight: 10, label: 'Contact info is easy to find' },
-  responseSpeed: { weight: 5, label: 'Loads reasonably fast' },
-  notPlaceholder: { weight: 5, label: "Isn't a near-empty placeholder page" },
+  reachable: { weight: 20, label: 'Real website exists' },
+  https: { weight: 15, label: 'HTTPS / SSL' },
+  mobileViewport: { weight: 15, label: 'Mobile-friendly (viewport tag)' },
+  responseSpeed: { weight: 15, label: 'Page load speed' },
+  contactFindable: { weight: 10, label: 'Contact info visible' },
+  metaDescription: { weight: 10, label: 'Meta description present' },
+  businessSchema: { weight: 10, label: 'Google Business / LocalBusiness schema' },
+  bookingForm: { weight: 5, label: 'Booking or enquiry form present' },
 };
 
 function normalizeUrl(input) {
@@ -42,7 +46,6 @@ function isBlockedHost(hostname) {
   const h = hostname.toLowerCase();
   if (h === 'localhost' || h.endsWith('.localhost')) return true;
   if (h === '0.0.0.0' || h === '::1' || h === '[::1]') return true;
-  // IPv4 private/reserved ranges + link-local (covers 169.254.169.254 cloud metadata)
   const ipv4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (ipv4) {
     const [a, b] = [parseInt(ipv4[1]), parseInt(ipv4[2])];
@@ -120,7 +123,7 @@ export default async function handler(req, res) {
   }
   const elapsedMs = Date.now() - start;
 
-  // 1. Reachable
+  // 1. Real website exists / reachable
   possible += CHECKS.reachable.weight;
   const reachable = !!(response && response.ok);
   if (reachable) earned += CHECKS.reachable.weight;
@@ -130,6 +133,7 @@ export default async function handler(req, res) {
     try {
       html = (await response.text()).slice(0, 300000); // cap to avoid huge pages
     } catch (e) { html = ''; }
+    const textOnly = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
     // 2. HTTPS
     possible += CHECKS.https.weight;
@@ -143,20 +147,17 @@ export default async function handler(req, res) {
     if (hasViewport) earned += CHECKS.mobileViewport.weight;
     results.mobileViewport = { pass: hasViewport, note: hasViewport ? 'Has a mobile viewport tag.' : 'No mobile viewport tag — likely renders poorly on phones.' };
 
-    // 4. SEO basics
-    possible += CHECKS.seoBasics.weight;
-    const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-    const hasTitle = !!(titleMatch && titleMatch[1] && titleMatch[1].trim().length > 3);
-    const hasMetaDesc = /<meta[^>]+name=["']description["'][^>]+content=["'][^"']{20,}/i.test(html);
-    const seoOk = hasTitle && hasMetaDesc;
-    if (seoOk) earned += CHECKS.seoBasics.weight;
-    else if (hasTitle || hasMetaDesc) earned += Math.round(CHECKS.seoBasics.weight / 2);
-    results.seoBasics = { pass: seoOk, note: seoOk ? 'Title and meta description both present.' : 'Missing a proper title and/or meta description — hurts how it looks in Google search results.' };
+    // 4. Page load speed (rough proxy via response time — not full Lighthouse,
+    // but real and free; a paid PageSpeed Insights key can replace this later)
+    possible += CHECKS.responseSpeed.weight;
+    const fastEnough = elapsedMs < 3000;
+    if (fastEnough) earned += CHECKS.responseSpeed.weight;
+    results.responseSpeed = { pass: fastEnough, note: `Page responded in ${elapsedMs}ms${fastEnough ? '' : ' — slower than the 3s benchmark visitors tend to tolerate.'}` };
 
     // 5. Contact info findable
     possible += CHECKS.contactFindable.weight;
     const phonePattern = /(\+?\d[\d\s\-().]{7,}\d)/;
-    const hasPhone = phonePattern.test(html.replace(/<[^>]+>/g, ' '));
+    const hasPhone = phonePattern.test(textOnly);
     const hasEmailLink = /mailto:/i.test(html);
     const hasWaLink = /wa\.me|api\.whatsapp\.com/i.test(html);
     const hasContactWord = /contact us|get in touch|book now|call us/i.test(html);
@@ -164,39 +165,53 @@ export default async function handler(req, res) {
     if (contactOk) earned += CHECKS.contactFindable.weight;
     results.contactFindable = { pass: contactOk, note: contactOk ? 'Contact info or a contact path is visible.' : 'No clear phone, email, or contact link found on the page.' };
 
-    // 6. Response speed
-    possible += CHECKS.responseSpeed.weight;
-    const fastEnough = elapsedMs < 3000;
-    if (fastEnough) earned += CHECKS.responseSpeed.weight;
-    results.responseSpeed = { pass: fastEnough, note: `Page responded in ${elapsedMs}ms${fastEnough ? '' : ' — slower than the 3s benchmark visitors tend to tolerate.'}` };
+    // 6. Meta description
+    possible += CHECKS.metaDescription.weight;
+    const hasMetaDesc = /<meta[^>]+name=["']description["'][^>]+content=["'][^"']{20,}/i.test(html);
+    if (hasMetaDesc) earned += CHECKS.metaDescription.weight;
+    results.metaDescription = { pass: hasMetaDesc, note: hasMetaDesc ? 'Has a meta description.' : 'No meta description — hurts how it looks in Google search results.' };
 
-    // 7. Not a placeholder
-    possible += CHECKS.notPlaceholder.weight;
-    const textOnly = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    const looksPlaceholder = textOnly.length < 200 || /coming soon|under construction|default web page|this domain is for sale/i.test(textOnly);
-    if (!looksPlaceholder) earned += CHECKS.notPlaceholder.weight;
-    results.notPlaceholder = { pass: !looksPlaceholder, note: looksPlaceholder ? 'Page looks like a placeholder or near-empty stub, not a real business site.' : 'Page has real content.' };
+    // 7. Google Business / LocalBusiness structured data (JSON-LD)
+    possible += CHECKS.businessSchema.weight;
+    const hasBusinessSchema = /<script[^>]+type=["']application\/ld\+json["'][^>]*>[\s\S]*?(LocalBusiness|Restaurant|Store|ProfessionalService|HomeAndConstructionBusiness|MedicalBusiness)[\s\S]*?<\/script>/i.test(html);
+    if (hasBusinessSchema) earned += CHECKS.businessSchema.weight;
+    results.businessSchema = { pass: hasBusinessSchema, note: hasBusinessSchema ? 'Has LocalBusiness structured data.' : 'No LocalBusiness schema found — a missed opportunity for richer Google search results.' };
+
+    // 8. Booking / enquiry form
+    possible += CHECKS.bookingForm.weight;
+    const hasForm = /<form[\s>]/i.test(html);
+    if (hasForm) earned += CHECKS.bookingForm.weight;
+    results.bookingForm = { pass: hasForm, note: hasForm ? 'Has a form on the page.' : 'No booking or enquiry form found — visitors have no easy way to reach out directly.' };
   } else {
     // Site unreachable — every other check is automatically a fail, but we
     // still report them so the UI can show a full, honest breakdown.
-    ['https', 'mobileViewport', 'seoBasics', 'contactFindable', 'responseSpeed', 'notPlaceholder'].forEach(key => {
+    ['https', 'mobileViewport', 'responseSpeed', 'contactFindable', 'metaDescription', 'businessSchema', 'bookingForm'].forEach(key => {
       possible += CHECKS[key].weight;
       results[key] = { pass: false, note: 'Could not check — no reachable website.' };
     });
   }
 
   const score = possible > 0 ? Math.round((earned / possible) * 100) : 0;
-  const grade = score >= 80 ? 'Strong' : score >= 50 ? 'Needs work' : 'Critical gaps';
+  // Opportunity Score = 100 − Website Health Score. A business that fails
+  // everything scores 100 here — maximum opportunity for a web designer.
+  const opportunityScore = 100 - score;
+  let grade, gradeNote;
+  if (opportunityScore <= 30) { grade = 'Strong site'; gradeNote = 'Few gaps — low pitch priority.'; }
+  else if (opportunityScore <= 60) { grade = 'Some gaps'; gradeNote = 'Worth a soft pitch.'; }
+  else if (opportunityScore <= 85) { grade = 'Significant gaps'; gradeNote = 'Strong pitch opportunity.'; }
+  else { grade = 'Critical gaps'; gradeNote = 'Highest priority lead.'; }
 
   return res.status(200).json({
     url: finalUrl,
     score,
+    opportunityScore,
     grade,
+    gradeNote,
     checks: Object.entries(results).map(([key, r]) => ({
       key, label: CHECKS[key].label, pass: r.pass, note: r.note,
     })),
     summary: reachable
-      ? `${finalUrl} scores ${score}/100 — ${grade.toLowerCase()}.`
-      : `No working website found at "${rawUrl}".`,
+      ? `${finalUrl} — Website Health ${score}/100, Opportunity Score ${opportunityScore}/100 (${grade.toLowerCase()}).`
+      : `No working website found at "${rawUrl}" — Opportunity Score 100/100 (highest priority lead).`,
   });
 }
