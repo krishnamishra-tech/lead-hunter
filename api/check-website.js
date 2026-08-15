@@ -42,16 +42,14 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // ── Rate limit check ──
+    // ── Rate limit check — atomic, closes a race condition where concurrent
+    // requests could both read the same count and both slip past the cap.
     const today = new Date().toISOString().slice(0, 10);
-    const { data: usageRow } = await supabaseAdmin
-      .from('api_usage')
-      .select('website_checks')
-      .eq('user_id', user.id)
-      .eq('usage_date', today)
-      .maybeSingle();
-    const currentCount = (usageRow && usageRow.website_checks) || 0;
-    if (currentCount >= DAILY_CHECK_LIMIT) {
+    const { data: newCount, error: usageError } = await supabaseAdmin.rpc('increment_usage_atomic', {
+      p_user_id: user.id, p_usage_date: today, p_column: 'website_checks', p_daily_limit: DAILY_CHECK_LIMIT,
+    });
+    if (usageError) throw usageError;
+    if (newCount > DAILY_CHECK_LIMIT) {
       res.status(429).json({ error: 'Daily website-check limit reached — please try again tomorrow' });
       return;
     }
@@ -92,14 +90,6 @@ module.exports = async function handler(req, res) {
       res.status(502).json({ error: 'Could not get a score for this site — it may be blocking automated checks' });
       return;
     }
-
-    // ── Record usage ──
-    await supabaseAdmin
-      .from('api_usage')
-      .upsert(
-        { user_id: user.id, usage_date: today, website_checks: currentCount + 1 },
-        { onConflict: 'user_id,usage_date' }
-      );
 
     res.status(200).json({ score: Math.round(rawScore * 100) });
   } catch (err) {
