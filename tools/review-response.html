@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free Google Review Response Generator — LocalScout</title>
+<meta name="description" content="Generate a professional response to any Google review — positive, negative, or neutral — in seconds. Free tool for local businesses and the agencies that manage them.">
+<link rel="canonical" href="https://localscout.online/tools/review-response.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tools-shared.css">
+<style>
+  .star-row { display: flex; gap: 8px; margin-bottom: 4px; }
+  .star-btn { width: 40px; height: 40px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--paper); cursor: pointer; font-size: 16px; }
+  .star-btn.active { background: var(--marigold); border-color: var(--marigold); }
+  .tone-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .tone-btn { background: var(--card); border: 1.5px solid var(--line); border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .tone-btn.active { background: var(--navy); color: var(--paper); border-color: var(--navy); }
+  .response-card { background: var(--paper); border: 1.5px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 12px; position: relative; }
+  .response-card p { font-size: 13.5px; line-height: 1.6; margin-right: 70px; }
+  .copy-btn { position: absolute; top: 14px; right: 14px; background: var(--navy); color: var(--paper); border: none; border-radius: 7px; padding: 6px 12px; font-size: 11.5px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <div class="logo"><span class="dot"></span>LocalScout</div>
+    <div class="nav-links">
+      <a href="index.html">All tools</a>
+      <a href="../features.html">Features</a>
+      <a href="../pricing.html">Pricing</a>
+      <a href="../app.html" class="nav-cta">Log in / Sign up</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="kicker">Free Tool</div>
+  <h1>Review Response Generator</h1>
+  <p>Pick a star rating and a tone — get 3 ready-to-post responses to a Google review, positive or negative.</p>
+</div>
+
+<main>
+  <div class="wrap">
+    <div class="tool-card">
+      <div class="field">
+        <label>Business name</label>
+        <input type="text" id="bizName" placeholder="e.g. Sharma Real Estate" value="your business">
+      </div>
+      <div class="field">
+        <label>Star rating of the review</label>
+        <div class="star-row" id="starRow"></div>
+      </div>
+      <div class="field">
+        <label>What did the reviewer mention? (optional — makes it more specific)</label>
+        <input type="text" id="reviewDetail" placeholder="e.g. slow response time, great service, pricing">
+      </div>
+      <div class="field">
+        <label>Tone</label>
+        <div class="tone-row" id="toneRow"></div>
+      </div>
+      <button class="btn btn-primary" onclick="generate()">Generate responses</button>
+
+      <div id="resultBox" style="margin-top:22px;display:none;">
+        <div id="responsesOut"></div>
+      </div>
+
+      <div class="cta-banner" style="margin-top:24px;">
+        <p><strong>Managing reviews for clients?</strong><br>LocalScout finds local businesses whose review profile — and website — needs work, before your competitor pitches them.</p>
+        <a href="../app.html" class="btn btn-marigold btn-sm">Try LocalScout free →</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>© 2026 LocalScout. Free tools for web design agencies and freelancers. · <a href="../privacy-policy.html">Privacy Policy</a> · <a href="../about.html">About</a></footer>
+
+<script>
+let rating = 5;
+let tone = 'professional';
+
+const stars = document.getElementById('starRow');
+for (let i = 1; i <= 5; i++) {
+  const b = document.createElement('button');
+  b.className = 'star-btn' + (i === 5 ? ' active' : '');
+  b.textContent = '★'.repeat(i);
+  b.onclick = () => { rating = i; [...stars.children].forEach((c, idx) => c.classList.toggle('active', idx === i - 1)); };
+  stars.appendChild(b);
+}
+
+const tones = ['professional', 'warm', 'apologetic', 'brief'];
+const toneRow = document.getElementById('toneRow');
+tones.forEach(t => {
+  const b = document.createElement('button');
+  b.className = 'tone-btn' + (t === 'professional' ? ' active' : '');
+  b.textContent = t[0].toUpperCase() + t.slice(1);
+  b.onclick = () => { tone = t; [...toneRow.children].forEach(c => c.classList.toggle('active', c === b)); };
+  toneRow.appendChild(b);
+});
+tones.forEach((t, i) => { }); // toneRow built above
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function generate() {
+  const name = document.getElementById('bizName').value.trim() || 'your business';
+  const detail = document.getElementById('reviewDetail').value.trim();
+  const detailPhrase = detail ? ` about ${detail}` : '';
+  let templates = [];
+
+  if (rating >= 4) {
+    templates = {
+      professional: [
+        `Thank you for taking the time to share this${detailPhrase}. We're glad ${name} could deliver the experience you expected, and we look forward to serving you again.`,
+        `We really appreciate your feedback${detailPhrase}. Reviews like this help us know we're on the right track — thank you for choosing ${name}.`,
+        `Thank you for the kind words${detailPhrase}. It means a lot to our team at ${name}, and we hope to see you again soon.`,
+      ],
+      warm: [
+        `This made our day! Thank you so much${detailPhrase} — we're so happy you had a great experience with ${name}. See you again soon!`,
+        `Wow, thank you${detailPhrase}! Our whole team appreciates you taking the time to write this. Can't wait to have you back at ${name}.`,
+        `You're too kind! Thanks for the love${detailPhrase} — this is exactly why we do what we do at ${name}.`,
+      ],
+      apologetic: [
+        `Thank you for your feedback${detailPhrase} — we're glad it worked out well overall, and we'll keep working to make every visit to ${name} even better.`,
+        `We appreciate this${detailPhrase}, and we're always looking for ways to improve at ${name}. Thank you for your support.`,
+        `Thanks for sharing this${detailPhrase} — glad to hear it, and we'll keep striving to do even better next time at ${name}.`,
+      ],
+      brief: [
+        `Thank you${detailPhrase}! Glad you enjoyed your experience with ${name}.`,
+        `Really appreciate this${detailPhrase} — thanks for choosing ${name}!`,
+        `Thanks so much${detailPhrase}! See you again soon.`,
+      ],
+    }[tone];
+  } else if (rating === 3) {
+    templates = {
+      professional: [
+        `Thank you for the honest feedback${detailPhrase}. We'd like to understand more about your experience at ${name} — please reach out directly so we can make it right.`,
+        `We appreciate you taking the time to review us${detailPhrase}. There's clearly room to improve, and we'd welcome the chance to do better next time at ${name}.`,
+        `Thanks for sharing this${detailPhrase}. We take feedback like this seriously at ${name} and will use it to improve.`,
+      ],
+      warm: [
+        `Thanks for letting us know${detailPhrase} — we want every visit to ${name} to be a great one, and it sounds like this one fell short somewhere. We'd love to hear more.`,
+        `We appreciate the honest review${detailPhrase}. Please reach out — we'd really like to turn this into a 5-star experience next time at ${name}.`,
+        `Thank you for the feedback${detailPhrase}. We're always working to do better at ${name}, and we hope you'll give us another shot.`,
+      ],
+      apologetic: [
+        `We're sorry your experience${detailPhrase} wasn't a full 5 stars. Please reach out to us directly — we'd like to understand what happened and make it right at ${name}.`,
+        `Thank you for the honest feedback${detailPhrase}, and we're sorry it wasn't perfect. We'd appreciate the chance to improve your experience with ${name}.`,
+        `We're sorry to hear this${detailPhrase}. Your feedback matters to us at ${name}, and we'd like to do better next time.`,
+      ],
+      brief: [
+        `Thanks for the feedback${detailPhrase} — we'll work on this at ${name}.`,
+        `Appreciate you letting us know${detailPhrase}. We'll do better.`,
+        `Thank you${detailPhrase} — noted, and we'll improve.`,
+      ],
+    }[tone];
+  } else {
+    templates = {
+      professional: [
+        `We're sorry to hear about your experience${detailPhrase}. This isn't the standard we hold ourselves to at ${name}, and we'd appreciate the opportunity to make it right — please contact us directly.`,
+        `Thank you for bringing this to our attention${detailPhrase}. We take this seriously and would like to resolve it — please reach out to us directly at ${name}.`,
+        `We apologize for the experience described${detailPhrase}. This doesn't reflect what we aim for at ${name}, and we'd like to discuss this further — please get in touch.`,
+      ],
+      warm: [
+        `We're really sorry to hear this${detailPhrase} — this isn't the experience we want anyone to have at ${name}. Please reach out directly so we can make things right.`,
+        `This isn't okay, and we're sorry${detailPhrase}. We'd love the chance to fix this for you — please contact ${name} directly so we can help.`,
+        `We hear you, and we're sorry${detailPhrase}. Please reach out to us directly — we want to turn this around for you at ${name}.`,
+      ],
+      apologetic: [
+        `We sincerely apologize for your experience${detailPhrase}. This falls short of what we expect from ourselves at ${name}, and we'd like the chance to make it right — please contact us directly.`,
+        `We're very sorry to hear about this${detailPhrase}. Please reach out to us directly so we can understand what happened and address it properly at ${name}.`,
+        `Our apologies for this experience${detailPhrase}. We'd like to resolve this with you directly — please get in touch with ${name} at your earliest convenience.`,
+      ],
+      brief: [
+        `We're sorry${detailPhrase}. Please contact us directly so we can make this right.`,
+        `Apologies${detailPhrase} — please reach out and we'll fix this.`,
+        `Sorry to hear this${detailPhrase}. Please get in touch with ${name} directly.`,
+      ],
+    }[tone];
+  }
+
+  document.getElementById('responsesOut').innerHTML = templates.map((t, i) => `
+    <div class="response-card">
+      <p>${esc(t)}</p>
+      <button class="copy-btn" onclick="copyText(this, ${i})">Copy</button>
+    </div>
+  `).join('');
+  window.__responses = templates;
+  document.getElementById('resultBox').style.display = 'block';
+}
+
+function copyText(btn, i) {
+  navigator.clipboard.writeText(window.__responses[i]).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+
+generate();
+</script>
+
+</body>
+</html>

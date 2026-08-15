@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free Google Business Profile Checker — LocalScout</title>
+<meta name="description" content="Score your Google Business Profile against 10 completeness checks — photos, hours, category, posts, reviews — and get a prioritized fix list. Free, no signup.">
+<link rel="canonical" href="https://localscout.online/tools/gbp-checker.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tools-shared.css">
+<style>
+  .check-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .check-row:last-child { border: none; }
+  .check-row input[type=checkbox] { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--teal); flex-shrink: 0; }
+  .check-row .label { font-weight: 600; font-size: 13.5px; }
+  .check-row .note { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .score-ring { width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+  .score-ring .num { font-family: var(--display); font-size: 32px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <div class="logo"><span class="dot"></span>LocalScout</div>
+    <div class="nav-links">
+      <a href="index.html">All tools</a>
+      <a href="../features.html">Features</a>
+      <a href="../pricing.html">Pricing</a>
+      <a href="../app.html" class="nav-cta">Log in / Sign up</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="kicker">Free Tool</div>
+  <h1>Google Business Profile Checker</h1>
+  <p>Tick off what your listing already has — get a completeness score and a prioritized list of what to fix first.</p>
+</div>
+
+<main>
+  <div class="wrap">
+    <div class="tool-card" style="max-width:720px;">
+      <div id="checksContainer"></div>
+      <div class="result-box show" style="margin-top:22px;">
+        <div style="text-align:center;">
+          <div class="score-ring" id="scoreRing"><span class="num" id="scoreNum">0</span></div>
+          <p style="font-weight:700;font-size:15px;" id="gradeText"></p>
+        </div>
+        <div id="fixListOut" style="margin-top:16px;"></div>
+      </div>
+
+      <div class="cta-banner" style="margin-top:24px;">
+        <p><strong>Pitching a business with a weak profile?</strong><br>LocalScout finds local businesses with gaps like these — website, listing, or both — and helps you pitch the fix.</p>
+        <a href="../app.html" class="btn btn-marigold btn-sm">Try LocalScout free →</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>© 2026 LocalScout. Free tools for web design agencies and freelancers. · <a href="../privacy-policy.html">Privacy Policy</a> · <a href="../about.html">About</a></footer>
+
+<script>
+const CHECKS = [
+  { id: 'claimed', label: 'Profile is claimed and verified', note: 'Unclaimed listings show up but can\'t be managed or trusted as accurate.', weight: 15 },
+  { id: 'category', label: 'Primary category is accurate', note: 'A wrong or too-broad category hurts visibility for relevant searches.', weight: 10 },
+  { id: 'hours', label: 'Business hours are filled in', note: 'Missing hours is one of the most common reasons customers skip a listing.', weight: 10 },
+  { id: 'phone', label: 'Phone number is listed and correct', note: 'Should match the number on the website exactly.', weight: 10 },
+  { id: 'website', label: 'Website link is added', note: 'Even a single-page site is better than no link at all.', weight: 10 },
+  { id: 'photos', label: '5+ real photos uploaded', note: 'Listings with more photos get significantly more clicks and calls.', weight: 15 },
+  { id: 'reviews10', label: '10+ reviews', note: 'Review count and recency both affect ranking and trust.', weight: 10 },
+  { id: 'respond', label: 'Owner responds to reviews', note: 'Especially negative ones — responding shows the business is active.', weight: 10 },
+  { id: 'posts', label: 'Posted an update in the last 30 days', note: 'Google Posts (offers, updates, events) are an underused ranking signal.', weight: 5 },
+  { id: 'description', label: 'Business description is filled in', note: 'A clear description with relevant keywords helps both users and search.', weight: 5 },
+];
+
+const container = document.getElementById('checksContainer');
+CHECKS.forEach(c => {
+  const row = document.createElement('label');
+  row.className = 'check-row';
+  row.innerHTML = `
+    <input type="checkbox" id="chk-${c.id}" onchange="calc()">
+    <div>
+      <div class="label">${c.label}</div>
+      <div class="note">${c.note}</div>
+    </div>
+  `;
+  container.appendChild(row);
+});
+
+function calc() {
+  let score = 0;
+  const missing = [];
+  CHECKS.forEach(c => {
+    const checked = document.getElementById('chk-' + c.id).checked;
+    if (checked) score += c.weight; else missing.push(c);
+  });
+
+  const ring = document.getElementById('scoreRing');
+  const num = document.getElementById('scoreNum');
+  const grade = document.getElementById('gradeText');
+  const color = score >= 80 ? '#3FA796' : score >= 50 ? '#F2A33B' : '#C1502E';
+  ring.style.background = `conic-gradient(${color} ${score * 3.6}deg, #EFE9DA 0deg)`;
+  num.textContent = score;
+  num.style.color = color;
+  grade.textContent = score >= 80 ? 'Strong profile' : score >= 50 ? 'Room to improve' : 'Needs work';
+  grade.style.color = color;
+
+  const fixList = document.getElementById('fixListOut');
+  if (missing.length === 0) {
+    fixList.innerHTML = `<p style="font-size:13.5px;color:var(--ink-soft);text-align:center;">Every box checked — solid profile.</p>`;
+  } else {
+    fixList.innerHTML = `<p style="font-weight:700;font-size:13px;margin-bottom:8px;">Fix these first:</p>` +
+      missing.sort((a, b) => b.weight - a.weight).map(c => `
+        <div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--line);">✗ ${c.label}</div>
+      `).join('');
+  }
+}
+
+calc();
+</script>
+
+</body>
+</html>

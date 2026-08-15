@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free QR Code Generator — LocalScout</title>
+<meta name="description" content="Generate a free QR code for a link, WhatsApp number, or menu — download as PNG instantly. No signup, no expiry, no watermark.">
+<link rel="canonical" href="https://localscout.online/tools/qr-generator.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tools-shared.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  .type-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .type-btn { background: var(--card); border: 1.5px solid var(--line); border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .type-btn.active { background: var(--navy); color: var(--paper); border-color: var(--navy); }
+  #qrOut { display: flex; justify-content: center; padding: 24px 0; }
+  #qrOut img, #qrOut canvas { border-radius: 10px; border: 1px solid var(--line); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <div class="logo"><span class="dot"></span>LocalScout</div>
+    <div class="nav-links">
+      <a href="index.html">All tools</a>
+      <a href="../features.html">Features</a>
+      <a href="../pricing.html">Pricing</a>
+      <a href="../app.html" class="nav-cta">Log in / Sign up</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="kicker">Free Tool</div>
+  <h1>QR Code Generator</h1>
+  <p>For a website, WhatsApp number, or menu — generate and download a QR code in seconds. Free, no expiry.</p>
+</div>
+
+<main>
+  <div class="wrap">
+    <div class="tool-card">
+      <div class="type-row" id="typeRow"></div>
+
+      <div class="field" id="fieldWrap">
+        <label id="fieldLabel">Website URL</label>
+        <input type="text" id="qrInput" placeholder="https://example.com" oninput="renderQr()">
+      </div>
+
+      <div id="qrOut"></div>
+
+      <button class="btn btn-marigold" style="width:100%;" onclick="downloadQr()">Download PNG</button>
+
+      <div class="cta-banner" style="margin-top:24px;">
+        <p><strong>Building a demo site for a prospect?</strong><br>LocalScout builds an instant demo and finds the leads worth pitching it to.</p>
+        <a href="../app.html" class="btn btn-marigold btn-sm">Try LocalScout free →</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>© 2026 LocalScout. Free tools for web design agencies and freelancers. · <a href="../privacy-policy.html">Privacy Policy</a> · <a href="../about.html">About</a></footer>
+
+<script>
+const TYPES = {
+  url: { label: 'Website URL', placeholder: 'https://example.com', build: v => v },
+  whatsapp: { label: 'WhatsApp number (with country code)', placeholder: 'e.g. 919876543210', build: v => `https://wa.me/${v.replace(/\D/g,'')}` },
+  phone: { label: 'Phone number', placeholder: 'e.g. +91 98765 43210', build: v => `tel:${v.replace(/\s/g,'')}` },
+  text: { label: 'Any text (menu link, offer, note)', placeholder: 'Type anything', build: v => v },
+};
+
+let currentType = 'url';
+const typeRow = document.getElementById('typeRow');
+Object.keys(TYPES).forEach(key => {
+  const b = document.createElement('button');
+  b.className = 'type-btn' + (key === 'url' ? ' active' : '');
+  b.textContent = key === 'url' ? 'Website' : key === 'whatsapp' ? 'WhatsApp' : key[0].toUpperCase() + key.slice(1);
+  b.onclick = () => {
+    currentType = key;
+    [...typeRow.children].forEach(c => c.classList.toggle('active', c === b));
+    document.getElementById('fieldLabel').textContent = TYPES[key].label;
+    document.getElementById('qrInput').placeholder = TYPES[key].placeholder;
+    renderQr();
+  };
+  typeRow.appendChild(b);
+});
+
+let qrInstance = null;
+function renderQr() {
+  const raw = document.getElementById('qrInput').value.trim();
+  const out = document.getElementById('qrOut');
+  out.innerHTML = '';
+  if (!raw) return;
+  const value = TYPES[currentType].build(raw);
+  const holder = document.createElement('div');
+  out.appendChild(holder);
+  qrInstance = new QRCode(holder, { text: value, width: 220, height: 220, colorDark: '#132743', colorLight: '#ffffff' });
+}
+
+function downloadQr() {
+  const canvas = document.querySelector('#qrOut canvas');
+  const img = document.querySelector('#qrOut img');
+  const source = canvas || img;
+  if (!source) { alert('Enter a value first.'); return; }
+  const link = document.createElement('a');
+  link.download = 'qr-code.png';
+  link.href = canvas ? canvas.toDataURL('image/png') : img.src;
+  link.click();
+}
+
+document.getElementById('qrInput').value = 'https://localscout.online';
+renderQr();
+</script>
+
+</body>
+</html>
