@@ -1,4 +1,4 @@
-// POST /api/audit-website  { url: string }  →  { score, grade, gradeNote, checks: [...], summary }
+// POST /api/audit-website  { url: string }  →  { score, opportunityScore, grade, gradeNote, checks: [...], summary }
 //
 // Runs REAL checks against the given URL — no third-party paid APIs (no
 // Lighthouse/PageSpeed key needed), just a server-side fetch + basic HTML
@@ -18,8 +18,8 @@
 //
 // Opportunity Score = 100 − Website Health Score (i.e. this score,
 // inverted) — a business that fails everything is the *highest* priority
-// pitch, not the lowest. The UI computes that inversion; this endpoint
-// reports the straightforward health score plus a pass/fail per check.
+// pitch, not the lowest.
+const { isSafeUrl, normalizeUrl, safeFetchWithTimeout } = require('./_lib/security');
 
 const CHECKS = {
   reachable: { weight: 20, label: 'Real website exists' },
@@ -32,81 +32,23 @@ const CHECKS = {
   bookingForm: { weight: 5, label: 'Booking or enquiry form present' },
 };
 
-function normalizeUrl(input) {
-  let url = input.trim();
-  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-  return url;
-}
-
-// SSRF guard — this endpoint fetches whatever URL a visitor types in, so
-// without this check it could be used to probe internal services, localhost,
-// or cloud metadata endpoints (e.g. 169.254.169.254) via our server. Block
-// anything that isn't a public http(s) host before ever calling fetch().
-function isBlockedHost(hostname) {
-  const h = hostname.toLowerCase();
-  if (h === 'localhost' || h.endsWith('.localhost')) return true;
-  if (h === '0.0.0.0' || h === '::1' || h === '[::1]') return true;
-  const ipv4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (ipv4) {
-    const [a, b] = [parseInt(ipv4[1]), parseInt(ipv4[2])];
-    if (a === 10 || a === 127 || a === 0) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 169 && b === 254) return true; // link-local + cloud metadata
-  }
-  return false;
-}
-function isSafeUrl(url) {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
-    if (isBlockedHost(parsed.hostname)) return false;
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-async function fetchWithTimeout(url, ms) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), ms);
-  try {
-    let currentUrl = url;
-    for (let hop = 0; hop < 5; hop++) {
-      const res = await fetch(currentUrl, {
-        signal: controller.signal,
-        redirect: 'manual', // validate each redirect target ourselves before following it
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LocalScoutAudit/1.0; +https://localscout.online)' },
-      });
-      if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
-        const nextUrl = new URL(res.headers.get('location'), currentUrl).toString();
-        if (!isSafeUrl(nextUrl)) throw new Error('Redirect target not allowed');
-        currentUrl = nextUrl;
-        continue;
-      }
-      // Attach the final resolved URL so the caller can report it accurately.
-      Object.defineProperty(res, 'url', { value: currentUrl, configurable: true });
-      return res;
-    }
-    throw new Error('Too many redirects');
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
   const { url: rawUrl } = req.body || {};
   if (!rawUrl || typeof rawUrl !== 'string') {
-    return res.status(400).json({ error: 'url is required' });
+    res.status(400).json({ error: 'url is required' });
+    return;
   }
 
   const url = normalizeUrl(rawUrl);
   if (!isSafeUrl(url)) {
-    return res.status(400).json({ error: 'That URL cannot be checked.' });
+    res.status(400).json({ error: 'That URL cannot be checked.' });
+    return;
   }
+
   const results = {};
   let html = '';
   let finalUrl = url;
@@ -116,7 +58,7 @@ export default async function handler(req, res) {
   const start = Date.now();
   let response = null;
   try {
-    response = await fetchWithTimeout(url, 8000);
+    response = await safeFetchWithTimeout(url, 8000);
     finalUrl = response.url || url;
   } catch (e) {
     response = null;
@@ -192,8 +134,6 @@ export default async function handler(req, res) {
   }
 
   const score = possible > 0 ? Math.round((earned / possible) * 100) : 0;
-  // Opportunity Score = 100 − Website Health Score. A business that fails
-  // everything scores 100 here — maximum opportunity for a web designer.
   const opportunityScore = 100 - score;
   let grade, gradeNote;
   if (opportunityScore <= 30) { grade = 'Strong site'; gradeNote = 'Few gaps — low pitch priority.'; }
@@ -201,7 +141,7 @@ export default async function handler(req, res) {
   else if (opportunityScore <= 85) { grade = 'Significant gaps'; gradeNote = 'Strong pitch opportunity.'; }
   else { grade = 'Critical gaps'; gradeNote = 'Highest priority lead.'; }
 
-  return res.status(200).json({
+  res.status(200).json({
     url: finalUrl,
     score,
     opportunityScore,
@@ -214,4 +154,4 @@ export default async function handler(req, res) {
       ? `${finalUrl} — Website Health ${score}/100, Opportunity Score ${opportunityScore}/100 (${grade.toLowerCase()}).`
       : `No working website found at "${rawUrl}" — Opportunity Score 100/100 (highest priority lead).`,
   });
-}
+};
