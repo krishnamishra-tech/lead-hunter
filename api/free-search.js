@@ -161,10 +161,11 @@ module.exports = async function handler(req, res) {
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    const { data: usageRow } = await supabaseAdmin
-      .from('api_usage').select('osm_searches').eq('user_id', user.id).eq('usage_date', today).maybeSingle();
-    const currentCount = (usageRow && usageRow.osm_searches) || 0;
-    if (currentCount >= DAILY_LIMIT) {
+    const { data: newCount, error: usageError } = await supabaseAdmin.rpc('increment_usage_atomic', {
+      p_user_id: user.id, p_usage_date: today, p_column: 'osm_searches', p_daily_limit: DAILY_LIMIT,
+    });
+    if (usageError) throw usageError;
+    if (newCount > DAILY_LIMIT) {
       res.status(429).json({ error: 'Daily search limit reached — please try again tomorrow' });
       return;
     }
@@ -191,10 +192,6 @@ module.exports = async function handler(req, res) {
     // else. Dropping them here is what fixes "finding dead/empty leads".
     const contactable = allParsed.filter((r) => r.phone || r.website || r.email);
     const results = contactable.slice(0, wantedCount);
-
-    await supabaseAdmin
-      .from('api_usage')
-      .upsert({ user_id: user.id, usage_date: today, osm_searches: currentCount + 1 }, { onConflict: 'user_id,usage_date' });
 
     res.status(200).json({
       results,
