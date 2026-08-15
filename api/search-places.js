@@ -79,24 +79,27 @@ module.exports = async function handler(req, res) {
     ].join(',');
 
     const today = new Date().toISOString().slice(0, 10);
-    const { data: usageRow } = await supabaseAdmin
-      .from('api_usage')
-      .select('places_searches')
-      .eq('user_id', user.id)
-      .eq('usage_date', today)
-      .maybeSingle();
-    let currentCount = (usageRow && usageRow.places_searches) || 0;
-    if (currentCount >= DAILY_SEARCH_LIMIT) {
-      res.status(429).json({ error: 'Daily search limit reached — please try again tomorrow' });
-      return;
-    }
 
     const allPlaces = [];
     let pageToken = null;
     let pagesFetched = 0;
 
     for (let page = 0; page < wantedPages; page++) {
-      if (currentCount >= DAILY_SEARCH_LIMIT) break; // stop early if quota runs out mid-pagination
+      // Atomically reserve one unit of quota for this page BEFORE calling
+      // Google — if another concurrent request already used up today's
+      // quota, this returns a count over the limit and we stop here
+      // instead of racing past the cap.
+      const { data: newCount, error: usageError } = await supabaseAdmin.rpc('increment_usage_atomic', {
+        p_user_id: user.id, p_usage_date: today, p_column: 'places_searches', p_daily_limit: DAILY_SEARCH_LIMIT,
+      });
+      if (usageError) throw usageError;
+      if (newCount > DAILY_SEARCH_LIMIT) {
+        if (page === 0) {
+          res.status(429).json({ error: 'Daily search limit reached — please try again tomorrow' });
+          return;
+        }
+        break; // quota ran out mid-pagination — return what we already fetched
+      }
 
       const body = pageToken
         ? { textQuery: query.trim(), pageSize: PAGE_SIZE, pageToken }
@@ -124,21 +127,11 @@ module.exports = async function handler(req, res) {
       }
 
       pagesFetched++;
-      currentCount++;
       allPlaces.push(...(data.places || []));
 
       if (!data.nextPageToken || allPlaces.length >= wantedCount) break;
       pageToken = data.nextPageToken;
       await sleep(PAGE_TOKEN_DELAY_MS);
-    }
-
-    if (pagesFetched > 0) {
-      await supabaseAdmin
-        .from('api_usage')
-        .upsert(
-          { user_id: user.id, usage_date: today, places_searches: currentCount },
-          { onConflict: 'user_id,usage_date' }
-        );
     }
 
     const results = allPlaces.slice(0, wantedCount).map((p) => ({
