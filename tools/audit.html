@@ -58,7 +58,6 @@
           <div class="score-ring" id="scoreRing">
             <span class="num" id="scoreNum">—</span>
           </div>
-          <p style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--brass);margin-bottom:10px;">Opportunity Score</p>
           <p style="font-weight:700;font-size:15px;margin-bottom:4px;" id="gradeText"></p>
           <p style="font-size:13px;color:var(--ink-soft);" id="summaryText"></p>
         </div>
@@ -73,7 +72,7 @@
   </div>
 </main>
 
-<footer>© 2026 LocalScout. Free tools for web design agencies and freelancers.</footer>
+<footer>© 2026 LocalScout. Free tools for web design agencies and freelancers. · <a href="../privacy-policy.html">Privacy Policy</a> · <a href="../about.html">About</a></footer>
 
 <script>
 async function runAudit() {
@@ -112,16 +111,13 @@ function renderResult(data) {
   const banner = document.getElementById('ctaBanner');
   const ctaHeadline = document.getElementById('ctaHeadline');
 
-  // Opportunity Score is the number that matters for a pitch — higher means
-  // more worth reaching out to. It's simply 100 − website health score.
-  const opp = typeof data.opportunityScore === 'number' ? data.opportunityScore : (100 - data.score);
-  const color = opp >= 86 ? '#C1502E' : opp >= 61 ? '#F2A33B' : opp >= 31 ? '#F2C94C' : '#3FA796';
-  ring.style.background = `conic-gradient(${color} ${opp * 3.6}deg, #EFE9DA 0deg)`;
-  num.textContent = opp;
+  const color = data.score >= 80 ? '#3FA796' : data.score >= 50 ? '#F2A33B' : '#C1502E';
+  ring.style.background = `conic-gradient(${color} ${data.score * 3.6}deg, #EFE9DA 0deg)`;
+  num.textContent = data.score;
   num.style.color = color;
-  grade.textContent = `${data.grade || ''}${data.gradeNote ? ' — ' + data.gradeNote : ''}`;
+  grade.textContent = data.grade;
   grade.style.color = color;
-  summary.textContent = `Opportunity Score ${opp}/100 (Website Health ${data.score}/100). ${data.summary || ''}`;
+  summary.textContent = data.summary;
 
   list.innerHTML = (data.checks || []).map(c => `
     <li class="${c.pass ? 'pass' : 'fail'}">
@@ -133,9 +129,9 @@ function renderResult(data) {
     </li>
   `).join('');
 
-  if (opp >= 31) {
+  if (data.score < 80) {
     banner.style.display = 'flex';
-    ctaHeadline.textContent = opp >= 86
+    ctaHeadline.textContent = data.score < 50
       ? 'This is exactly the gap worth pitching.'
       : "There's a real opening here — worth a pitch.";
   } else {
