@@ -35,6 +35,10 @@
   .nav-links { display: flex; align-items: center; gap: 28px; font-size: 14px; color: #C9D4E3; }
   .nav-links a:hover { color: var(--paper); }
   .nav-cta { background: var(--marigold); color: var(--navy-deep); font-weight: 700; padding: 9px 18px; border-radius: 8px; font-size: 13.5px; }
+  @media (max-width: 760px) {
+    .nav-links a:not(.nav-cta) { display: none; }
+    .nav-links { gap: 12px; }
+  }
 
   .page-hero { background: var(--navy); padding: 60px 0 50px; text-align: center; }
   .page-hero h1 { font-family: var(--display); font-size: 36px; font-weight: 700; color: var(--paper); margin-bottom: 12px; }
