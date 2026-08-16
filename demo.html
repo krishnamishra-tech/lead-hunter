@@ -7,38 +7,22 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Poppins:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
-  body { font-family: 'DM Sans', -apple-system, sans-serif; line-height: 1.6; -webkit-font-smoothing: antialiased; }
-  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 32px; }
-  a { text-decoration: none; }
-  section { padding: 96px 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+  a { text-decoration: none; color: inherit; }
+  section { padding: 84px 0; }
   h1, h2, h3 { line-height: 1.15; }
-  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 8px; padding: 16px 32px; border-radius: 100px;
-    font-weight: 700; font-size: 14.5px; cursor: pointer; border: none; transition: transform .15s ease, box-shadow .15s ease;
-  }
-  .btn:hover { transform: translateY(-1px); }
-  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
-  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
-  .fade-up { animation: fadeUp .8s ease both; }
-  .fade-up.d1 { animation-delay: .1s; } .fade-up.d2 { animation-delay: .22s; } .fade-up.d3 { animation-delay: .34s; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-  .icon-svg { width: 22px; height: 22px; }
-  @media (max-width: 900px) {
-    .grid-4 { grid-template-columns: repeat(2, 1fr); }
-    .grid-3 { grid-template-columns: 1fr; }
-    .grid-2 { grid-template-columns: 1fr; gap: 32px; }
-    section { padding: 56px 0; }
-    .wrap { padding: 0 22px; }
-  }
+  .rise { opacity: 0; transform: translateY(14px); animation: rise .8s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+  .r1 { animation-delay: .05s; } .r2 { animation-delay: .14s; } .r3 { animation-delay: .23s; } .r4 { animation-delay: .32s; }
+  @media (prefers-reduced-motion: reduce) { .rise { opacity: 1; transform: none; animation: none; } }
+  @media (max-width: 780px) { section { padding: 52px 0; } .wrap { padding: 0 22px; } }
   #app { display: none; }
   #fallback { max-width: 480px; margin: 100px auto; text-align: center; padding: 0 24px; font-family: sans-serif; color: #666; }
-  .placeholder-note { font-size: 11px; opacity: .65; font-style: italic; }
 </style>
 </head>
 <body>
@@ -55,402 +39,378 @@ function decodePayload() {
   const params = new URLSearchParams(window.location.search);
   const raw = params.get('d');
   if (!raw) return null;
-  try { return JSON.parse(decodeURIComponent(atob(raw))); } catch (e) { return null; }
-}
-
-// ── Category → theme mapping ──────────────────────────────────────────
-const THEME_MAP = {
-  real_estate: 'real_estate',
-  salons: 'beauty', spas: 'beauty', clothing_boutiques: 'beauty', boutiques: 'beauty', jewellers: 'beauty',
-  dentists: 'health', clinics: 'health', daycare: 'health',
-  interior_designers: 'design', architects: 'design', furniture_stores: 'design',
-  gyms: 'fitness',
-  cafes: 'cafe', restaurants: 'cafe', bakeries: 'cafe',
-};
-function getThemeKey(category) { return THEME_MAP[category] || 'general'; }
-
-// ── Small reusable line-art icon set (no emoji — keeps things premium) ──
-const ICON_PATHS = [
-  '<circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2 2 5-5" stroke-linecap="round" stroke-linejoin="round"/>', // check-circle
-  '<path d="M12 3l2.6 5.9L21 9.6l-4.5 4.2L17.6 21 12 17.6 6.4 21l1.1-7.2L3 9.6l6.4-.7L12 3z" stroke-linejoin="round"/>', // star
-  '<path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6l7-3z" stroke-linejoin="round"/>', // shield
-  '<path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" stroke-linejoin="round"/>', // bolt
-  '<path d="M12 20s-7-4.4-7-10a4.5 4.5 0 0 1 7-3.7A4.5 4.5 0 0 1 19 10c0 5.6-7 10-7 10z" stroke-linejoin="round"/>', // heart
-  '<rect x="5" y="5" width="14" height="14" rx="3" transform="rotate(45 12 12)"/>', // diamond
-];
-function icon(i, color, size) {
-  return `<svg class="icon-svg" style="width:${size||22}px;height:${size||22}px;" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.6">${ICON_PATHS[i % ICON_PATHS.length]}</svg>`;
-}
-
-function starRow(rating) {
-  const full = Math.round(rating);
-  return '★'.repeat(full) + '☆'.repeat(5 - full);
+  try {
+    return JSON.parse(decodeURIComponent(atob(raw)));
+  } catch (e) {
+    return null;
+  }
 }
 function esc(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function starRow(rating) {
+  const full = Math.round(rating || 0);
+  return '★'.repeat(Math.max(0, full)) + '☆'.repeat(Math.max(0, 5 - full));
 }
 
-// ── Theme configs ──────────────────────────────────────────────────────
-// Palettes and copy voice follow standard industry conventions (navy/gold
-// for real estate, dark/lime for fitness, cream/green for cafes, etc.) —
-// each theme is a distinct system, not one template with colors swapped.
-const THEMES = {
-  real_estate: {
-    headFont: "'Fraunces', Georgia, serif", weight: 700,
-    ink: '#12203a', paper: '#faf8f3', card: '#ffffff', line: '#e8e3d6',
-    dark: '#0d1830', darkAlt: '#1a2c4d', accent: '#b8863f', accentInk: '#3a2c10', accentSoft: '#f3e9d3',
-    tagline: (n, ci) => `A calmer way to find your next property in ${ci || 'the city'}.`,
-    eyebrow: 'REAL ESTATE', offerTag: 'FREE CONSULTATION', offerLine: 'Book a no-pressure chat this week',
-    trustBullets: ['Local market experts', 'Verified listings', 'End-to-end support', 'No pushy sales'],
-    aboutTitle: 'About Us',
-    about: (n, ci) => `${n} helps buyers, sellers, and renters navigate the ${ci || 'local'} market without the usual pressure — honest guidance, straight answers, and a process built around what actually fits your move.`,
-    aboutChecklist: ['Verified property listings', 'Transparent pricing', 'Dedicated support', 'Fast paperwork turnaround'],
-    services: [
-      { t: 'Buying Assistance', d: 'End-to-end support finding and closing on the right property.' },
-      { t: 'Selling & Listing', d: 'Pricing, staging guidance, and marketing that gets real interest.' },
-      { t: 'Rental Search', d: 'Curated options matched to your budget and timeline.' },
-      { t: 'Consultation', d: 'A no-pressure conversation about your options first.' },
-    ],
-    stats: [['Local', 'Market focus'], ['Verified', 'Every listing'], ['Fast', 'Response time'], ['Trusted', 'By the community']],
-    pricing: [
-      { tier: 'Consultation', price: 'Free', unit: '', items: ['Property assessment', 'Market overview', 'No obligation'] },
-      { tier: 'Full Service', price: 'Custom', unit: 'quote', items: ['Buying/selling support', 'Negotiation', 'Paperwork handled'], popular: true },
-      { tier: 'Premium', price: 'Custom', unit: 'quote', items: ['Priority listings', 'Dedicated agent', 'Concierge support'] },
-    ],
-    ctaTitle: 'Ready to find your next property?',
+// ── Category → template family ──────────────────────────────────────
+// Every niche LocalScout supports maps to one of three families. New
+// niches added later just need one line here — everything else (the
+// actual template rendering) is shared.
+const FAMILY_MAP = {
+  real_estate: 'trust', dentists: 'trust', clinics: 'trust', law_firms: 'trust',
+  ca_firms: 'trust', coaching_centers: 'trust', tuition_centers: 'trust',
+  daycare: 'trust', travel_agents: 'trust',
+
+  restaurants: 'transactional', cafes: 'transactional', bakeries: 'transactional',
+  pet_services: 'transactional', car_dealers: 'transactional',
+
+  salons: 'visual', gyms: 'visual', interior_designers: 'visual', architects: 'visual',
+  boutiques: 'visual', yoga_studios: 'visual', photographers: 'visual',
+  event_planners: 'visual', wedding: 'visual', spas: 'visual',
+  clothing_boutiques: 'visual', jewellers: 'visual', furniture_stores: 'visual',
+  hotels: 'visual', graphic_designers: 'visual', digital_marketers: 'visual',
+  video_editors: 'visual',
+};
+function getFamily(categoryKey) { return FAMILY_MAP[categoryKey] || 'visual'; }
+
+// Short, generic, category-flavored phrases — never fabricates specific
+// facts (no invented prices, listings, or menu items), just tone.
+const FAMILY_COPY = {
+  trust: {
+    kicker: (cl, area) => `${cl || 'Local business'}${area ? ' · ' + area : ''}`,
+    headline: (n, ci) => `${ci ? 'Serving ' + ci + ' with' : 'Built on'} experience clients actually trust.`,
+    body: (n, ci, cl) => `${n} brings real experience and a straightforward approach to every client — no pressure, just honest guidance from someone who knows ${(cl || 'this work').toLowerCase()} in ${ci || 'the local area'}.`,
+    sectionTitle: 'What we offer',
+    ctaLabel: 'Schedule a call',
+    ctaTitle: 'Ready to get started?',
   },
-  beauty: {
-    headFont: "'Playfair Display', Georgia, serif", weight: 700,
-    ink: '#3a2530', paper: '#fdf6f5', card: '#ffffff', line: '#f0dbe0',
-    dark: '#3d1f2b', darkAlt: '#5c2c3e', accent: '#b3486b', accentInk: '#4a1424', accentSoft: '#f7e6ea',
-    tagline: (n, ci) => `Look and feel your best, right here in ${ci || 'your city'}.`,
-    eyebrow: 'BEAUTY & WELLNESS', offerTag: 'NEW CLIENT OFFER', offerLine: '15% off your first visit',
-    trustBullets: ['Certified stylists', 'Premium products', 'Relaxing space', 'Easy booking'],
-    aboutTitle: 'Our Story',
-    about: (n, ci, cl) => `${n} is a ${(cl || 'beauty').toLowerCase()} studio in ${ci || 'your area'}, built around one idea: everyone deserves to leave feeling more confident than when they walked in.`,
-    aboutChecklist: ['Certified stylists & therapists', 'Premium, cruelty-free products', 'Relaxing, clean space', 'Easy online booking'],
-    services: [
-      { t: 'Hair & Styling', d: 'Cuts, color, and styling tailored to you.' },
-      { t: 'Skincare & Facials', d: 'Treatments that actually fit your skin.' },
-      { t: 'Spa Treatments', d: 'A proper reset — massage, body treatments, and more.' },
-      { t: 'Bridal Packages', d: 'Full look planning for your big day.' },
-    ],
-    stats: [['Skilled', 'Certified team'], ['Premium', 'Products used'], ['Relaxing', 'Studio space'], ['Loved', 'By regulars']],
-    pricing: [
-      { tier: 'Essentials', price: '₹499', unit: 'onwards', items: ['Haircut & style', 'Basic facial', 'Quick touch-ups'] },
-      { tier: 'Signature', price: '₹1,499', unit: 'onwards', items: ['Full color service', 'Spa facial', 'Styling included'], popular: true },
-      { tier: 'Bridal', price: 'Custom', unit: 'package', items: ['Full bridal look', 'Trial session', 'Day-of team'] },
-    ],
-    ctaTitle: 'Book your appointment today',
+  transactional: {
+    kicker: (cl, area) => `${cl || 'Local business'}${area ? ' · ' + area : ''}`,
+    headline: (n, ci) => `Quality ${ci ? 'in ' + ci + ', ' : ''}worth coming back for.`,
+    body: (n, ci, cl) => `${n} keeps it simple: good ${(cl || 'service').toLowerCase()}, straightforward pricing, and a team that treats every visit like it matters.`,
+    sectionTitle: 'Popular right now',
+    ctaLabel: 'Order on WhatsApp',
+    ctaTitle: 'Ready to order?',
   },
-  health: {
-    headFont: "'Poppins', sans-serif", weight: 700,
-    ink: '#123939', paper: '#f5faf9', card: '#ffffff', line: '#dcece9',
-    dark: '#0f2e2e', darkAlt: '#164545', accent: '#1f8a7a', accentInk: '#0c2d27', accentSoft: '#e3f2ef',
-    tagline: (n, ci) => `Thoughtful care for ${ci || 'your community'}, close to home.`,
-    eyebrow: 'HEALTHCARE', offerTag: 'NEW PATIENTS', offerLine: 'Free first consultation this month',
-    trustBullets: ['Experienced doctors', 'Modern equipment', 'Same-day slots', 'Insurance friendly'],
-    aboutTitle: 'About Our Practice',
-    about: (n, ci) => `${n} provides attentive, modern care for the ${ci || 'local'} community. Our team takes the time to actually listen, explain what's going on, and treat you like a person — not a number on a chart.`,
-    aboutChecklist: ['Experienced, licensed practitioners', 'Modern diagnostic equipment', 'Same-day appointments available', 'Clear, honest explanations'],
-    services: [
-      { t: 'Consultation', d: 'A thorough first conversation about your health.' },
-      { t: 'Diagnostics', d: 'Accurate testing with fast, clear results.' },
-      { t: 'Treatment Plans', d: 'Care built around your specific case.' },
-      { t: 'Emergency Care', d: 'Here when you need us most.' },
-    ],
-    stats: [['Experienced', 'Care team'], ['Modern', 'Equipment'], ['Same-day', 'Availability'], ['Trusted', 'Locally']],
-    pricing: [
-      { tier: 'Consultation', price: '₹300', unit: 'onwards', items: ['General checkup', 'Health advice', 'Referral if needed'] },
-      { tier: 'Diagnostics', price: '₹800', unit: 'onwards', items: ['Standard tests', 'Fast results', 'Doctor review'], popular: true },
-      { tier: 'Full Care', price: 'Custom', unit: 'plan', items: ['Ongoing treatment', 'Regular follow-up', 'Priority booking'] },
-    ],
-    ctaTitle: 'Book a consultation',
-  },
-  design: {
-    headFont: "'Poppins', sans-serif", weight: 700,
-    ink: '#3a2a1c', paper: '#faf6f1', card: '#ffffff', line: '#ecdfd0',
-    dark: '#2c1d10', darkAlt: '#432c19', accent: '#c17a3d', accentInk: '#3a2510', accentSoft: '#f5e6d5',
-    tagline: (n, ci) => `Spaces that feel considered, built in ${ci || 'your city'}.`,
-    eyebrow: 'INTERIOR & ARCHITECTURE', offerTag: 'FREE SITE VISIT', offerLine: 'First consultation, no charge',
-    trustBullets: ['In-house designers', 'Turnkey execution', 'On-time delivery', 'Transparent quotes'],
-    aboutTitle: 'About Us',
-    about: (n, ci) => `${n} designs spaces that work as hard as they look good. Based in ${ci || 'your area'}, we work closely with every client to turn a blank room into somewhere you actually want to be.`,
-    aboutChecklist: ['In-house design team', 'Turnkey project execution', 'Transparent, itemized quotes', 'On-time project delivery'],
-    services: [
-      { t: 'Residential Design', d: 'Homes that reflect how you actually live.' },
-      { t: 'Commercial Design', d: 'Spaces built for how your business runs.' },
-      { t: 'Renovation', d: 'Reworking what you have into what you need.' },
-      { t: 'Consultation', d: 'A first conversation about the possibilities.' },
-    ],
-    stats: [['In-house', 'Design team'], ['Turnkey', 'Execution'], ['On-time', 'Delivery'], ['Transparent', 'Quotes']],
-    pricing: [
-      { tier: 'Consultation', price: 'Free', unit: '', items: ['Site visit', 'Concept discussion', 'No obligation'] },
-      { tier: 'Design Package', price: 'Custom', unit: 'quote', items: ['Full space plan', '3D visualization', 'Material selection'], popular: true },
-      { tier: 'Turnkey', price: 'Custom', unit: 'quote', items: ['Design + execution', 'Project management', 'Handover ready'] },
-    ],
-    ctaTitle: "Let's design your space",
-  },
-  fitness: {
-    headFont: "'Manrope', sans-serif", weight: 800,
-    ink: '#f4f6f4', paper: '#f6f7f5', card: '#181c19', line: '#2a3129',
-    dark: '#0c0f0d', darkAlt: '#1a201b', accent: '#c8ea3e', accentInk: '#12180f', accentSoft: '#22281f',
-    isDarkTheme: true,
-    tagline: (n, ci) => `Build your strength. Transform your life — in ${ci || 'your city'}.`,
-    eyebrow: 'FITNESS', offerTag: 'NEW MEMBER OFFER', offerLine: 'Get 20% off all membership plans',
-    trustBullets: ['Modern equipment', 'Certified trainers', 'Personal coaching', 'Flexible timings'],
-    aboutTitle: 'More Than Just A Gym',
-    about: (n, ci) => `Whether you just want to work out or you're building a stronger, healthier you — ${n} in ${ci || 'your area'} has the equipment, coaching, and community to back you the whole way.`,
-    aboutChecklist: ['State-of-the-art equipment', 'Clean, spacious facility', 'Nutrition guidance', 'Supportive community'],
-    services: [
-      { t: 'Muscle Building', d: 'Build strength and increase muscle mass with expert guidance.' },
-      { t: 'Fat Loss', d: 'High-intensity workouts designed to burn fat and tone your body.' },
-      { t: 'Strength Training', d: 'Increase power, endurance, and overall functional strength.' },
-      { t: 'Group Classes', d: 'Fun, motivating group sessions for all fitness levels.' },
-    ],
-    stats: [['Modern', 'Equipment'], ['Certified', 'Trainers'], ['Flexible', 'Timings'], ['Active', 'Community']],
-    pricing: [
-      { tier: 'Basic', price: '₹999', unit: '/month', items: ['Gym access', 'Basic equipment', 'Locker facility'] },
-      { tier: 'Standard', price: '₹1,499', unit: '/month', items: ['Gym access', 'All equipment', 'Group classes', '2 PT sessions/mo'], popular: true },
-      { tier: 'Premium', price: '₹2,199', unit: '/month', items: ['All Standard benefits', 'Personal training', 'Nutrition guidance'] },
-    ],
-    ctaTitle: "Don't wait. Start today.",
-  },
-  cafe: {
-    headFont: "'Fraunces', Georgia, serif", weight: 600,
-    ink: '#2b2015', paper: '#faf6ee', card: '#ffffff', line: '#e6dcc8',
-    dark: '#1e2e21', darkAlt: '#2a3f2d', accent: '#c98a3e', accentInk: '#3a2510', accentSoft: '#f3e7d3',
-    tagline: (n, ci) => `Where every visit feels like ${ci ? 'a piece of ' + ci : 'home'}.`,
-    eyebrow: 'CAFE & FOOD', offerTag: 'JOIN OUR REWARDS', offerLine: 'Earn points on every order',
-    trustBullets: ['Fresh daily', 'Cozy ambience', 'Skilled baristas & chefs', 'Community events'],
-    aboutTitle: 'More Than Just A Cafe',
-    about: (n, ci) => `At ${n}, we believe good food brings people together. We source quality ingredients, prepare everything with care, and create a space in ${ci || 'the neighborhood'} where memories are made.`,
-    aboutChecklist: ['Fresh, quality ingredients', 'Skilled baristas & kitchen team', 'Cozy, welcoming ambience', 'Community events & specials'],
-    services: [
-      { t: 'Coffee & Beverages', d: 'Handcrafted drinks made fresh, every single cup.' },
-      { t: 'All-Day Menu', d: 'Breakfast through dinner, made with care.' },
-      { t: 'Desserts & Bakes', d: 'In-house baked treats, best with a warm drink.' },
-      { t: 'Events & Catering', d: 'Live music nights, workshops, and private catering.' },
-    ],
-    stats: [['Fresh', 'Daily'], ['Cozy', 'Ambience'], ['Skilled', 'Team'], ['Loved', 'Locally']],
-    pricing: [
-      { tier: 'Coffee & Bites', price: '₹150', unit: 'onwards', items: ['Handcrafted coffee', 'Light snacks', 'Dine-in or takeaway'] },
-      { tier: 'Full Meal', price: '₹350', unit: 'onwards', items: ['Full menu access', 'Dessert included', 'Group-friendly'], popular: true },
-      { tier: 'Private Event', price: 'Custom', unit: 'quote', items: ['Space booking', 'Custom catering', 'Dedicated staff'] },
-    ],
-    ctaTitle: 'Come in for a cup today',
-  },
-  general: {
-    headFont: "'Poppins', sans-serif", weight: 700,
-    ink: '#161a2e', paper: '#f5f7fd', card: '#ffffff', line: '#e2e6f5',
-    dark: '#131a33', darkAlt: '#1c2650', accent: '#2f6fed', accentInk: '#0e1c40', accentSoft: '#e6edfd',
-    tagline: (n, ci) => `Quality service, right here in ${ci || 'your area'}.`,
-    eyebrow: (cl) => (cl || 'LOCAL BUSINESS').toUpperCase(), offerTag: 'NEW CUSTOMER OFFER', offerLine: 'Ask us about current promotions',
-    trustBullets: ['Trusted locally', 'Reliable service', 'Fair pricing', 'Easy to reach'],
-    aboutTitle: 'About Us',
-    about: (n, ci, cl) => `${n} is proud to serve the ${ci || 'local'} community with reliable, straightforward ${(cl || 'service').toLowerCase()}. We focus on doing right by every customer, every time.`,
-    aboutChecklist: ['Reliable, on-time service', 'Fair, transparent pricing', 'Easy to reach and book', 'Trusted by the community'],
-    services: (cl) => [
-      { t: `${cl || 'Core'} Services`, d: 'Our main offering, done right.' },
-      { t: 'Consultation', d: 'A no-obligation first conversation.' },
-      { t: 'Custom Packages', d: 'Built around what you actually need.' },
-      { t: 'Ongoing Support', d: "We're here after the first visit too." },
-    ],
-    stats: [['Reliable', 'Service'], ['Fair', 'Pricing'], ['Local', 'Focus'], ['Trusted', 'By customers']],
-    pricing: [
-      { tier: 'Starter', price: 'Custom', unit: 'quote', items: ['Core service', 'Standard support'] },
-      { tier: 'Standard', price: 'Custom', unit: 'quote', items: ['Full service', 'Priority support', 'Follow-up included'], popular: true },
-      { tier: 'Premium', price: 'Custom', unit: 'quote', items: ['Everything in Standard', 'Dedicated contact', 'Custom terms'] },
-    ],
-    ctaTitle: 'Get in touch today',
+  visual: {
+    kicker: (cl, area) => `${cl || 'Local business'}${area ? ' · ' + area : ''}`,
+    headline: (n, ci) => `Work that speaks for itself${ci ? ', right here in ' + ci : ''}.`,
+    body: (n, ci, cl) => `${n} focuses on craft and detail in every ${(cl || 'project').toLowerCase()} — based in ${ci || 'the local area'}, built around what actually fits the client.`,
+    sectionTitle: 'Recent work',
+    ctaLabel: 'Get in touch',
+    ctaTitle: 'Like what you see?',
   },
 };
 
-function render(payload) {
-  const name = payload.n || 'Your Business';
-  const categoryKey = payload.c || 'other';
-  const categoryLabel = payload.cl || 'Business';
-  const city = payload.ci || '';
-  const area = payload.ar || '';
-  const phone = (payload.p || '').replace(/[^0-9]/g, '');
-  const rating = payload.r;
-  const ratingCount = payload.rc;
+// ── Family: Trust & Credibility ─────────────────────────────────────
+// Real estate, clinics, law/CA firms, tuition — sells on experience and
+// proof. Stone paper + bottle green + copper, Fraunces headlines, an
+// asymmetric editorial hero, and pen-circle annotations around the
+// credibility stats (the signature move of this family).
+function renderTrust(d) {
+  const copy = FAMILY_COPY.trust;
+  const waLink = d.phone ? `https://wa.me/${d.phone}` : null;
+  const telLink = d.phone ? `tel:${d.phone}` : null;
+  const initials = (d.name || 'B').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
-  const themeKey = getThemeKey(categoryKey);
-  const t = THEMES[themeKey];
-  const services = typeof t.services === 'function' ? t.services(categoryLabel) : t.services;
-  const eyebrowText = typeof t.eyebrow === 'function' ? t.eyebrow(categoryLabel) : t.eyebrow;
-  const waLink = phone ? `https://wa.me/${phone}` : null;
-  const telLink = phone ? `tel:${phone}` : null;
-  const heroTextColor = t.isDarkTheme ? t.ink : '#fff';
-  const bodyBg = t.isDarkTheme ? t.dark : t.paper;
-  const bodyInk = t.isDarkTheme ? t.ink : t.ink;
-
-  document.title = name;
-  document.body.style.background = bodyBg;
-  document.body.style.color = bodyInk;
-
-  const navBg = t.isDarkTheme ? t.dark : t.paper;
-  const cardBg = t.card;
-
-  const trustHTML = t.trustBullets.map((b, i) => `
-    <div style="display:flex;align-items:center;gap:8px;">
-      ${icon(i, t.accent, 17)}
-      <span style="font-size:12.5px;color:${t.isDarkTheme ? '#c7ceca' : t.ink + 'bb'};">${esc(b)}</span>
-    </div>`).join('');
-
-  const statsHTML = t.stats.map((s, i) => `
-    <div style="text-align:center;">
-      <div style="font-family:${t.headFont};font-size:26px;font-weight:${t.weight};color:${t.accent};margin-bottom:4px;">${esc(s[0])}</div>
-      <div style="font-size:12px;color:${t.isDarkTheme ? '#9aa39c' : t.ink + '99'};">${esc(s[1])}</div>
-    </div>`).join('');
-
-  const servicesHTML = services.map((s, i) => `
-    <div style="background:${cardBg};border:1px solid ${t.line};border-radius:16px;padding:28px 24px;">
-      <div style="width:44px;height:44px;border-radius:12px;background:${t.accentSoft};display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
-        ${icon(i, t.accent, 20)}
+  document.title = d.name;
+  return `
+  <style>
+    body{ background:#0D110E; }
+    .t-wrap{ max-width:1080px; margin:0 auto; }
+    .t-page{ background:#EAE4D6; border-radius:0; }
+    .t-nav{ display:flex; justify-content:space-between; align-items:center; padding:22px 5vw; background:#22392F; position:sticky; top:0; z-index:5; }
+    .t-brand{ color:#EAE4D6; font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:18px; }
+    .t-brand em{ color:#C79A6C; font-style:normal; }
+    .t-cta{ border:1px solid rgba(234,228,214,0.3); color:#EAE4D6; font-size:12px; font-weight:600; padding:10px 18px; border-radius:2px; letter-spacing:0.03em; text-transform:uppercase; }
+    .t-hero{ display:grid; grid-template-columns:1.1fr 0.9fr; min-height:340px; }
+    .t-copy{ padding:56px 5vw 30px; display:flex; flex-direction:column; justify-content:center; }
+    .t-kicker{ font-family:ui-monospace,monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#9C6B45; margin-bottom:14px; display:flex; align-items:center; gap:9px; }
+    .t-kicker::before{ content:""; width:22px; height:1px; background:#9C6B45; }
+    .t-copy h1{ font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:clamp(28px,4vw,44px); line-height:1.08; letter-spacing:-0.015em; color:#1B1912; margin-bottom:18px; }
+    .t-copy p{ font-size:14.5px; color:#5B5648; line-height:1.65; max-width:400px; margin-bottom:26px; }
+    .t-stats{ display:flex; gap:30px; flex-wrap:wrap; }
+    .t-stat{ position:relative; }
+    .t-stat b{ display:block; font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:22px; color:#1B1912; }
+    .t-stat span{ font-size:10.5px; color:#7A7563; letter-spacing:0.04em; text-transform:uppercase; }
+    .t-stat.circled::before{
+      content:""; position:absolute; top:-8px; left:-14px; right:-14px; bottom:-6px;
+      border:1.5px solid #9C6B45; border-radius:50%; opacity:0.55; pointer-events:none;
+      transform:rotate(-3deg);
+    }
+    .t-photo{ position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center;
+      background:radial-gradient(120% 100% at 80% 0%, #3E5A4A 0%, transparent 55%), radial-gradient(100% 90% at 10% 100%, #C79A6C 0%, transparent 45%), linear-gradient(160deg, #22392F 0%, #17251E 100%); }
+    .t-avatar{ width:96px; height:96px; border-radius:50%; background:rgba(234,228,214,0.1); border:1px solid rgba(234,228,214,0.25); display:flex; align-items:center; justify-content:center; color:#EAE4D6; font-family:'Fraunces',Georgia,serif; font-size:30px; font-weight:500; }
+    .t-services{ padding:10px 5vw 40px; }
+    .t-services .head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:22px; }
+    .t-services .head h2{ font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:19px; color:#1B1912; }
+    .t-grid{ display:grid; grid-template-columns:1.4fr 1fr; grid-template-rows:auto auto; gap:14px; }
+    .t-card{ background:#fff; border-radius:6px; border:1px solid rgba(27,25,18,0.07); overflow:hidden; }
+    .t-card.big{ grid-row:span 2; min-height:230px; display:flex; flex-direction:column; }
+    .t-card .img{ height:100px; background:linear-gradient(135deg,#3C4C5A,#28333E); }
+    .t-card.big .img{ flex:1; }
+    .t-card .info{ padding:14px 16px; }
+    .t-card .tag{ display:inline-block; font-size:9.5px; letter-spacing:0.08em; text-transform:uppercase; color:#9C6B45; font-family:ui-monospace,monospace; margin-bottom:6px; }
+    .t-card .name{ font-weight:600; font-size:13.5px; color:#1B1912; }
+    .t-card .sub{ font-size:11.5px; color:#8A8570; margin-top:2px; }
+    .t-quote{ margin:0 5vw 40px; padding:30px 32px; background:#DFD8C6; border-radius:6px; position:relative; }
+    .t-quote .mark{ font-family:'Fraunces',Georgia,serif; font-size:56px; color:#9C6B45; opacity:0.35; line-height:0.6; display:block; margin-bottom:8px; }
+    .t-quote p{ font-size:15px; color:#3A382F; line-height:1.65; font-style:italic; max-width:540px; }
+    .t-quote .who{ margin-top:14px; font-style:normal; font-size:11px; color:#8A8570; font-family:ui-monospace,monospace; letter-spacing:0.03em; }
+    .t-map{ padding:10px 5vw 44px; }
+    .t-map h2{ font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:19px; color:#1B1912; margin-bottom:16px; }
+    .t-map-box{ height:180px; border-radius:6px; position:relative; overflow:hidden; background:#DFD8C6;
+      background-image: linear-gradient(rgba(27,25,18,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(27,25,18,0.06) 1px, transparent 1px);
+      background-size:28px 28px; }
+    .t-pin{ position:absolute; top:50%; left:50%; transform:translate(-50%,-100%); }
+    .t-pin .dot{ width:16px; height:16px; border-radius:50% 50% 50% 0; background:#9C6B45; transform:rotate(-45deg); margin:0 auto; box-shadow:0 4px 10px rgba(0,0,0,0.25); }
+    .t-pin .ring{ position:absolute; top:8px; left:50%; transform:translateX(-50%); width:36px; height:36px; border-radius:50%; border:1.5px solid #9C6B45; opacity:0.5; animation:tping 2s ease-out infinite; }
+    @keyframes tping{ 0%{ transform:translateX(-50%) scale(0.6); opacity:0.6; } 100%{ transform:translateX(-50%) scale(1.6); opacity:0; } }
+    .t-foot{ background:#22392F; padding:26px 5vw; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+    .t-foot .addr{ font-size:12.5px; color:rgba(234,228,214,0.6); }
+    .t-foot .stars{ font-size:12px; color:#C79A6C; font-family:ui-monospace,monospace; }
+    .t-foot .btn{ background:#C79A6C; color:#17251E; font-size:12.5px; font-weight:700; padding:11px 20px; border-radius:3px; }
+    @media (max-width:760px){ .t-hero{ grid-template-columns:1fr; } .t-grid{ grid-template-columns:1fr; } .t-card.big{ grid-row:span 1; min-height:auto; } .t-nav, .t-copy, .t-services, .t-map{ padding-left:6vw; padding-right:6vw; } .t-quote{ margin-left:6vw; margin-right:6vw; } }
+  </style>
+  <div class="t-wrap">
+    <div class="t-page">
+      <nav class="t-nav rise r1">
+        <div class="t-brand">${esc(d.name)}</div>
+        ${telLink ? `<a href="${telLink}" class="t-cta">${esc(copy.ctaLabel)}</a>` : `<span class="t-cta">${esc(copy.ctaLabel)}</span>`}
+      </nav>
+      <div class="t-hero">
+        <div class="t-copy rise r2">
+          <span class="t-kicker">${esc(copy.kicker(d.categoryLabel, [d.area, d.city].filter(Boolean).join(' · ')))}</span>
+          <h1>${esc(copy.headline(d.name, d.city))}</h1>
+          <p>${esc(copy.body(d.name, d.city, d.categoryLabel))}</p>
+          <div class="t-stats">
+            ${d.rating ? `<div class="t-stat circled"><b>${esc(d.rating)}★</b><span>${d.ratingCount ? esc(d.ratingCount) + ' reviews' : 'Rated locally'}</span></div>` : ''}
+            <div class="t-stat"><b>Local</b><span>${esc(d.city || 'Trusted nearby')}</span></div>
+          </div>
+        </div>
+        <div class="t-photo rise r2"><div class="t-avatar">${esc(initials)}</div></div>
       </div>
-      <p style="font-weight:700;font-size:15.5px;margin-bottom:6px;">${esc(s.t)}</p>
-      <p style="font-size:13px;color:${t.isDarkTheme ? '#a6ada6' : t.ink + '99'};line-height:1.55;">${esc(s.d)}</p>
-    </div>`).join('');
+      <div class="t-services rise r3">
+        <div class="head"><h2>${esc(copy.sectionTitle)}</h2></div>
+        <div class="t-grid">
+          <div class="t-card big"><div class="img"></div><div class="info"><span class="tag">Featured</span><div class="name">${esc(d.categoryLabel || 'Service')}</div><div class="sub">Ask about current availability</div></div></div>
+          <div class="t-card"><div class="img" style="background:linear-gradient(135deg,#9C6B45,#6E4A2E);"></div><div class="info"><div class="name">${esc(d.categoryLabel || 'Service')}</div><div class="sub">Get in touch to learn more</div></div></div>
+          <div class="t-card"><div class="img" style="background:linear-gradient(135deg,#5C6E54,#3E4A38);"></div><div class="info"><div class="name">Consultation</div><div class="sub">A no-pressure first conversation</div></div></div>
+        </div>
+      </div>
+      ${d.rating ? `
+      <div class="t-quote rise r3">
+        <span class="mark">"</span>
+        <p>Real, verified reviews from ${esc(d.ratingCount || 'satisfied')} customers back this business on Google.</p>
+        <div class="who">— ${esc(d.rating)}★ average on Google</div>
+      </div>` : ''}
+      <div class="t-map rise r4">
+        <h2>Find us</h2>
+        <div class="t-map-box">
+          <div class="t-pin"><div class="ring"></div><div class="dot"></div></div>
+        </div>
+      </div>
+      <div class="t-foot">
+        <div class="addr">${esc([d.area, d.city].filter(Boolean).join(', ') || 'Get in touch for directions')}</div>
+        ${d.rating ? `<div class="stars">${starRow(d.rating)} ${esc(d.rating)} · ${esc(d.ratingCount || 0)} reviews</div>` : '<div></div>'}
+        ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn">${esc(copy.ctaTitle)}</a>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
 
-  const checklistHTML = t.aboutChecklist.map((c, i) => `
-    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
-      ${icon(0, t.accent, 18)}
-      <span style="font-size:13.5px;">${esc(c)}</span>
-    </div>`).join('');
+// ── Family: Local & Transactional ───────────────────────────────────
+// Restaurants, cafes, bakeries, pet services, auto — sells on
+// immediacy. Dark charcoal + saffron/maroon, Fraunces headlines, an
+// "open now" pulse strip and a ticket-stub badge (signature move).
+function renderTransactional(d) {
+  const copy = FAMILY_COPY.transactional;
+  const waLink = d.phone ? `https://wa.me/${d.phone}` : null;
 
-  const pricingHTML = t.pricing.map(p => `
-    <div style="background:${cardBg};border:${p.popular ? `1.5px solid ${t.accent}` : `1px solid ${t.line}`};border-radius:16px;padding:30px 26px;position:relative;">
-      ${p.popular ? `<div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:${t.accent};color:${t.accentInk};font-size:10px;font-weight:800;padding:4px 12px;border-radius:20px;letter-spacing:.05em;">MOST POPULAR</div>` : ''}
-      <p style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:${t.isDarkTheme ? '#9aa39c' : t.ink + '99'};margin-bottom:10px;">${esc(p.tier)}</p>
-      <p style="font-family:${t.headFont};font-size:28px;font-weight:${t.weight};margin-bottom:4px;">${esc(p.price)}<span style="font-size:13px;font-weight:400;opacity:.7;"> ${esc(p.unit)}</span></p>
-      <div style="height:1px;background:${t.line};margin:16px 0;"></div>
-      ${p.items.map(it => `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:13px;">${icon(0, t.accent, 15)}<span>${esc(it)}</span></div>`).join('')}
-      <p class="placeholder-note" style="margin-top:12px;color:${t.isDarkTheme ? '#8f978f' : t.ink + '88'};">Sample pricing — customize to match your real rates</p>
-    </div>`).join('');
+  document.title = d.name;
+  return `
+  <style>
+    body{ background:#0A0807; }
+    .x-wrap{ max-width:1100px; margin:0 auto; }
+    .x-page{ background:#1A1512; }
+    .x-nav{ display:flex; justify-content:space-between; align-items:center; padding:22px 5vw; background:#241D18; border-bottom:1px solid rgba(242,234,217,0.06); position:sticky; top:0; z-index:5; }
+    .x-brand .name{ color:#F2EAD9; font-family:'Fraunces',Georgia,serif; font-weight:700; font-size:18px; }
+    .x-brand .tag{ font-size:10px; color:#E0A73E; letter-spacing:0.08em; text-transform:uppercase; font-family:ui-monospace,monospace; }
+    .x-cta{ background:#E0A73E; color:#1A1512; font-size:12px; font-weight:800; padding:11px 18px; border-radius:3px; letter-spacing:0.02em; text-transform:uppercase; }
+    .x-open{ display:flex; align-items:center; gap:8px; padding:11px 5vw; background:rgba(224,167,62,0.08); border-bottom:1px solid rgba(224,167,62,0.15); font-size:11.5px; color:#F0C876; font-family:ui-monospace,monospace; letter-spacing:0.03em; }
+    .x-dot{ width:7px; height:7px; border-radius:50%; background:#6FBF73; position:relative; }
+    .x-dot::after{ content:""; position:absolute; inset:-4px; border-radius:50%; border:1px solid #6FBF73; animation:xping 1.8s ease-out infinite; }
+    @keyframes xping{ 0%{ transform:scale(0.7); opacity:1; } 100%{ transform:scale(2); opacity:0; } }
+    .x-hero{ display:grid; grid-template-columns:1fr 1fr; min-height:320px; }
+    .x-copy{ padding:44px 5vw 30px; display:flex; flex-direction:column; justify-content:center; }
+    .x-kicker{ font-family:ui-monospace,monospace; font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:#E0A73E; margin-bottom:14px; }
+    .x-copy h1{ font-family:'Fraunces',Georgia,serif; font-weight:700; font-size:clamp(28px,4vw,42px); line-height:1.06; color:#F2EAD9; margin-bottom:16px; letter-spacing:-0.01em; }
+    .x-copy p{ font-size:13.5px; color:rgba(242,234,217,0.55); line-height:1.6; max-width:360px; margin-bottom:26px; }
+    .x-ctas{ display:flex; gap:12px; flex-wrap:wrap; }
+    .x-btn-p{ background:#E0A73E; color:#1A1512; font-size:12.5px; font-weight:800; padding:13px 22px; border-radius:3px; letter-spacing:0.02em; text-transform:uppercase; }
+    .x-btn-g{ border:1px solid rgba(242,234,217,0.25); color:#F2EAD9; font-size:12.5px; font-weight:600; padding:13px 22px; border-radius:3px; letter-spacing:0.02em; text-transform:uppercase; }
+    .x-photo{ position:relative; overflow:hidden; background:radial-gradient(110% 90% at 85% 15%, #9C3D4B 0%, transparent 55%), radial-gradient(90% 80% at 15% 100%, #E0A73E 0%, transparent 45%), linear-gradient(160deg, #241D18 0%, #14100D 100%); }
+    .x-ticket{ position:absolute; top:22px; left:22px; background:#6E2430; color:#F2EAD9; padding:11px 18px 11px 15px; border-radius:2px; transform:rotate(-4deg); box-shadow:0 12px 26px -10px rgba(0,0,0,0.5); }
+    .x-ticket::before, .x-ticket::after{ content:""; position:absolute; width:12px; height:12px; background:#1A1512; border-radius:50%; top:50%; transform:translateY(-50%); }
+    .x-ticket::before{ left:-6px; } .x-ticket::after{ right:-6px; }
+    .x-ticket .t1{ font-family:ui-monospace,monospace; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; opacity:0.75; }
+    .x-ticket .t2{ font-family:'Fraunces',Georgia,serif; font-weight:700; font-size:14px; margin-top:2px; }
+    .x-menu{ padding:10px 5vw 34px; }
+    .x-menu .head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:18px; }
+    .x-menu .head h2{ font-family:'Fraunces',Georgia,serif; font-weight:700; font-size:18px; color:#F2EAD9; }
+    .x-dishes{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    .x-dish{ background:#241D18; border-radius:8px; overflow:hidden; border:1px solid rgba(242,234,217,0.06); }
+    .x-dimg{ height:88px; }
+    .x-dinfo{ padding:13px 15px; }
+    .x-dname{ font-size:13px; font-weight:600; color:#F2EAD9; }
+    .x-dsub{ font-size:11px; color:rgba(242,234,217,0.4); margin-top:5px; }
+    .x-strip{ display:flex; justify-content:space-between; align-items:center; padding:20px 5vw; background:#241D18; border-top:1px solid rgba(242,234,217,0.06); flex-wrap:wrap; gap:12px; }
+    .x-strip .hours{ font-size:12.5px; color:rgba(242,234,217,0.55); }
+    .x-strip .stars{ font-size:12px; color:#F0C876; font-family:ui-monospace,monospace; }
+    @media (max-width:760px){ .x-hero{ grid-template-columns:1fr; } .x-photo{ min-height:170px; } .x-dishes{ grid-template-columns:1fr 1fr; } .x-nav, .x-copy, .x-menu, .x-strip, .x-open{ padding-left:6vw; padding-right:6vw; } }
+  </style>
+  <div class="x-wrap">
+    <div class="x-page">
+      <nav class="x-nav rise r1">
+        <div class="x-brand"><div class="name">${esc(d.name)}</div><div class="tag">${esc(d.categoryLabel || 'Local business')}</div></div>
+        ${d.phone ? `<a href="${waLink}" target="_blank" rel="noopener" class="x-cta">💬 ${esc(copy.ctaLabel)}</a>` : `<span class="x-cta">${esc(copy.ctaLabel)}</span>`}
+      </nav>
+      <div class="x-open rise r1"><span class="x-dot"></span> Open now</div>
+      <div class="x-hero">
+        <div class="x-copy rise r2">
+          <span class="x-kicker">${esc(copy.kicker(d.categoryLabel, d.city))}</span>
+          <h1>${esc(copy.headline(d.name, d.city))}</h1>
+          <p>${esc(copy.body(d.name, d.city, d.categoryLabel))}</p>
+          <div class="x-ctas">
+            ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="x-btn-p">${esc(copy.ctaLabel)}</a>` : `<span class="x-btn-p">${esc(copy.ctaLabel)}</span>`}
+            <a href="#menu" class="x-btn-g">View more</a>
+          </div>
+        </div>
+        <div class="x-photo rise r2">
+          <div class="x-ticket"><div class="t1">Ask about</div><div class="t2">Today's special</div></div>
+        </div>
+      </div>
+      <div class="x-menu rise r3" id="menu">
+        <div class="head"><h2>${esc(copy.sectionTitle)}</h2></div>
+        <div class="x-dishes">
+          <div class="x-dish"><div class="x-dimg" style="background:linear-gradient(150deg,#9C3D4B,#6E2430);"></div><div class="x-dinfo"><div class="x-dname">Ask for today's picks</div><div class="x-dsub">Message to check availability</div></div></div>
+          <div class="x-dish"><div class="x-dimg" style="background:linear-gradient(150deg,#E0A73E,#B5822B);"></div><div class="x-dinfo"><div class="x-dname">${esc(d.categoryLabel || 'Popular choice')}</div><div class="x-dsub">Customer favorite</div></div></div>
+          <div class="x-dish"><div class="x-dimg" style="background:linear-gradient(150deg,#7A6A4E,#4E4432);"></div><div class="x-dinfo"><div class="x-dname">Full menu on request</div><div class="x-dsub">Send a message anytime</div></div></div>
+        </div>
+      </div>
+      <div class="x-strip rise r4">
+        <div class="hours">${esc([d.area, d.city].filter(Boolean).join(', ') || 'Contact for hours')}</div>
+        ${d.rating ? `<div class="stars">${starRow(d.rating)} ${esc(d.rating)} · ${esc(d.ratingCount || 0)} reviews</div>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
 
+// ── Family: Visual & Lifestyle ──────────────────────────────────────
+// Salons, gyms, designers, photographers, boutiques — sells on look
+// and craft. Warm paper + sage + gold, Fraunces headlines, a full-bleed
+// gallery-led hero (no split) with a portfolio grid underneath.
+function renderVisual(d) {
+  const copy = FAMILY_COPY.visual;
+  const waLink = d.phone ? `https://wa.me/${d.phone}` : null;
+  const telLink = d.phone ? `tel:${d.phone}` : null;
+
+  document.title = d.name;
+  return `
+  <style>
+    body{ background:#12160F; }
+    .v-wrap{ max-width:1100px; margin:0 auto; }
+    .v-page{ background:#F7F2E7; }
+    .v-nav{ display:flex; justify-content:space-between; align-items:center; padding:22px 5vw; position:absolute; top:0; left:0; right:0; z-index:5; }
+    .v-brand{ color:#F7F2E7; font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:19px; }
+    .v-cta{ background:rgba(247,242,231,0.14); backdrop-filter:blur(6px); border:1px solid rgba(247,242,231,0.3); color:#F7F2E7; font-size:12px; font-weight:600; padding:10px 18px; border-radius:30px; letter-spacing:0.02em; }
+    .v-hero{ position:relative; min-height:440px; display:flex; align-items:flex-end;
+      background:radial-gradient(120% 90% at 20% 10%, #5C6E54 0%, transparent 55%), radial-gradient(100% 80% at 85% 90%, #B8923D 0%, transparent 45%), linear-gradient(165deg, #2E3B27 0%, #171E12 100%); }
+    .v-hero-inner{ padding:64px 5vw 46px; width:100%; }
+    .v-kicker{ font-family:ui-monospace,monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#D9BE7C; margin-bottom:16px; }
+    .v-hero h1{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:clamp(30px,5vw,52px); line-height:1.05; color:#F7F2E7; letter-spacing:-0.015em; max-width:640px; margin-bottom:18px; }
+    .v-hero p{ font-size:14.5px; color:rgba(247,242,231,0.65); max-width:420px; line-height:1.6; margin-bottom:24px; }
+    .v-stats{ display:flex; gap:24px; }
+    .v-stat b{ display:block; font-family:'Fraunces',Georgia,serif; font-size:19px; color:#F7F2E7; font-weight:500; }
+    .v-stat span{ font-size:10px; color:rgba(247,242,231,0.5); letter-spacing:0.04em; text-transform:uppercase; }
+    .v-about{ padding:56px 5vw 20px; max-width:620px; }
+    .v-about .k{ font-family:ui-monospace,monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#8C9E6F; margin-bottom:14px; }
+    .v-about p{ font-size:16.5px; color:#3A3826; font-weight:400; line-height:1.7; font-family:'Fraunces',Georgia,serif; }
+    .v-gallery{ padding:36px 5vw 50px; }
+    .v-gallery .head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:20px; }
+    .v-gallery h2{ font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:19px; color:#2A2818; }
+    .v-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    .v-tile{ aspect-ratio:1; border-radius:8px; }
+    .v-tile:nth-child(1){ background:linear-gradient(150deg,#5C6E54,#3E4A38); }
+    .v-tile:nth-child(2){ background:linear-gradient(150deg,#B8923D,#8C7031); }
+    .v-tile:nth-child(3){ background:linear-gradient(150deg,#3C4C5A,#28333E); }
+    .v-tile:nth-child(4){ background:linear-gradient(150deg,#9C6B45,#6E4A2E); }
+    .v-cta-strip{ background:linear-gradient(165deg, #2E3B27 0%, #171E12 100%); padding:56px 5vw; text-align:center; }
+    .v-cta-strip h2{ font-family:'Fraunces',Georgia,serif; font-weight:500; font-size:26px; color:#F7F2E7; margin-bottom:10px; }
+    .v-cta-strip .sub{ font-size:13px; color:rgba(247,242,231,0.55); margin-bottom:26px; }
+    .v-cta-strip .btns{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+    .v-btn-p{ background:#D9BE7C; color:#1C2214; font-size:12.5px; font-weight:700; padding:13px 24px; border-radius:30px; }
+    .v-btn-g{ border:1px solid rgba(247,242,231,0.3); color:#F7F2E7; font-size:12.5px; font-weight:600; padding:13px 24px; border-radius:30px; }
+    .v-foot{ padding:22px 5vw; text-align:center; font-size:12px; color:#8A8570; }
+    @media (max-width:760px){ .v-grid{ grid-template-columns:1fr 1fr; } .v-nav, .v-hero-inner, .v-about, .v-gallery, .v-cta-strip{ padding-left:6vw; padding-right:6vw; } }
+  </style>
+  <div class="v-wrap">
+    <div class="v-page">
+      <div class="v-hero">
+        <nav class="v-nav rise r1">
+          <div class="v-brand">${esc(d.name)}</div>
+          ${telLink ? `<a href="${telLink}" class="v-cta">${esc(copy.ctaLabel)}</a>` : `<span class="v-cta">${esc(copy.ctaLabel)}</span>`}
+        </nav>
+        <div class="v-hero-inner rise r2">
+          <div class="v-kicker">${esc(copy.kicker(d.categoryLabel, d.city))}</div>
+          <h1>${esc(copy.headline(d.name, d.city))}</h1>
+          <p>${esc(copy.body(d.name, d.city, d.categoryLabel))}</p>
+          <div class="v-stats">
+            ${d.rating ? `<div class="v-stat"><b>${esc(d.rating)}★</b><span>${d.ratingCount ? esc(d.ratingCount) + ' reviews' : 'Rated locally'}</span></div>` : ''}
+            <div class="v-stat"><b>${esc(d.city || 'Local')}</b><span>Based here</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="v-about rise r3">
+        <div class="k">About</div>
+        <p>${esc(copy.body(d.name, d.city, d.categoryLabel))}</p>
+      </div>
+      <div class="v-gallery rise r3">
+        <div class="head"><h2>${esc(copy.sectionTitle)}</h2></div>
+        <div class="v-grid"><div class="v-tile"></div><div class="v-tile"></div><div class="v-tile"></div><div class="v-tile"></div></div>
+      </div>
+      <div class="v-cta-strip rise r4">
+        <h2>${esc(copy.ctaTitle)}</h2>
+        <div class="sub">${esc([d.area, d.city].filter(Boolean).join(', ') || "We'd love to hear from you.")}</div>
+        <div class="btns">
+          ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="v-btn-p">Message on WhatsApp</a>` : ''}
+          ${telLink ? `<a href="${telLink}" class="v-btn-g">Call now</a>` : ''}
+        </div>
+      </div>
+      <div class="v-foot">© ${new Date().getFullYear()} ${esc(d.name)}</div>
+    </div>
+  </div>`;
+}
+
+const RENDERERS = { trust: renderTrust, transactional: renderTransactional, visual: renderVisual };
+
+function render(payload) {
+  const d = {
+    name: payload.n || 'Your Business',
+    categoryKey: payload.c || 'other',
+    categoryLabel: payload.cl || 'Business',
+    city: payload.ci || '',
+    area: payload.ar || '',
+    phone: (payload.p || '').replace(/[^0-9]/g, ''),
+    rating: payload.r || null,
+    ratingCount: payload.rc || null,
+  };
+  const family = getFamily(d.categoryKey);
   const app = document.getElementById('app');
   app.style.display = 'block';
   document.getElementById('fallback').style.display = 'none';
-
-  app.innerHTML = `
-    <nav style="position:sticky;top:0;background:${navBg}ee;backdrop-filter:blur(10px);border-bottom:1px solid ${t.line};z-index:10;">
-      <div class="wrap" style="display:flex;align-items:center;justify-content:space-between;height:80px;">
-        <span style="font-family:${t.headFont};font-weight:${t.weight};font-size:19px;">${esc(name)}</span>
-        ${telLink ? `<a href="${telLink}" class="btn" style="background:${t.accent};color:${t.accentInk};">Call Now</a>` : ''}
-      </div>
-    </nav>
-
-    <div style="background:${t.isDarkTheme ? `linear-gradient(155deg, ${t.dark}, ${t.darkAlt})` : `linear-gradient(155deg, ${t.dark}, ${t.darkAlt})`};color:#fff;position:relative;overflow:hidden;">
-      <div class="wrap grid-2" style="padding:88px 32px 96px;">
-        <div>
-          <p class="eyebrow fade-up" style="color:${t.accent};margin-bottom:20px;">${esc(eyebrowText)}</p>
-          <h1 class="fade-up d1" style="font-family:${t.headFont};font-size:clamp(34px,5.2vw,50px);font-weight:${t.weight};margin-bottom:18px;letter-spacing:-0.01em;">${esc(name)}</h1>
-          <p class="fade-up d2" style="font-size:16.5px;opacity:.82;max-width:460px;margin-bottom:28px;font-weight:300;">${t.tagline(name, city)}</p>
-          <div class="fade-up d3" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px;">
-            ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn" style="background:${t.accent};color:${t.accentInk};box-shadow:0 14px 28px -10px ${t.accent}90;">Message on WhatsApp</a>` : ''}
-            <a href="#contact" class="btn" style="border:1.5px solid rgba(255,255,255,.3);color:#fff;">See Details</a>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:420px;">${trustHTML}</div>
-        </div>
-        <div style="position:relative;">
-          <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:36px;min-height:280px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;">
-            ${rating ? `<p style="color:${t.accent};font-size:13px;letter-spacing:1.5px;margin-bottom:10px;">${starRow(rating)}</p><p style="font-size:13px;opacity:.75;margin-bottom:20px;">${rating} · ${ratingCount ? ratingCount + ' reviews' : 'Rated locally'}</p>` : ''}
-            <div style="width:64px;height:64px;border-radius:16px;background:${t.accent}22;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">${icon(1, t.accent, 30)}</div>
-            <p style="font-size:13px;opacity:.7;max-width:260px;">A preview built from your real business details — customize freely.</p>
-          </div>
-          <div style="position:absolute;bottom:-24px;right:-14px;background:${t.card};color:${t.ink};border-radius:14px;padding:18px 20px;box-shadow:0 20px 40px -10px rgba(0,0,0,.35);max-width:210px;">
-            <p style="font-size:10px;font-weight:800;letter-spacing:.06em;color:${t.accent};margin-bottom:6px;">${esc(t.offerTag)}</p>
-            <p style="font-size:13px;font-weight:600;">${esc(t.offerLine)}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <section style="background:${cardBg};padding:56px 0;">
-      <div class="wrap grid-4">${statsHTML}</div>
-    </section>
-
-    <section>
-      <div class="wrap grid-2">
-        <div>
-          <p class="eyebrow" style="color:${t.accent};margin-bottom:14px;">${esc(t.aboutTitle)}</p>
-          <h2 style="font-family:${t.headFont};font-size:28px;font-weight:${t.weight};margin-bottom:18px;">${esc(name)}</h2>
-          <p style="font-size:15px;opacity:.85;line-height:1.7;margin-bottom:22px;">${t.about(name, city, categoryLabel)}</p>
-          ${checklistHTML}
-        </div>
-        <div style="background:${t.isDarkTheme ? t.darkAlt : t.accentSoft};border-radius:20px;min-height:280px;display:flex;align-items:center;justify-content:center;position:relative;">
-          <div style="width:74px;height:74px;border-radius:20px;background:${t.card};display:flex;align-items:center;justify-content:center;">${icon(2, t.accent, 34)}</div>
-        </div>
-      </div>
-    </section>
-
-    <section style="background:${t.isDarkTheme ? t.darkAlt : t.accentSoft};">
-      <div class="wrap">
-        <p class="eyebrow" style="color:${t.accent};text-align:center;margin-bottom:14px;">What We Offer</p>
-        <h2 style="font-family:${t.headFont};font-size:30px;font-weight:${t.weight};text-align:center;margin-bottom:48px;">Our Services</h2>
-        <div class="grid-4">${servicesHTML}</div>
-      </div>
-    </section>
-
-    <section>
-      <div class="wrap" style="max-width:680px;text-align:center;">
-        <p class="eyebrow" style="color:${t.accent};margin-bottom:14px;">In Their Words</p>
-        <div style="background:${cardBg};border:1px solid ${t.line};border-radius:20px;padding:44px 36px;">
-          <p style="font-family:${t.headFont};font-size:19px;line-height:1.6;font-style:italic;margin-bottom:18px;">"Add a real customer quote here once you have one — a genuine review always outperforms a placeholder."</p>
-          <p class="placeholder-note">— placeholder testimonial slot, replace before publishing</p>
-        </div>
-      </div>
-    </section>
-
-    <section style="background:${t.isDarkTheme ? t.darkAlt : t.accentSoft};">
-      <div class="wrap">
-        <p class="eyebrow" style="color:${t.accent};text-align:center;margin-bottom:14px;">Simple. Flexible.</p>
-        <h2 style="font-family:${t.headFont};font-size:30px;font-weight:${t.weight};text-align:center;margin-bottom:48px;">Packages</h2>
-        <div class="grid-3">${pricingHTML}</div>
-      </div>
-    </section>
-
-    <section id="contact" style="background:linear-gradient(155deg, ${t.dark}, ${t.darkAlt});color:#fff;">
-      <div class="wrap" style="max-width:560px;text-align:center;">
-        <h2 style="font-family:${t.headFont};font-size:30px;font-weight:${t.weight};margin-bottom:16px;">${esc(t.ctaTitle)}</h2>
-        <p style="opacity:.75;margin-bottom:32px;font-weight:300;">${[area, city].filter(Boolean).join(', ') || "Reach out any time — we'd love to help."}</p>
-        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-          ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="btn" style="background:${t.accent};color:${t.accentInk};">WhatsApp Us</a>` : ''}
-          ${telLink ? `<a href="${telLink}" class="btn" style="border:1.5px solid rgba(255,255,255,.3);color:#fff;">Call Us</a>` : ''}
-        </div>
-      </div>
-    </section>
-
-    <footer style="background:${t.dark};color:#fff;padding:56px 0 28px;">
-      <div class="wrap" style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:36px;margin-bottom:36px;">
-        <div>
-          <p style="font-family:${t.headFont};font-weight:${t.weight};font-size:18px;margin-bottom:10px;">${esc(name)}</p>
-          <p style="font-size:12.5px;opacity:.6;max-width:280px;line-height:1.6;">${esc(categoryLabel)} serving ${esc([area, city].filter(Boolean).join(', ') || 'the local community')}.</p>
-          <div style="display:flex;gap:10px;margin-top:16px;">
-            ${[0,1,2].map(i => `<div style="width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;">${icon(i, '#fff', 15)}</div>`).join('')}
-          </div>
-        </div>
-        <div>
-          <p style="font-size:12px;font-weight:700;letter-spacing:.04em;opacity:.5;margin-bottom:14px;">CONTACT</p>
-          ${phone ? `<p style="font-size:13px;opacity:.75;margin-bottom:8px;">${esc(payload.p)}</p>` : ''}
-          <p style="font-size:13px;opacity:.75;">${esc([area, city].filter(Boolean).join(', ') || 'Location on request')}</p>
-        </div>
-        <div>
-          <p style="font-size:12px;font-weight:700;letter-spacing:.04em;opacity:.5;margin-bottom:14px;">NEWSLETTER</p>
-          <p style="font-size:12.5px;opacity:.65;margin-bottom:12px;">Stay updated on offers &amp; news.</p>
-          <div style="display:flex;background:rgba(255,255,255,.08);border-radius:9px;overflow:hidden;">
-            <input placeholder="Your email" style="flex:1;background:transparent;border:none;padding:10px 12px;color:#fff;font-size:12.5px;outline:none;">
-            <div style="background:${t.accent};color:${t.accentInk};display:flex;align-items:center;padding:0 14px;">${icon(3, t.accentInk, 15)}</div>
-          </div>
-        </div>
-      </div>
-      <div class="wrap" style="border-top:1px solid rgba(255,255,255,.08);padding-top:20px;font-size:11.5px;opacity:.45;text-align:center;">
-        © ${new Date().getFullYear()} ${esc(name)} — preview site generated by LocalScout
-      </div>
-    </footer>
-  `;
+  app.innerHTML = RENDERERS[family](d);
 }
 
 const payload = decodePayload();
