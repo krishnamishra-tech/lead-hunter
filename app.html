@@ -646,13 +646,15 @@ Gomti Nagar" style="width:100%;height:160px;margin-top:10px;padding:10px;border:
 
     <div class="card">
       <div class="card-title">Team (Business)</div>
-      <div class="card-sub">The Business plan can be shared with up to 2 teammates — invite them by email below.</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <input id="team-invite-email" type="email" placeholder="teammate@company.com" style="flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;">
-        <button class="btn btn-navy" onclick="inviteTeammate()">Invite</button>
+      <div class="card-sub">The Business plan can be shared with up to 2 teammates. Share the link below — anyone who signs up or logs in through it joins your team and works from the same shared leads.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+        <input id="team-invite-link-box" readonly style="flex:1;min-width:220px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-size:12.5px;" placeholder="Click Generate to create your invite link">
+        <button class="btn btn-outline" onclick="copyTeamInviteLink()">Copy link</button>
+        <button class="btn btn-navy" onclick="generateTeamInviteLink()">Generate link</button>
       </div>
       <div id="team-members-list" style="margin-top:10px;font-size:12.5px;color:var(--ink-soft);"></div>
     </div>
+
 
     <div class="card">
       <div class="card-title">Data</div>
@@ -908,9 +910,15 @@ const ENFORCE_LEAD_LIMIT = true; // every plan is capped at PLAN_LIMITS[currentP
 let currentUser = null;
 let currentPlan = 'free'; // 'free' | 'starter' | 'business' — kept in sync with the profiles table (updated automatically after payment)
 let isAdminAccount = false;
+// TEAM_OWNER_ID: whose lead pool this session reads/writes.
+// Defaults to the signed-in user's own id. If this user joined someone
+// else's team via an invite link, resolveTeamOwner() (below) sets this to
+// that team owner's id instead — so every lead everyone adds lands in one
+// shared pool, and everyone on the team sees the same leads.
+let TEAM_OWNER_ID = null;
 
 function toRow(l) {
-  return { id: l.id, user_id: currentUser.id, name: l.name, phone: l.phone || '', instagram: l.instagram || '', area: l.area || '',
+  return { id: l.id, user_id: TEAM_OWNER_ID || currentUser.id, name: l.name, phone: l.phone || '', instagram: l.instagram || '', area: l.area || '',
     niche: l.niche || '', niche_label: l.nicheLabel || '', has_website: !!l.hasWebsite, source: l.source || '',
     status: l.status || 'New', added: l.added || new Date().toLocaleDateString(), notes: l.notes || '',
     status_updated: l.statusUpdated || new Date().toISOString(),
@@ -1582,6 +1590,7 @@ function showExampleResults() {
 async function onAuthReady(user) {
   currentUser = user;
   document.getElementById('auth-screen').style.display = 'none';
+  await resolveTeamOwner();
   const done = await checkOnboardingDone(user.id);
   if (!done) { showOnboardingScreen(); return; }
   await enterApp({});
@@ -1655,40 +1664,96 @@ async function recordReferralIfPending() {
 }
 
 // ── Team accounts (Business plan) ──────────────────────────────────────
-// Requires a `team_invites` table (owner_id uuid, email text, status text
-// default 'pending', created_at timestamptz default now()) and ideally a
-// `team_members` table once invites are accepted — this client code covers
-// sending/listing invites; accepting one and sharing Business-plan access needs a
-// small server-side step (e.g. an Edge Function triggered on signup that
-// matches the new user's email against pending invites).
-async function inviteTeammate() {
-  if (currentPlan !== 'business') { showUpgradeBlock('Team invites are a Business-plan feature.'); return; }
-  const input = document.getElementById('team-invite-email');
-  const email = input.value.trim();
-  if (!email) { showToast('Enter a teammate email first'); return; }
+// Link-based team sharing. Requires two tables in Supabase (see
+// supabase-migrations/team-invite-links.sql — run once in the SQL Editor):
+//
+//   team_invite_links (owner_id uuid unique, token uuid unique default
+//     gen_random_uuid(), created_at timestamptz default now())
+//   team_members (owner_id uuid, member_id uuid, created_at timestamptz
+//     default now(), primary key (owner_id, member_id))
+//
+// Plus RLS policies on `leads` (and `lead_events`) that allow a row's
+// access when auth.uid() = user_id OR auth.uid() is a team_members row
+// for that owner. The migration file adds all of this — nothing here
+// works until that SQL has been run.
+//
+// How it works: the admin generates a link containing their own
+// team_invite_links token. Anyone who opens it and logs in (new or
+// existing account) gets added to team_members under that owner, and
+// TEAM_OWNER_ID (set in resolveTeamOwner, called on every login) points
+// their whole session — reading and adding leads — at the owner's pool.
+
+async function generateTeamInviteLink() {
+  if (currentPlan !== 'business') { showUpgradeBlock('Team invite links are a Business-plan feature.'); return; }
   try {
-    await sb.from('team_invites').insert({ owner_id: currentUser.id, email, status: 'pending' });
-    showToast(`Invited ${email}`);
-    input.value = '';
-    loadTeamMembers();
+    let { data, error } = await sb.from('team_invite_links').select('token').eq('owner_id', currentUser.id).single();
+    if (error && error.code === 'PGRST116') {
+      // No row yet for this owner — create one.
+      const ins = await sb.from('team_invite_links').insert({ owner_id: currentUser.id }).select('token').single();
+      if (ins.error) throw ins.error;
+      data = ins.data;
+    } else if (error) throw error;
+    const link = `${window.location.origin}${window.location.pathname}?invite=${data.token}`;
+    document.getElementById('team-invite-link-box').value = link;
+    showToast('Invite link ready — click Copy link');
   } catch (e) {
-    console.error('Team invite error', e);
-    showToast('Could not send invite — team table may not be set up yet');
+    console.error('Generate invite link error', e);
+    showToast('Could not generate link — team tables may not be set up yet');
   }
+}
+function copyTeamInviteLink() {
+  const box = document.getElementById('team-invite-link-box');
+  if (!box || !box.value) { showToast('Click "Generate link" first'); return; }
+  box.select();
+  navigator.clipboard.writeText(box.value).then(() => showToast('Invite link copied')).catch(() => showToast('Could not copy'));
 }
 async function loadTeamMembers() {
   const el = document.getElementById('team-members-list');
   if (!el) return;
   try {
-    const { data, error } = await sb.from('team_invites').select('email, status').eq('owner_id', currentUser.id);
+    const { data, error } = await sb.from('team_members').select('member_id').eq('owner_id', currentUser.id);
     if (error) throw error;
-    el.innerHTML = (data || []).length
-      ? data.map(t => `<div>• ${esc(t.email)} — ${esc(t.status)}</div>`).join('')
-      : 'No teammates invited yet.';
+    el.textContent = (data || []).length
+      ? `${data.length} teammate${data.length === 1 ? '' : 's'} on your team, working from your shared leads.`
+      : 'No teammates yet — generate a link above and send it to invite one.';
   } catch (e) {
-    el.textContent = 'Invite your first teammate above.';
+    el.textContent = 'Generate an invite link above to get started.';
   }
 }
+// Captures ?invite=<token> from the URL on first load and stashes it until
+// login completes (same pattern as capturePendingReferral).
+function capturePendingTeamInvite() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('invite');
+  if (token) localStorage.setItem('ls_pending_team_invite', token);
+}
+// Called on every login. Figures out whose lead pool this session should
+// use: if this account already joined a team, or a pending invite link
+// token is waiting, TEAM_OWNER_ID becomes that owner's id — otherwise it's
+// just the signed-in user's own id.
+async function resolveTeamOwner() {
+  const pendingToken = localStorage.getItem('ls_pending_team_invite');
+  if (pendingToken) {
+    try {
+      const { data: linkRow, error: linkErr } = await sb.from('team_invite_links').select('owner_id').eq('token', pendingToken).single();
+      if (!linkErr && linkRow && linkRow.owner_id !== currentUser.id) {
+        await sb.from('team_members').insert({ owner_id: linkRow.owner_id, member_id: currentUser.id });
+        showToast("You've joined the team — you're now seeing shared leads.");
+      }
+    } catch (e) {
+      console.error('Accept team invite error', e);
+    } finally {
+      localStorage.removeItem('ls_pending_team_invite');
+    }
+  }
+  try {
+    const { data, error } = await sb.from('team_members').select('owner_id').eq('member_id', currentUser.id).single();
+    TEAM_OWNER_ID = (!error && data) ? data.owner_id : currentUser.id;
+  } catch (e) {
+    TEAM_OWNER_ID = currentUser.id;
+  }
+}
+
 
 // ── In-app notifications (follow-up reminders) ────────────────────────
 function toggleNotifPanel() {
@@ -1961,6 +2026,7 @@ if ('serviceWorker' in navigator) {
 }
 
 capturePendingReferral();
+capturePendingTeamInvite();
 applyStoredLanguage();
 
 sb.auth.onAuthStateChange((event, session) => {
