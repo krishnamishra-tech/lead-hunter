@@ -54,6 +54,8 @@ module.exports = async function handler(req, res) {
   let finalUrl = url;
   let earned = 0;
   let possible = 0;
+  let pageTitle = '';
+  let metaDescriptionText = '';
 
   const start = Date.now();
   let response = null;
@@ -107,11 +109,15 @@ module.exports = async function handler(req, res) {
     if (contactOk) earned += CHECKS.contactFindable.weight;
     results.contactFindable = { pass: contactOk, note: contactOk ? 'Contact info or a contact path is visible.' : 'No clear phone, email, or contact link found on the page.' };
 
-    // 6. Meta description
+    // Meta description (also captured separately as text for fallback display)
     possible += CHECKS.metaDescription.weight;
     const hasMetaDesc = /<meta[^>]+name=["']description["'][^>]+content=["'][^"']{20,}/i.test(html);
     if (hasMetaDesc) earned += CHECKS.metaDescription.weight;
     results.metaDescription = { pass: hasMetaDesc, note: hasMetaDesc ? 'Has a meta description.' : 'No meta description — hurts how it looks in Google search results.' };
+    const titleMatch = html.match(/<title[^>]*>([^<]{1,200})<\/title>/i);
+    if (titleMatch) pageTitle = titleMatch[1].trim();
+    const descMatch = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{1,300})["']/i);
+    if (descMatch) metaDescriptionText = descMatch[1].trim();
 
     // 7. Google Business / LocalBusiness structured data (JSON-LD)
     possible += CHECKS.businessSchema.weight;
@@ -147,6 +153,8 @@ module.exports = async function handler(req, res) {
     opportunityScore,
     grade,
     gradeNote,
+    pageTitle,
+    metaDescriptionText,
     checks: Object.entries(results).map(([key, r]) => ({
       key, label: CHECKS[key].label, pass: r.pass, note: r.note,
     })),
