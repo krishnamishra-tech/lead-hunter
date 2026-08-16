@@ -1305,7 +1305,49 @@ async function generateDemoLink(id) {
     showDemoShareModal(l, longUrl); // long link still works fine, just not shortened
   }
 }
-function showDemoShareModal(lead, url, statusNote) {
+async function generateComparisonLink(id) {
+  if (currentPlan === 'free') {
+    showUpgradeBlock('The website comparison tool needs Starter or Business.');
+    return;
+  }
+  const l = leads.find(x => x.id === id);
+  if (!l || !l.website) return;
+  const payload = {
+    n: l.name || 'Your Business',
+    c: l.niche || 'other',
+    cl: l.nicheLabel || 'Business',
+    ci: (l.area || '').split(',').pop().trim() || '',
+    ar: l.area || '',
+    p: l.phone || '',
+    r: l.rating || null,
+    rc: l.ratingCount || null,
+    u: l.website,
+  };
+  let encoded;
+  try {
+    encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+  } catch (e) {
+    showToast('Could not build comparison link for this lead');
+    return;
+  }
+  const longUrl = `${window.location.origin}/comparison.html?d=${encoded}`;
+  showDemoShareModal(l, longUrl, 'Shortening link...', true);
+
+  try {
+    const res = await fetch('/api/shorten', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ longUrl }),
+    });
+    const data = await res.json();
+    const shortUrl = data.shortUrl || longUrl;
+    showDemoShareModal(l, shortUrl, null, true);
+  } catch (e) {
+    console.error('Shorten request failed', e);
+    showDemoShareModal(l, longUrl, null, true);
+  }
+}
+function showDemoShareModal(lead, url, statusNote, isComparison) {
   let modal = document.getElementById('demo-share-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -1313,11 +1355,13 @@ function showDemoShareModal(lead, url, statusNote) {
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;';
     document.body.appendChild(modal);
   }
-  const defaultMsg = `Hi! I put together a quick preview of what a website for ${lead.name} could look like — take a look: ${url}`;
+  const defaultMsg = isComparison
+    ? `Hi! I put together a quick preview of what your site could look like — used your real info, just laid out differently: ${url}\nNo pressure either way, just thought it might be useful 🙂`
+    : `Hi! I put together a quick preview of what a website for ${lead.name} could look like — take a look: ${url}`;
   const waLink = lead.phone ? `https://wa.me/${lead.phone}?text=${encodeURIComponent(defaultMsg)}` : null;
   modal.innerHTML = `
     <div style="background:#fff;border-radius:16px;padding:26px;max-width:440px;width:100%;">
-      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 4px;">Demo site for</p>
+      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 4px;">${isComparison ? 'Website comparison for' : 'Demo site for'}</p>
       <p style="font-weight:700;font-size:17px;margin:0 0 16px;">${esc(lead.name)}</p>
 
       ${statusNote ? `<p style="font-size:12px;color:var(--ink-soft);margin-bottom:10px;">⏳ ${esc(statusNote)}</p>` : ''}
@@ -1328,7 +1372,7 @@ function showDemoShareModal(lead, url, statusNote) {
         <button class="btn btn-outline" onclick="copyDemoLink()">Copy</button>
       </div>
 
-      <a href="${esc(url)}" target="_blank" rel="noopener" style="display:block;text-align:center;font-size:13px;color:var(--brass);font-weight:600;margin-bottom:18px;">👀 Preview the demo site first</a>
+      <a href="${esc(url)}" target="_blank" rel="noopener" style="display:block;text-align:center;font-size:13px;color:var(--brass);font-weight:600;margin-bottom:18px;">👀 ${isComparison ? 'Preview the comparison first' : 'Preview the demo site first'}</a>
 
       ${lead.phone ? `
         <label style="font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;">Message to send</label>
@@ -3264,7 +3308,9 @@ function renderLeads() {
         <button class="btn btn-outline" onclick="toggleAiPanel('${l.id}')">AI message</button>
         <button class="btn btn-outline" onclick="toggleNotesPanel('${l.id}')">Notes</button>
         <button class="btn btn-outline" onclick="logReply('${l.id}')">Log reply</button>
-        <button class="btn ${!l.hasWebsite ? 'btn-navy' : 'btn-outline'}" onclick="generateDemoLink('${l.id}')" title="${currentPlan === 'free' ? 'Needs Starter or Business' : 'Generate a live preview mini-site to pitch them'}">🎨 Demo site${currentPlan === 'free' ? ' 🔒' : (!l.hasWebsite ? ' (no site yet!)' : '')}</button>
+        ${l.hasWebsite && l.website
+          ? `<button class="btn btn-outline" onclick="generateComparisonLink('${l.id}')" title="${currentPlan === 'free' ? 'Needs Starter or Business' : 'Compare a premium redesign against their real current site'}">🔍 Compare vs their site${currentPlan === 'free' ? ' 🔒' : ''}</button>`
+          : `<button class="btn btn-navy" onclick="generateDemoLink('${l.id}')" title="${currentPlan === 'free' ? 'Needs Starter or Business' : 'Generate a live preview mini-site to pitch them'}">🎨 Demo site${currentPlan === 'free' ? ' 🔒' : ' (no site yet!)'}</button>`}
         ${!ig ? `
           <button class="btn btn-outline" onclick="findInstagram('${l.id}')">Find Instagram</button>
           <button class="btn-save" onclick="promptAddInstagram('${l.id}')">+ Add handle</button>
