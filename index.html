@@ -43,6 +43,10 @@
   .nav-links { display: flex; align-items: center; gap: 28px; font-size: 14px; color: #C9D4E3; }
   .nav-links a:hover { color: var(--paper); }
   .nav-cta { background: var(--marigold); color: var(--navy-deep); font-weight: 700; padding: 9px 18px; border-radius: 8px; font-size: 13.5px; }
+  @media (max-width: 760px) {
+    .nav-links a:not(.nav-cta) { display: none; }
+    .nav-links { gap: 12px; }
+  }
 
   .hero-section { background: var(--navy); background-image: radial-gradient(circle at 15% 20%, rgba(242,163,59,0.08), transparent 45%); padding: 72px 0 0; overflow: hidden; }
   .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: center; padding-bottom: 56px; }
@@ -478,7 +482,7 @@
   </div>
 </div>
 
-<footer>© 2026 LocalScout. Built for web design agencies and freelancers finding their next client. · <a href="about.html" style="color:#8494AC;">About</a> · <a href="privacy.html" style="color:#8494AC;">Privacy</a></footer>
+<footer>© 2026 LocalScout. Built for web design agencies and freelancers finding their next client. · <a href="privacy-policy.html">Privacy Policy</a> · <a href="about.html">About</a></footer>
 
 <script>
   function runDemo() {
