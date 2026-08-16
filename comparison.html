@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website Comparison</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="shared-demo-templates.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #0D110E; padding: 28px 4vw 60px; }
+  a { text-decoration: none; color: inherit; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  #fallback { max-width: 480px; margin: 100px auto; text-align: center; padding: 0 24px; font-family: sans-serif; color: #999; }
+  #app { display: none; }
+
+  .cx-top { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 14px;
+    margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid rgba(234,228,214,0.1); }
+  .cx-eyebrow { font-family: ui-monospace, monospace; font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: #C79A6C; margin-bottom: 8px; display: block; }
+  .cx-top h1 { color: #EAE4D6; font-size: clamp(19px,3vw,25px); font-weight: 600; font-family: 'Fraunces', Georgia, serif; }
+  .cx-top .meta { font-size: 12px; color: rgba(234,228,214,0.45); text-align: right; max-width: 260px; line-height: 1.5; }
+
+  .compare { position: relative; width: 100%; height: 620px; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 40px 90px -35px rgba(0,0,0,0.7); border: 1px solid rgba(234,228,214,0.08); }
+  .pane { position: absolute; inset: 0; overflow: auto; background: #fff; }
+  .before-pane { z-index: 3; }
+  .after-pane { z-index: 1; }
+  .before-pane iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .before-badge { position: absolute; top: 14px; left: 14px; z-index: 6;
+    background: rgba(30,30,25,0.85); color: #EEE9DA; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 3px; font-family: ui-monospace, monospace; pointer-events: none; }
+  .after-badge { position: absolute; top: 14px; right: 14px; z-index: 6;
+    background: rgba(217,190,124,0.95); color: #1C2214; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 3px; font-family: ui-monospace, monospace; pointer-events: none; }
+
+  .handle { position: absolute; top: 0; bottom: 0; width: 3px; background: #EAE4D6; left: 50%; transform: translateX(-50%);
+    z-index: 10; box-shadow: 0 0 0 1px rgba(0,0,0,0.15); cursor: ew-resize; }
+  .grip { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 42px; height: 42px; border-radius: 50%;
+    background: #EAE4D6; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 22px rgba(0,0,0,0.4); }
+  .grip svg { width: 17px; height: 17px; }
+  .drag-hint { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 9; pointer-events: none;
+    font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: #4b4938; background: rgba(234,228,214,0.92); padding: 5px 10px; border-radius: 20px; transition: opacity .4s; }
+
+  .fallback-toggle { display: block; text-align: center; margin-top: 14px; font-size: 12px; color: rgba(234,228,214,0.5); }
+  .fallback-toggle button { background: none; border: none; color: #C79A6C; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: underline; }
+  .site-summary { display: none; margin-top: 14px; background: #1B2317; border-radius: 10px; padding: 20px 22px; }
+  .site-summary.show { display: block; }
+  .site-summary h3 { color: #EAE4D6; font-family: 'Fraunces', Georgia, serif; font-size: 15px; margin-bottom: 6px; }
+  .site-summary p { color: rgba(234,228,214,0.6); font-size: 12.5px; line-height: 1.6; margin-bottom: 4px; }
+
+  .flags { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .flag { display: flex; align-items: center; gap: 8px; background: rgba(234,228,214,0.05); border: 1px solid rgba(234,228,214,0.12);
+    border-radius: 20px; padding: 7px 12px 7px 8px; font-size: 12px; color: rgba(234,228,214,0.75); }
+  .flag .dot { width: 6px; height: 6px; border-radius: 50%; background: #C79A6C; flex-shrink: 0; }
+  .flags-loading { font-size: 12px; color: rgba(234,228,214,0.4); margin-top: 16px; }
+
+  @media (max-width: 760px) { .compare { height: 720px; } }
+</style>
+</head>
+<body>
+
+<div id="fallback">
+  <h2 style="margin-bottom:12px;">Preview link looks incomplete</h2>
+  <p>This link is missing its business data. Ask whoever sent it to regenerate the preview link.</p>
+</div>
+
+<div id="app"></div>
+
+<script>
+function decodePayload() {
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get('d');
+  if (!raw) return null;
+  try {
+    return JSON.parse(decodeURIComponent(atob(raw)));
+  } catch (e) {
+    return null;
+  }
+}
+
+function setSplit(pct) {
+  pct = Math.max(6, Math.min(94, pct));
+  const before = document.getElementById('beforePane');
+  const handle = document.getElementById('handle');
+  before.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+  handle.style.left = pct + '%';
+}
+
+function initDrag() {
+  const compare = document.getElementById('compare');
+  const handle = document.getElementById('handle');
+  const hint = document.getElementById('hint');
+  let dragging = false;
+  function pointerToPct(clientX) {
+    const rect = compare.getBoundingClientRect();
+    return ((clientX - rect.left) / rect.width) * 100;
+  }
+  function start() { dragging = true; if (hint) hint.style.opacity = '0'; }
+  function move(e) {
+    if (!dragging) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    setSplit(pointerToPct(x));
+  }
+  function end() { dragging = false; }
+  handle.addEventListener('mousedown', start);
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  handle.addEventListener('touchstart', start, { passive: true });
+  window.addEventListener('touchmove', move, { passive: true });
+  window.addEventListener('touchend', end);
+  compare.addEventListener('click', (e) => {
+    if (e.target.closest('.grip')) return;
+    setSplit(pointerToPct(e.clientX));
+    if (hint) hint.style.opacity = '0';
+  });
+}
+
+function toggleFallback() {
+  document.getElementById('site-summary').classList.toggle('show');
+}
+
+// Loads real, current audit data for the site (mobile-friendliness, HTTPS,
+// load speed, etc.) via the same endpoint the app itself uses. Every flag
+// shown below reflects an actual failed check right now — nothing here
+// is invented or guessed.
+async function loadRealAudit(url) {
+  const flagsEl = document.getElementById('flags');
+  const summaryEl = document.getElementById('site-summary');
+  try {
+    const res = await fetch('/api/audit-website', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!data || !data.checks) throw new Error('No audit data');
+
+    const failed = data.checks.filter(c => !c.pass);
+    flagsEl.innerHTML = failed.length
+      ? failed.map(c => `<div class="flag"><span class="dot"></span>${esc(c.note || c.label)}</div>`).join('')
+      : `<div class="flag"><span class="dot"></span>No major gaps found — this is a genuinely solid site.</div>`;
+
+    summaryEl.innerHTML = `
+      <h3>${esc(data.pageTitle || 'Their current site')}</h3>
+      <p>${esc(data.metaDescriptionText || 'No page description was found.')}</p>
+      <p style="margin-top:10px;">${esc(data.summary || '')}</p>`;
+  } catch (e) {
+    flagsEl.innerHTML = `<div class="flag"><span class="dot"></span>Could not re-check their site right now.</div>`;
+    summaryEl.innerHTML = `<h3>Preview unavailable</h3><p>Could not load a summary for this site right now.</p>`;
+  }
+}
+
+function render(payload) {
+  const d = {
+    name: payload.n || 'Your Business',
+    categoryKey: payload.c || 'other',
+    categoryLabel: payload.cl || 'Business',
+    city: payload.ci || '',
+    area: payload.ar || '',
+    phone: (payload.p || '').replace(/[^0-9]/g, ''),
+    rating: payload.r || null,
+    ratingCount: payload.rc || null,
+  };
+  const websiteUrl = payload.u || '';
+  const family = getFamily(d.categoryKey);
+  const afterHtml = RENDERERS[family](d);
+
+  const app = document.getElementById('app');
+  app.style.display = 'block';
+  document.getElementById('fallback').style.display = 'none';
+  document.title = d.name + ' — Before / After';
+
+  app.innerHTML = `
+    <div class="wrap">
+      <div class="cx-top">
+        <div>
+          <span class="cx-eyebrow">Website comparison</span>
+          <h1>${esc(d.name)}</h1>
+        </div>
+        <div class="meta">${esc([d.categoryLabel, d.city].filter(Boolean).join(' · '))}${d.rating ? ' · ' + esc(d.rating) + '★' : ''}<br>Generated from their existing site</div>
+      </div>
+
+      <div class="compare" id="compare">
+        <div class="pane before-pane" id="beforePane">
+          <span class="before-badge">Current site (live)</span>
+          ${websiteUrl ? `<iframe src="${esc(websiteUrl)}" loading="lazy" referrerpolicy="no-referrer" title="Current site"></iframe>` : `<div style="padding:60px 30px;color:#555;font-family:sans-serif;">No website URL was provided for this lead.</div>`}
+        </div>
+        <div class="pane after-pane" id="afterPane">
+          <span class="after-badge">Redesign</span>
+          ${afterHtml}
+        </div>
+        <div class="handle" id="handle"><div class="grip"><svg viewBox="0 0 24 24" fill="none" stroke="#1B1912" stroke-width="2" stroke-linecap="round"><path d="M8 7l-4 5 4 5M16 7l4 5-4 5"/></svg></div></div>
+        <div class="drag-hint" id="hint">Drag to compare</div>
+      </div>
+
+      <div class="fallback-toggle">
+        Site not loading in the preview above? Some sites block embedding —
+        <button onclick="toggleFallback()">tap here for a text summary</button> instead.
+      </div>
+      <div class="site-summary" id="site-summary"><p>Loading...</p></div>
+
+      <div class="flags-loading" id="flags-loading">Checking their current site for real gaps...</div>
+      <div class="flags" id="flags"></div>
+    </div>`;
+
+  setSplit(50);
+  initDrag();
+  document.getElementById('flags-loading').style.display = 'none';
+  if (websiteUrl) loadRealAudit(websiteUrl);
+  else document.getElementById('flags').innerHTML = `<div class="flag"><span class="dot"></span>No website URL provided — nothing to compare against.</div>`;
+}
+
+const payload = decodePayload();
+if (payload) render(payload);
+</script>
+</body>
+</html>
