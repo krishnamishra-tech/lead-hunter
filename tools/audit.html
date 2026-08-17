@@ -4,13 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Free Website Audit Checker — LocalScout</title>
-<meta name="description" content="Paste any business website URL and get a real, instant audit — HTTPS, mobile-friendliness, SEO basics, contact info, and speed. Free tool by LocalScout.">
+<meta name="description" content="Paste any business website URL and get a real, instant audit — HTTPS, mobile-friendliness, SEO basics, contact info, speed, and more. Free tool by LocalScout.">
 <link rel="canonical" href="https://localscout.online/tools/audit.html">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tools-shared.css">
 <style>
-  .checklist { list-style: none; margin-top: 18px; }
+  .tool-card.wide { max-width: 960px; }
+  .checklist { list-style: none; margin-top: 12px; }
   .checklist li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .checklist li:last-child { border: none; }
   .checklist .mark { font-size: 15px; flex-shrink: 0; width: 20px; }
@@ -20,6 +21,48 @@
   .checklist .note { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
   .loading-line { font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft); text-align: center; padding: 20px 0; display: none; }
   .loading-line.show { display: block; }
+
+  .result-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 28px; margin-top: 8px; }
+  @media (max-width: 780px) { .result-grid { grid-template-columns: 1fr; } }
+
+  .cat-bars { margin-top: 20px; }
+  .cat-bar-row { margin-bottom: 12px; }
+  .cat-bar-row .cat-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+  .cat-bar-row .cat-name { font-weight: 600; color: var(--ink); }
+  .cat-bar-row .cat-score { font-family: var(--mono); color: var(--ink-soft); }
+  .cat-bar-track { height: 7px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  .cat-bar-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+
+  .issues-panel { margin-top: 20px; }
+  .issues-panel h3 { font-family: var(--display); font-size: 15px; margin-bottom: 10px; }
+  .issue-row { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+  .issue-row:last-child { border: none; }
+  .issue-row .ic { color: var(--clay); flex-shrink: 0; }
+
+  .phone-frame { width: 220px; margin: 0 auto; border: 8px solid #1A1512; border-radius: 28px; overflow: hidden; background: #fff; box-shadow: 0 20px 40px -20px rgba(0,0,0,0.3); }
+  .phone-frame .screen { width: 100%; height: 380px; overflow: hidden; position: relative; }
+  .phone-frame iframe { width: 375px; height: 640px; border: 0; transform: scale(0.587); transform-origin: top left; }
+  .phone-fallback { padding: 30px 16px; text-align: center; font-size: 12px; color: var(--ink-soft); }
+
+  .compare-toggle { text-align: center; margin-top: 24px; }
+  .compare-toggle button { background: none; border: none; color: var(--brass); font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: underline; }
+  .compare-box { display: none; margin-top: 14px; }
+  .compare-box.show { display: block; }
+  .compare-result { margin-top: 18px; padding: 16px; background: var(--paper); border-radius: 10px; border: 1px solid var(--line); }
+  .compare-vs { display: flex; align-items: center; justify-content: center; gap: 20px; margin-top: 14px; }
+  .compare-side { text-align: center; }
+  .compare-side .score { font-family: var(--display); font-size: 30px; font-weight: 700; }
+  .compare-side .url { font-size: 11px; color: var(--ink-soft); max-width: 140px; word-break: break-all; margin-top: 4px; }
+  .compare-vs-label { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); text-transform: uppercase; }
+
+  .action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+  .action-row .btn { flex: 1; min-width: 150px; }
+
+  @media print {
+    nav, footer, .action-row, .compare-toggle, .cta-banner, .field, #auditBtn { display: none !important; }
+    body { background: #fff; }
+    .tool-card { border: none; box-shadow: none; }
+  }
 </style>
 </head>
 <body>
@@ -39,29 +82,64 @@
 <div class="page-hero">
   <div class="kicker">Free Tool</div>
   <h1>Website Audit Checker</h1>
-  <p>Paste any business website URL — get a real, instant score on HTTPS, mobile-friendliness, SEO basics, contact info, and speed. Use it before every cold pitch.</p>
+  <p>Paste any business website URL — get a real, instant audit across trust, mobile, speed, SEO, and content. 14 real checks, no fabricated "AI score." Use it before every cold pitch.</p>
 </div>
 
 <main>
   <div class="wrap">
-    <div class="tool-card">
+    <div class="tool-card wide">
       <div class="field">
         <label>Website URL</label>
         <input type="text" id="urlInput" placeholder="e.g. sharmarealestate.com" onkeydown="if(event.key==='Enter')runAudit()">
       </div>
       <button class="btn btn-primary" onclick="runAudit()" id="auditBtn">Run free audit</button>
 
-      <p class="loading-line" id="loadingLine">Checking HTTPS, mobile tag, SEO basics, contact info, speed...</p>
+      <p class="loading-line" id="loadingLine">Checking HTTPS, mobile tag, SEO basics, contact info, speed, and 9 more real signals...</p>
 
       <div class="result-box" id="resultBox">
-        <div style="text-align:center;">
-          <div class="score-ring" id="scoreRing">
-            <span class="num" id="scoreNum">—</span>
+        <div class="result-grid">
+          <div>
+            <div style="text-align:center;">
+              <div class="score-ring" id="scoreRing">
+                <span class="num" id="scoreNum">—</span>
+              </div>
+              <p style="font-weight:700;font-size:15px;margin-bottom:4px;" id="gradeText"></p>
+              <p style="font-size:13px;color:var(--ink-soft);" id="summaryText"></p>
+            </div>
+
+            <div class="cat-bars" id="catBars"></div>
+
+            <div class="phone-frame" style="margin-top:24px;">
+              <div class="screen" id="phoneScreen"><div class="phone-fallback">Preview loads after you run an audit.</div></div>
+            </div>
+            <p style="text-align:center;font-size:10.5px;color:var(--ink-soft);margin-top:8px;">Live preview of their real site at mobile width — some sites block embedding.</p>
           </div>
-          <p style="font-weight:700;font-size:15px;margin-bottom:4px;" id="gradeText"></p>
-          <p style="font-size:13px;color:var(--ink-soft);" id="summaryText"></p>
+
+          <div>
+            <div class="issues-panel">
+              <h3>Top issues found</h3>
+              <div id="issuesList"></div>
+            </div>
+            <ul class="checklist" id="checklist"></ul>
+          </div>
         </div>
-        <ul class="checklist" id="checklist"></ul>
+
+        <div class="action-row">
+          <button class="btn btn-outline" onclick="shareReport()" id="shareBtn">🔗 Share report</button>
+          <button class="btn btn-outline" onclick="window.print()">⬇️ Download as PDF</button>
+          <a class="btn btn-marigold" id="redesignBtn" href="#" target="_blank" rel="noopener">✨ See a redesign preview</a>
+        </div>
+
+        <div class="compare-toggle">
+          <button onclick="toggleCompare()">+ Compare against another website</button>
+        </div>
+        <div class="compare-box" id="compareBox">
+          <div class="field" style="margin-top:12px;">
+            <input type="text" id="compareInput" placeholder="Paste a second URL to compare, e.g. a competitor's site">
+          </div>
+          <button class="btn btn-outline" style="width:100%;" onclick="runCompare()" id="compareBtn">Compare</button>
+          <div class="compare-result" id="compareResult" style="display:none;"></div>
+        </div>
 
         <div class="cta-banner" id="ctaBanner" style="display:none;">
           <p><strong id="ctaHeadline">This is exactly the gap worth pitching.</strong><br>LocalScout finds businesses like this one, scores the opportunity, and builds a demo site to send — before you even call.</p>
@@ -75,9 +153,13 @@
 <footer>© 2026 LocalScout. Free tools for web design agencies and freelancers. · <a href="../privacy-policy.html">Privacy Policy</a> · <a href="../about.html">About</a></footer>
 
 <script>
+let lastResult = null;
+let lastUrl = '';
+
 async function runAudit() {
   const input = document.getElementById('urlInput').value.trim();
   if (!input) { alert('Enter a website URL first.'); return; }
+  lastUrl = input;
 
   const btn = document.getElementById('auditBtn');
   const loading = document.getElementById('loadingLine');
@@ -93,6 +175,8 @@ async function runAudit() {
       body: JSON.stringify({ url: input }),
     });
     const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    lastResult = data;
     renderResult(data);
   } catch (e) {
     alert('Could not run the audit right now — try again in a moment.');
@@ -100,6 +184,10 @@ async function runAudit() {
     btn.disabled = false; btn.textContent = 'Run free audit';
     loading.classList.remove('show');
   }
+}
+
+function catColor(score) {
+  return score >= 80 ? '#3FA796' : score >= 50 ? '#F2A33B' : '#C1502E';
 }
 
 function renderResult(data) {
@@ -110,14 +198,32 @@ function renderResult(data) {
   const list = document.getElementById('checklist');
   const banner = document.getElementById('ctaBanner');
   const ctaHeadline = document.getElementById('ctaHeadline');
+  const catBars = document.getElementById('catBars');
+  const issuesList = document.getElementById('issuesList');
+  const phoneScreen = document.getElementById('phoneScreen');
+  const redesignBtn = document.getElementById('redesignBtn');
 
-  const color = data.score >= 80 ? '#3FA796' : data.score >= 50 ? '#F2A33B' : '#C1502E';
+  const color = catColor(data.score);
   ring.style.background = `conic-gradient(${color} ${data.score * 3.6}deg, #EFE9DA 0deg)`;
   num.textContent = data.score;
   num.style.color = color;
   grade.textContent = data.grade;
   grade.style.color = color;
   summary.textContent = data.summary;
+
+  // Category score bars — real weighted sub-scores from the checks, not invented
+  catBars.innerHTML = (data.categories || []).map(c => `
+    <div class="cat-bar-row">
+      <div class="cat-top"><span class="cat-name">${esc(c.name)}</span><span class="cat-score">${c.score}/100</span></div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${c.score}%;background:${catColor(c.score)};"></div></div>
+    </div>
+  `).join('');
+
+  // Top issues — real failed checks, worst (highest weight) first
+  const failed = (data.checks || []).filter(c => !c.pass).sort((a, b) => b.weight - a.weight);
+  issuesList.innerHTML = failed.length
+    ? failed.slice(0, 6).map(c => `<div class="issue-row"><span class="ic">⚠</span><span>${esc(c.note || c.label)}</span></div>`).join('')
+    : `<div class="issue-row"><span class="ic" style="color:var(--teal);">✓</span><span>No major issues found — this is a genuinely solid site.</span></div>`;
 
   list.innerHTML = (data.checks || []).map(c => `
     <li class="${c.pass ? 'pass' : 'fail'}">
@@ -128,6 +234,22 @@ function renderResult(data) {
       </div>
     </li>
   `).join('');
+
+  // Real mobile preview — an actual live iframe of their site at phone
+  // width, not a mockup. Some sites block embedding; we just show what
+  // loads, no fake screenshot.
+  phoneScreen.innerHTML = `<iframe src="${esc(data.url)}" loading="lazy" referrerpolicy="no-referrer" title="Mobile preview"></iframe>`;
+
+  // Redesign preview — links to LocalScout's real comparison tool using
+  // this exact audited URL and whatever we know about the business.
+  const comparePayload = {
+    n: data.pageTitle || 'This business',
+    c: 'other', cl: 'Business',
+    ci: '', ar: '', p: '', r: null, rc: null,
+    u: data.url,
+  };
+  const encoded = btoa(encodeURIComponent(JSON.stringify(comparePayload)));
+  redesignBtn.href = `../comparison.html?d=${encoded}`;
 
   if (data.score < 80) {
     banner.style.display = 'flex';
@@ -140,6 +262,88 @@ function renderResult(data) {
 
   document.getElementById('resultBox').classList.add('show');
 }
+
+function toggleCompare() {
+  document.getElementById('compareBox').classList.toggle('show');
+}
+
+async function runCompare() {
+  const compareUrl = document.getElementById('compareInput').value.trim();
+  if (!compareUrl) { alert('Enter a second URL to compare.'); return; }
+  if (!lastUrl) { alert('Run the main audit first.'); return; }
+
+  const btn = document.getElementById('compareBtn');
+  btn.disabled = true; btn.textContent = 'Comparing...';
+  const resultEl = document.getElementById('compareResult');
+
+  try {
+    const res = await fetch('/api/audit-website', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: lastUrl, compareUrl }),
+    });
+    const data = await res.json();
+    if (!data.compare) { alert('Could not check that second URL — try another.'); return; }
+
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `
+      <div class="compare-vs-label" style="text-align:center;">Website health, side by side</div>
+      <div class="compare-vs">
+        <div class="compare-side">
+          <div class="score" style="color:${catColor(data.score)};">${data.score}</div>
+          <div class="url">${esc(data.url)}</div>
+        </div>
+        <div style="font-size:11px;color:var(--ink-soft);">vs</div>
+        <div class="compare-side">
+          <div class="score" style="color:${catColor(data.compare.score)};">${data.compare.score}</div>
+          <div class="url">${esc(data.compare.url)}</div>
+        </div>
+      </div>`;
+  } catch (e) {
+    alert('Comparison failed — try again.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Compare';
+  }
+}
+
+async function shareReport() {
+  if (!lastResult) return;
+  const btn = document.getElementById('shareBtn');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Building link...';
+  try {
+    const encoded = btoa(encodeURIComponent(JSON.stringify({ url: lastResult.url, score: lastResult.score, grade: lastResult.grade })));
+    const longUrl = `${window.location.origin}${window.location.pathname}?r=${encoded}`;
+    const res = await fetch('/api/shorten', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ longUrl }),
+    });
+    const data = await res.json();
+    const shortUrl = data.shortUrl || longUrl;
+    await navigator.clipboard.writeText(shortUrl).catch(() => {});
+    btn.textContent = 'Link copied!';
+  } catch (e) {
+    btn.textContent = 'Could not build link';
+  } finally {
+    setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 2000);
+  }
+}
+
+// If the page was opened via a shared report link, re-run the audit for
+// that URL automatically (the link only carries the URL + a snapshot
+// score, not the full checklist — re-running gives an up-to-date result).
+(function checkSharedLink() {
+  const params = new URLSearchParams(window.location.search);
+  const r = params.get('r');
+  if (!r) return;
+  try {
+    const snap = JSON.parse(decodeURIComponent(atob(r)));
+    if (snap.url) {
+      document.getElementById('urlInput').value = snap.url;
+      runAudit();
+    }
+  } catch (e) {}
+})();
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
