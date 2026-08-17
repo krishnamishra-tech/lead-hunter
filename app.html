@@ -593,6 +593,8 @@ Gomti Nagar" style="width:100%;height:160px;margin-top:10px;padding:10px;border:
       <div class="section-label"><span>Your leads</span></div>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
         <input id="lead-search" type="text" placeholder="Search by name or phone..." style="flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--cream);color:var(--ink);box-sizing:border-box;" oninput="setLeadsSearch(this.value)">
+        <select id="lead-country-filter" style="padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--cream);color:var(--ink);" onchange="setLeadsCountryFilter(this.value)"></select>
+        <select id="lead-niche-filter" style="padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--cream);color:var(--ink);" onchange="setLeadsNicheFilter(this.value)"></select>
         <button class="btn btn-outline" id="check-all-btn" onclick="checkAllWebsites()">Check all sites</button>
       </div>
       <div id="bulk-toolbar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px;"></div>
@@ -927,7 +929,7 @@ function toRow(l) {
     website_score_checked_at: l.websiteScoreCheckedAt || null,
     has_hours: (typeof l.hasHours === 'boolean') ? l.hasHours : null,
     photo_count: (typeof l.photoCount === 'number') ? l.photoCount : null,
-    email: l.email || null };
+    email: l.email || null, country: l.country || null };
 }
 function fromRow(r) {
   return { id: r.id, name: r.name, phone: r.phone, instagram: r.instagram, area: r.area,
@@ -935,7 +937,7 @@ function fromRow(r) {
     status: r.status, added: r.added, notes: r.notes, statusUpdated: r.status_updated, createdAt: r.created_at,
     website: r.website, rating: r.rating, ratingCount: r.rating_count,
     websiteScore: r.website_score, websiteScoreCheckedAt: r.website_score_checked_at,
-    hasHours: r.has_hours, photoCount: r.photo_count, email: r.email };
+    hasHours: r.has_hours, photoCount: r.photo_count, email: r.email, country: r.country || '' };
 }
 
 async function fetchLeads() {
@@ -2084,6 +2086,18 @@ let leads = [];
 let savedIds = new Set();
 let leadsFilter = 'total';
 let leadsSearch = '';
+let leadsCountryFilter = '';
+let leadsNicheFilter = '';
+function setLeadsCountryFilter(val) { leadsCountryFilter = val; renderLeads(); }
+function setLeadsNicheFilter(val) { leadsNicheFilter = val; renderLeads(); }
+// Best-effort read of whichever country is currently selected in the Hunt
+// tab's search form, so a lead saved from a search carries the country it
+// was actually found in. Returns '' (never throws) if that control isn't
+// on the page right now — e.g. leads added via other flows.
+function currentSearchCountry() {
+  const el = document.getElementById('h-country');
+  return el ? (el.value || '') : '';
+}
 let statsExpanded = false;
 function toggleStatsExpanded() { statsExpanded = !statsExpanded; renderLeads(); }
 let selectedLeadIds = new Set();
@@ -2748,6 +2762,7 @@ function aiLeadToRecord(r, nicheKey, fallbackArea) {
     phone: (r.phone || '').replace(/[^0-9]/g, ''),
     instagram: '',
     area: r.address || fallbackArea,
+    country: currentSearchCountry(),
     niche: nicheKey,
     nicheLabel: nicheKeyToLabel(nicheKey),
     hasWebsite: isRealWebsite(r.website),
@@ -3073,7 +3088,7 @@ async function saveParsedLead(i) {
   const newLead = {
     id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
     name, phone: row.phone, instagram: row.instagram, email: row.email || '', website: row.website || '',
-    area: row.area, niche: row.nicheKey, nicheLabel: row.nicheLabel,
+    area: row.area, country: currentSearchCountry(), niche: row.nicheKey, nicheLabel: row.nicheLabel,
     hasWebsite: !!row.website, source: 'Paste Import', status: 'New', notes: '',
     added: new Date().toLocaleDateString()
   };
@@ -3110,7 +3125,7 @@ async function saveAllParsed(indices) {
     newLeads.push({
       id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
       name, phone: row.phone, instagram: row.instagram, email: row.email || '', website: row.website || '',
-      area: row.area, niche: row.nicheKey, nicheLabel: row.nicheLabel,
+      area: row.area, country: currentSearchCountry(), niche: row.nicheKey, nicheLabel: row.nicheLabel,
       hasWebsite: !!row.website, source: 'Paste Import', status: 'New', notes: '',
       added: new Date().toLocaleDateString()
     });
@@ -3254,9 +3269,33 @@ function renderLeads() {
   let visibleLeads = leadsFilter === 'total' ? leads : leads.filter(filters[leadsFilter].test);
   const q = leadsSearch.trim().toLowerCase();
   if (q) visibleLeads = visibleLeads.filter(l => (l.name || '').toLowerCase().includes(q) || (l.phone || '').includes(q));
+
+  // Country / business-type filters — dropdowns are rebuilt from whatever
+  // values actually exist across all leads (not a fixed list), so a filter
+  // never shows an option with zero matching leads. Leads saved before this
+  // feature existed have no country recorded; they show under "Unknown".
+  const countryEl = document.getElementById('lead-country-filter');
+  const nicheEl = document.getElementById('lead-niche-filter');
+  if (countryEl && nicheEl) {
+    const countries = [...new Set(leads.map(l => l.country || 'Unknown'))].sort();
+    const niches = [...new Set(leads.map(l => l.nicheLabel || 'Other'))].sort();
+    if (countryEl.dataset.built !== String(countries.length) + countries.join(',')) {
+      countryEl.innerHTML = `<option value="">All countries</option>` + countries.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      countryEl.value = leadsCountryFilter;
+      countryEl.dataset.built = String(countries.length) + countries.join(',');
+    }
+    if (nicheEl.dataset.built !== String(niches.length) + niches.join(',')) {
+      nicheEl.innerHTML = `<option value="">All business types</option>` + niches.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      nicheEl.value = leadsNicheFilter;
+      nicheEl.dataset.built = String(niches.length) + niches.join(',');
+    }
+  }
+  if (leadsCountryFilter) visibleLeads = visibleLeads.filter(l => (l.country || 'Unknown') === leadsCountryFilter);
+  if (leadsNicheFilter) visibleLeads = visibleLeads.filter(l => (l.nicheLabel || 'Other') === leadsNicheFilter);
+
   const el = document.getElementById('leads-list');
   if (!leads.length) { el.innerHTML = '<div class="empty">No leads yet. Find some in the Hunt tab or add manually above.</div>'; return; }
-  if (!visibleLeads.length) { el.innerHTML = `<div class="empty">No leads match${q ? ' your search' : ' "' + filters[leadsFilter].label + '"'}. <a href="#" onclick="document.getElementById('lead-search').value='';setLeadsSearch('');setLeadsFilter('total');return false;">Clear filters</a></div>`; return; }
+  if (!visibleLeads.length) { el.innerHTML = `<div class="empty">No leads match${q ? ' your search' : ' "' + filters[leadsFilter].label + '"'}. <a href="#" onclick="document.getElementById('lead-search').value='';setLeadsSearch('');setLeadsFilter('total');leadsCountryFilter='';leadsNicheFilter='';if(document.getElementById('lead-country-filter'))document.getElementById('lead-country-filter').value='';if(document.getElementById('lead-niche-filter'))document.getElementById('lead-niche-filter').value='';renderLeads();return false;">Clear filters</a></div>`; return; }
   el.innerHTML = visibleLeads.map(l => {
     const hasPhone = !!l.phone;
     const hasInstagram = !!l.instagram;
